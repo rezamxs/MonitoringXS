@@ -1,0 +1,25 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csx}]
+indent_style = space
+indent_size = 4
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_diagnostic.CA2007.severity = none
+
+[*.{json,yml,yaml,md}]
+end_of_line = lf
+indent_style = space
+indent_size = 2
+
+[*.xaml]
+indent_style = space
+indent_size = 4

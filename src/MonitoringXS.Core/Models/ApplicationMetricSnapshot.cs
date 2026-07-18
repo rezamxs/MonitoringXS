@@ -1,0 +1,15 @@
+namespace MonitoringXS.Core.Models;
+
+public sealed record ApplicationMetricSnapshot(
+    ApplicationIdentity Application,
+    DateTimeOffset CapturedAt,
+    MetricValue<double> CpuPercent,
+    MetricValue<long> WorkingSetBytes,
+    MetricValue<double> IoReadBytesPerSecond,
+    MetricValue<double> IoWriteBytesPerSecond,
+    MetricValue<ulong> TotalIoReadBytes,
+    MetricValue<ulong> TotalIoWriteBytes,
+    MetricValue<ulong> IoReadOperationCount,
+    MetricValue<ulong> IoWriteOperationCount,
+    int ProcessCount,
+    IReadOnlyList<ProcessDescriptor> Processes);

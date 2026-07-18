@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Monitoring XS (WinUI x64)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build release",
+      "program": "${workspaceFolder}/src/MonitoringXS.App/bin/x64/Release/net10.0-windows10.0.26100.0/win-x64/MonitoringXS.App.exe",
+      "cwd": "${workspaceFolder}/src/MonitoringXS.App",
+      "stopAtEntry": false
+    }
+  ]
+}

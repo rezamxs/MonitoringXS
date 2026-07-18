@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "restore",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["restore", "MonitoringXS.sln"],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build release",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["build", "MonitoringXS.sln", "-c", "Release", "--no-restore"],
+      "dependsOn": "restore",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "test release",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["test", "MonitoringXS.sln", "-c", "Release", "--no-build"],
+      "dependsOn": "build release",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}

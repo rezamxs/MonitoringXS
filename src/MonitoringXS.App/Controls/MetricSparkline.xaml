@@ -1,0 +1,38 @@
+<UserControl
+    x:Class="MonitoringXS.App.Controls.MetricSparkline"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    MinHeight="120"
+    IsTabStop="False">
+    <Grid
+        x:Name="ChartRoot"
+        Background="{StaticResource SurfaceRaisedBrush}"
+        BorderBrush="{StaticResource SubtleBorderBrush}"
+        BorderThickness="1"
+        CornerRadius="8"
+        SizeChanged="ChartRoot_SizeChanged">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Polyline
+            x:Name="Line"
+            Margin="8"
+            Stroke="{StaticResource DataAccentBrush}"
+            StrokeLineJoin="Round"
+            StrokeThickness="2" />
+        <TextBlock
+            x:Name="EmptyState"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Foreground="{StaticResource SecondaryTextBrush}"
+            Text="Waiting for real samples…" />
+        <TextBlock
+            x:Name="Summary"
+            Grid.Row="1"
+            Margin="10,2,10,8"
+            Foreground="{StaticResource SecondaryTextBrush}"
+            Text="CPU history is warming up."
+            TextWrapping="Wrap" />
+    </Grid>
+</UserControl>

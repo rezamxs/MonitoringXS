@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a reproducible Monitoring XS problem
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Remove sensitive process, path, command-line, and network information before submitting.
+  - type: input
+    id: version
+    attributes:
+      label: Monitoring XS version or commit
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows edition and build
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
