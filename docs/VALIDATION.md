@@ -295,3 +295,44 @@ dotnet test MonitoringXS.sln -c Release
 
 - Release build succeeded for the complete solution with 0 warnings and 0 errors in 00:02:25.73.
 - Tests succeeded: 60 passed, 0 failed, 0 skipped: Core 3, Application 4, Collectors 14, Integration 35, Storage 4.
+
+## 2026-07-21 WinUI layout-cycle reliability investigation
+
+The previously observed UI-Automation fail-fast was reproduced before changing the product. The equivalent elevated workload scenario produced the same `0xc000027b` exception, `Microsoft.UI.Xaml.dll` offset `0x3ad79d`, and WER bucket as the original failure. A smaller normal, unelevated scenario then reproduced it by opening one application tab and expanding `Advanced application information`; opening the tab without expanding remained stable. Expanding with the keyboard Space key also crashed, which ruled out an AutomationPeer-only recursion or test-tool-only failure.
+
+The archived WER directories contained seven historical `Report.wer` files but no retained minidumps; the `.mdmp` files referenced by Event Viewer had already been removed from WER's temporary directory. A temporary diagnostic `Application.UnhandledException` observer was used without setting `Handled`. It captured the actual exception before fail-fast:
+
+```text
+Microsoft.UI.Xaml.LayoutCycleException
+Layout cycle detected. Layout could not complete.
+```
+
+The root cause was synchronous `MetricSparkline.Redraw()` from `ChartRoot.SizeChanged`. Expanding the adjacent advanced section changed layout; redraw immediately changed the polyline and summary text during that same layout pass, creating a second layout invalidation cycle. Removing only the `SizeChanged` callback made the failing keyboard-plus-Expander scenario stable, confirming causality. The final fix preserves resize redraws but coalesces them and dispatches one redraw at low priority after the active layout pass. The temporary exception observer was removed.
+
+Evidence against the other investigated causes:
+
+- Observable collections are mutated on the captured UI context, and stale-item removal enumerates a snapshot; no cross-thread UI access or collection-enumeration exception was observed.
+- The deterministic crash occurred before shutdown, and normal close remained clean, excluding dispatcher teardown and shutdown disposal as its trigger.
+- Opening the tab without expanding was stable, and XAML compilation succeeded, excluding a generally invalid data template.
+- Keyboard expansion reproduced the crash without `ExpandCollapsePattern`, excluding AutomationPeer recursion as the root trigger.
+- Enumeration plus 260 list scroll operations completed without error before the advanced section was involved, excluding automation pressure by itself.
+
+A reusable real-UI regression harness was added at `scripts/validation/Invoke-MonitoringXsUiAutomationStress.ps1`. It launches the actual Release app, opens a logical application tab by keyboard, toggles the advanced Expander, resizes the window, enumerates the UI Automation tree, checks responsiveness and Event Viewer, and requires a normal clean exit.
+
+Final commands and results:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release
+dotnet test MonitoringXS.sln -c Release
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validation\Invoke-MonitoringXsUiAutomationStress.ps1 -Configuration Release -DurationSeconds 60
+```
+
+- The first sandboxed restore failed only with NuGet TLS `NU1301`; the normal-network retry restored all projects successfully without clearing the global package cache.
+- The full Release build succeeded with 0 warnings and 0 errors in 00:02:22.91.
+- All 60 tests passed: Core 3, Application 4, Collectors 14, Integration 35, Storage 4; 0 failed and 0 skipped.
+- A normal 20-second WinUI smoke observed the `Monitoring XS` main window, responsiveness at every sample, a successful normal close, `dotnet run` exit code 0, and no new Application Error event.
+- The final 60-second automation stress opened the tab by keyboard and the Expander, read 14,420 automation elements, performed 29 Expander toggles and 55 window resizes, reported 0 automation errors and 0 crash events, remained responsive at every sample, and exited cleanly with code 0.
+- After a 30-second warm-up, the 60.739-second idle interval used 0.637% of total eight-logical-processor capacity. Working set was 149,823,488 bytes minimum, 152,630,524 bytes average, 158,068,736 bytes maximum, and 153,739,264 bytes at the final sample.
+
+Before deletion, all ten files in `.artifacts\ElevatedSmoke` were confirmed ignored and untracked. Those reproducible files, totaling 25,198,196 bytes, were deleted; the directory is empty. `.gitignore` already excludes `.artifacts/`.

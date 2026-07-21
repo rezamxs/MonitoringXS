@@ -40,6 +40,7 @@ Status: in progress.
 - [x] Normalize ETW and process-start timestamps to UTC before PID-reuse checks; discard ambiguous batches after ETW loss.
 - [x] Add collector diagnostics and deterministic warming-up, zero, partial, access-denied, cancellation, and PID-reuse coverage.
 - [x] Complete a one-time elevated runtime smoke with real `Available` physical-disk rates, logical-workload attribution, visible lower-bound semantics, and verified ETW-session release after normal shutdown.
+- [x] Reproduce and fix the advanced-detail WinUI layout-cycle fail-fast; retain keyboard/accessibility behavior and cover the equivalent scenario with a real UI Automation stress harness.
 - [ ] Exercise an actual OS PID-reuse occurrence during an elevated runtime capture; the UTC-domain rejection path is deterministic-test-covered, but no PID reuse occurred in the recorded manual smoke.
 
 ## Milestone 3 - Network and GPU

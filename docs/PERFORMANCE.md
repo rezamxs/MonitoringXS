@@ -40,3 +40,15 @@ This was an active disk-workload smoke on Windows 10 Pro build 19045.6466 with 8
 - The workload exited normally, the window accepted a normal close, the app and `dotnet run` exited with code 0, and the ETW session was absent afterward in the low-intrusion pass.
 
 The heavier UI Automation pass measured 3.498% total CPU capacity, 180,232,192-byte maximum working set, and 953 handles, but ended in a WinUI/XAML fail-fast while repeatedly scrolling and querying the virtualized list. These figures are retained as diagnostic evidence, not used as the clean lifecycle or responsiveness result.
+
+## 2026-07-21 post-layout-cycle idle measurement
+
+After the sparkline resize redraw was moved out of the active XAML layout pass, the x64 Release application was measured without UI Automation or a workload. The environment remained Windows 10 Pro build 19045.6466 with 8 logical processors and one-second monitoring updates.
+
+- Warm-up: 30 seconds.
+- Steady interval: 60.739 seconds with 61 working-set samples.
+- Process CPU time: 3.09375 seconds, equal to 0.637% of total machine CPU capacity.
+- Working set: 149,823,488 bytes minimum, 152,630,524 bytes average, 158,068,736 bytes maximum, and 153,739,264 bytes final.
+- The UI was responsive at every sample, normal close succeeded, `dotnet run` returned 0, and Event Viewer recorded no new crash.
+
+The result meets the current below-1%-idle-CPU and approximately-200-MB working-set targets on this validation machine. Broader hardware profiling remains release work.

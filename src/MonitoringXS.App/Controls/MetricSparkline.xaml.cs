@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -15,6 +16,7 @@ public sealed partial class MetricSparkline : UserControl
         new PropertyMetadata(null, OnSamplesChanged));
 
     private INotifyCollectionChanged? _observableSamples;
+    private bool _resizeRedrawPending;
 
     public MetricSparkline()
     {
@@ -55,7 +57,24 @@ public sealed partial class MetricSparkline : UserControl
         Redraw();
     }
 
-    private void ChartRoot_SizeChanged(object sender, SizeChangedEventArgs args) => Redraw();
+    private void ChartRoot_SizeChanged(object sender, SizeChangedEventArgs args)
+    {
+        if (_resizeRedrawPending)
+        {
+            return;
+        }
+
+        _resizeRedrawPending = DispatcherQueue.TryEnqueue(
+            DispatcherQueuePriority.Low,
+            () =>
+            {
+                _resizeRedrawPending = false;
+                if (IsLoaded)
+                {
+                    Redraw();
+                }
+            });
+    }
 
     private void Redraw()
     {

@@ -32,6 +32,10 @@ Check a suspected stale session from an Administrator shell with `logman query M
 
 Monitoring XS reports an invalid, inaccessible, or unsupported `%LocalAppData%\MonitoringXS\attribution-overrides.json` file as unavailable and continues without fabricating mappings. Preserve the file for diagnosis or move it aside while the app is closed; the app will create a new versioned document after the next explicit override change.
 
+## The app closes when advanced details are expanded
+
+Older builds could synchronously redraw the CPU sparkline from `SizeChanged` while the advanced Expander was changing layout. WinUI reported `LayoutCycleException` and terminated with `0xc000027b` in `Microsoft.UI.Xaml.dll`. Current builds coalesce resize redraws and dispatch them after the active layout pass. Rebuild the full Release solution and confirm it with `scripts\validation\Invoke-MonitoringXsUiAutomationStress.ps1`; do not suppress the fail-fast or mark the XAML exception handled.
+
 ## Corrupt local history
 
 Use the future in-app recovery action to quarantine and recreate the database. Do not manually overwrite a database while Monitoring XS is running.
