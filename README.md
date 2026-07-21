@@ -1,8 +1,57 @@
 # Monitoring XS
 
-Monitoring XS is an application-centric resource monitor for Windows 10 version 1809+ and Windows 11. It groups related processes into understandable logical applications, hides operating-system infrastructure, separates portable tools, and reports only real Windows metrics.
+Monitoring XS is a Windows desktop app I am building to make resource monitoring easier to understand.
 
-> Project status: early vertical slice at the Milestone 1/2 boundary. Process discovery, initial attribution, real CPU/working-set metrics, and real process-wide I/O accounting are implemented. Physical-disk attribution, network, GPU, SQLite history, and management actions remain planned and are never represented with fabricated values.
+Windows Task Manager shows many separate processes, even when several of them belong to the same application. This project tries to group related processes and show the combined CPU, memory and disk usage of the application.
+
+The project is still under development. Some parts work, but several planned features are not finished yet.
+
+## Why I started this project
+
+I wanted a simpler way to see which applications are using my computer resources.
+
+Programs such as Chrome, Edge and Visual Studio Code can create many processes. Checking each process separately makes it difficult to understand the total usage of the program.
+
+Monitoring XS tries to group these related processes and show them as one application.
+
+## Current status
+
+Currently working:
+
+- running application discovery
+- Win32 and MSIX application detection
+- grouping related processes
+- separating portable and unregistered applications
+- CPU usage
+- memory usage
+- Process I/O
+- physical disk monitoring through ETW
+- application tabs
+- beginner and advanced views
+- keyboard navigation
+
+Not finished yet:
+
+- network monitoring
+- GPU and VRAM monitoring
+- 24-hour history
+- application close, restart and force-stop actions
+- uninstall support
+- installer and release package
+- final UI pages and testing
+
+Physical disk monitoring may need Administrator access on some Windows systems. Without that permission, the application should show Access denied instead of displaying a fake value.
+
+## Validation
+
+The current repository has:
+
+- a successful Release build
+- 60 passing tests
+- no failed or skipped tests
+- validated ETW physical-disk monitoring on the development machine
+
+These results only describe the current development environment and do not mean the application is ready for a public release.
 
 ## Requirements
 
@@ -26,7 +75,7 @@ Run the app from Visual Studio using the x64 target, or:
 dotnet run --project src/MonitoringXS.App/MonitoringXS.App.csproj -c Debug -p:Platform=x64
 ```
 
-Packaging profiles will be added before the release milestone. Monitoring APIs may return limited data for protected or higher-integrity processes; the UI must show that limitation rather than request permanent elevation.
+Packaging profiles will be added before the release milestone. Some monitoring data can be unavailable for protected or higher-integrity processes. The app should show that limitation instead of requesting permanent elevation.
 
 ## Architecture and documentation
 
