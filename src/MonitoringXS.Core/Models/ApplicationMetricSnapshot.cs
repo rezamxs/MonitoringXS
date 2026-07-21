@@ -12,4 +12,9 @@ public sealed record ApplicationMetricSnapshot(
     MetricValue<ulong> IoReadOperationCount,
     MetricValue<ulong> IoWriteOperationCount,
     int ProcessCount,
-    IReadOnlyList<ProcessDescriptor> Processes);
+    IReadOnlyList<ProcessDescriptor> Processes)
+{
+    public PhysicalDiskMetricSet PhysicalDisk { get; init; } = PhysicalDiskMetricSet.Unavailable(
+        MetricAvailability.Unsupported,
+        "Physical-disk attribution is not configured.");
+}

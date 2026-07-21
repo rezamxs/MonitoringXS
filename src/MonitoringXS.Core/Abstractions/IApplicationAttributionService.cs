@@ -4,5 +4,7 @@ namespace MonitoringXS.Core.Abstractions;
 
 public interface IApplicationAttributionService
 {
-    IReadOnlyList<AttributionResult> Attribute(IReadOnlyList<ProcessDescriptor> processes);
+    ValueTask<IReadOnlyList<AttributionResult>> AttributeAsync(
+        IReadOnlyList<ProcessDescriptor> processes,
+        CancellationToken cancellationToken);
 }

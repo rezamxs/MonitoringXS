@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
 
@@ -6,13 +5,13 @@ namespace MonitoringXS.Collectors;
 
 public sealed class ProcessMetricCollector : IProcessMetricCollector
 {
-    private readonly IProcessIoCounterReader _ioCounterReader;
+    private readonly IProcessResourceCounterReader _counterReader;
     private readonly Dictionary<ProcessInstanceId, CpuState> _cpuStates = [];
     private readonly Dictionary<ProcessInstanceId, IoState> _ioStates = [];
 
-    public ProcessMetricCollector(IProcessIoCounterReader ioCounterReader)
+    public ProcessMetricCollector(IProcessResourceCounterReader counterReader)
     {
-        _ioCounterReader = ioCounterReader;
+        _counterReader = counterReader;
     }
 
     public ValueTask<IReadOnlyList<ProcessMetricSample>> CollectAsync(
@@ -45,47 +44,37 @@ public sealed class ProcessMetricCollector : IProcessMetricCollector
 
     private ProcessMetricSample CollectOne(ProcessDescriptor descriptor, DateTimeOffset capturedAt)
     {
-        try
+        MetricValue<ProcessResourceCounters> resource = _counterReader.Read(descriptor.InstanceId);
+        if (!resource.IsAvailable)
         {
-            using Process process = Process.GetProcessById(descriptor.InstanceId.ProcessId);
-            DateTimeOffset observedStart = new(process.StartTime.ToUniversalTime(), TimeSpan.Zero);
-            if (observedStart != descriptor.InstanceId.StartTimeUtc)
-            {
-                _cpuStates.Remove(descriptor.InstanceId);
-                return Unavailable(descriptor.InstanceId, capturedAt, MetricAvailability.Error, "Process ID was reused.");
-            }
-
-            TimeSpan totalCpu = process.TotalProcessorTime;
-            long workingSet = process.WorkingSet64;
-            MetricValue<double> cpu = CalculateCpu(descriptor.InstanceId, capturedAt, totalCpu);
-            MetricValue<ProcessIoCounters> ioCounters = _ioCounterReader.Read(descriptor.InstanceId);
-            (MetricValue<double> ioReadRate, MetricValue<double> ioWriteRate) =
-                CalculateIoRates(descriptor.InstanceId, capturedAt, ioCounters);
-
-            return new ProcessMetricSample(
+            _cpuStates.Remove(descriptor.InstanceId);
+            _ioStates.Remove(descriptor.InstanceId);
+            return Unavailable(
                 descriptor.InstanceId,
                 capturedAt,
-                cpu,
-                MetricValue<long>.Available(Math.Max(0, workingSet)),
-                ioReadRate,
-                ioWriteRate,
-                SelectIoCounter(ioCounters, counters => counters.ReadBytes),
-                SelectIoCounter(ioCounters, counters => counters.WriteBytes),
-                SelectIoCounter(ioCounters, counters => counters.ReadOperationCount),
-                SelectIoCounter(ioCounters, counters => counters.WriteOperationCount));
+                resource.Availability,
+                resource.Detail ?? "Process resource counters are unavailable.");
         }
-        catch (System.ComponentModel.Win32Exception exception)
-        {
-            _cpuStates.Remove(descriptor.InstanceId);
-            _ioStates.Remove(descriptor.InstanceId);
-            return Unavailable(descriptor.InstanceId, capturedAt, MetricAvailability.AccessDenied, exception.Message);
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
-        {
-            _cpuStates.Remove(descriptor.InstanceId);
-            _ioStates.Remove(descriptor.InstanceId);
-            return Unavailable(descriptor.InstanceId, capturedAt, MetricAvailability.Error, "Process exited during sampling.");
-        }
+
+        ProcessResourceCounters counters = resource.Value!.Value;
+        MetricValue<double> cpu = CalculateCpu(
+            descriptor.InstanceId,
+            capturedAt,
+            counters.TotalProcessorTime);
+        (MetricValue<double> ioReadRate, MetricValue<double> ioWriteRate) =
+            CalculateIoRates(descriptor.InstanceId, capturedAt, counters.IoCounters);
+
+        return new ProcessMetricSample(
+            descriptor.InstanceId,
+            capturedAt,
+            cpu,
+            MetricValue<long>.Available(Math.Max(0, counters.WorkingSetBytes)),
+            ioReadRate,
+            ioWriteRate,
+            SelectIoCounter(counters.IoCounters, value => value.ReadBytes),
+            SelectIoCounter(counters.IoCounters, value => value.WriteBytes),
+            SelectIoCounter(counters.IoCounters, value => value.ReadOperationCount),
+            SelectIoCounter(counters.IoCounters, value => value.WriteOperationCount));
     }
 
     private MetricValue<double> CalculateCpu(ProcessInstanceId process, DateTimeOffset capturedAt, TimeSpan totalCpu)

@@ -1,19 +1,23 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Data;
 using MonitoringXS.App.ViewModels;
+using Windows.Graphics;
 
 namespace MonitoringXS.App;
 
-public sealed partial class MainWindow : Window
+public sealed partial class MainWindow : Window, IDisposable
 {
     private readonly CancellationTokenSource _shutdown = new();
     private readonly Dictionary<string, TabViewItem> _applicationTabs = new(StringComparer.Ordinal);
+    private bool _disposed;
 
     public MainWindow(MainWindowViewModel viewModel)
     {
         ViewModel = viewModel;
         InitializeComponent();
+        AppWindow.Resize(new SizeInt32(1180, 760));
         Root.Loaded += Root_Loaded;
         Closed += MainWindow_Closed;
     }
@@ -29,6 +33,10 @@ public sealed partial class MainWindow : Window
         }
         catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
         {
+        }
+        finally
+        {
+            _shutdown.Dispose();
         }
     }
 
@@ -58,16 +66,43 @@ public sealed partial class MainWindow : Window
         ApplicationTabViewModel tabViewModel = ViewModel.OpenTab(card);
         TabViewItem tab = new()
         {
-            Header = tabViewModel.Title,
             IsClosable = true,
             Tag = card.LogicalApplicationId,
             Content = tabViewModel,
             ContentTemplate = (DataTemplate)Root.Resources["ApplicationDetailTemplate"]
         };
+        tab.SetBinding(TabViewItem.HeaderProperty, new Binding
+        {
+            Source = tabViewModel,
+            Path = new PropertyPath(nameof(ApplicationTabViewModel.Title)),
+            Mode = BindingMode.OneWay
+        });
         AutomationProperties.SetName(tab, $"{tabViewModel.Title} application tab");
         _applicationTabs.Add(card.LogicalApplicationId, tab);
         WorkspaceTabs.TabItems.Add(tab);
         WorkspaceTabs.SelectedItem = tab;
+    }
+
+    private void ApplicationList_ContainerContentChanging(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        bool isApplication = args.Item is ApplicationCardViewModel;
+        args.ItemContainer.IsTabStop = isApplication;
+        args.ItemContainer.IsHitTestVisible = isApplication;
+        if (args.Item is IApplicationListItemViewModel item)
+        {
+            AutomationProperties.SetName(args.ItemContainer, item.AutomationName);
+        }
+        else
+        {
+            AutomationProperties.SetName(args.ItemContainer, string.Empty);
+        }
     }
 
     private void WorkspaceTabs_TabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args)
@@ -92,7 +127,17 @@ public sealed partial class MainWindow : Window
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
+        Dispose();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         _shutdown.Cancel();
-        _shutdown.Dispose();
     }
 }

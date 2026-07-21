@@ -7,36 +7,79 @@ namespace MonitoringXS.Application;
 public sealed class MonitoringCoordinator
 {
     private const int OneMinuteCapacity = 60;
+    private const int MaximumApplicationHistorySeries = 512;
     private readonly IProcessDiscoveryService _discovery;
     private readonly IApplicationAttributionService _attribution;
     private readonly IProcessMetricCollector _collector;
     private readonly IMetricAggregationService _aggregation;
+    private readonly IPhysicalDiskMetricCollector? _physicalDiskCollector;
+    private readonly IPhysicalDiskAggregationService? _physicalDiskAggregation;
     private readonly Dictionary<string, BoundedTimeSeries<ApplicationHistoryPoint>> _history = new(StringComparer.Ordinal);
 
     public MonitoringCoordinator(
         IProcessDiscoveryService discovery,
         IApplicationAttributionService attribution,
         IProcessMetricCollector collector,
-        IMetricAggregationService aggregation)
+        IMetricAggregationService aggregation,
+        IPhysicalDiskMetricCollector? physicalDiskCollector = null,
+        IPhysicalDiskAggregationService? physicalDiskAggregation = null)
     {
         _discovery = discovery;
         _attribution = attribution;
         _collector = collector;
         _aggregation = aggregation;
+        _physicalDiskCollector = physicalDiskCollector;
+        _physicalDiskAggregation = physicalDiskAggregation;
     }
 
     public async ValueTask<MonitoringDashboardSnapshot> CaptureAsync(CancellationToken cancellationToken)
     {
         DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
         IReadOnlyList<ProcessDescriptor> processes = await _discovery.DiscoverAsync(cancellationToken);
-        IReadOnlyList<AttributionResult> attribution = _attribution.Attribute(processes);
-        IReadOnlyList<ProcessMetricSample> metrics = await _collector.CollectAsync(processes, capturedAt, cancellationToken);
+        IReadOnlyList<AttributionResult> attribution = await _attribution.AttributeAsync(processes, cancellationToken);
+        ProcessDescriptor[] attributedProcesses = attribution
+            .Where(result => !result.IsHidden && result.Application is not null)
+            .Select(result => result.Process)
+            .ToArray();
+        IReadOnlyList<ProcessMetricSample> metrics = await _collector.CollectAsync(
+            attributedProcesses,
+            capturedAt,
+            cancellationToken);
         IReadOnlyList<ApplicationMetricSnapshot> applications = _aggregation.Aggregate(attribution, metrics, capturedAt);
+        if (_physicalDiskCollector is not null && _physicalDiskAggregation is not null)
+        {
+            IReadOnlyList<PhysicalDiskProcessSample> physicalDiskSamples = await _physicalDiskCollector.CollectAsync(
+                attributedProcesses,
+                capturedAt,
+                cancellationToken);
+            IReadOnlyDictionary<string, PhysicalDiskMetricSet> physicalDiskByApplication =
+                _physicalDiskAggregation.Aggregate(attribution, physicalDiskSamples);
+            applications = applications
+                .Select(application => physicalDiskByApplication.TryGetValue(
+                    application.Application.LogicalApplicationId,
+                    out PhysicalDiskMetricSet? physicalDisk)
+                    ? application with { PhysicalDisk = physicalDisk }
+                    : application)
+                .ToArray();
+        }
+
+        HashSet<string> activeIds = applications
+            .Select(application => application.Application.LogicalApplicationId)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (string staleId in _history.Keys.Where(id => !activeIds.Contains(id)).ToArray())
+        {
+            _history.Remove(staleId);
+        }
 
         foreach (ApplicationMetricSnapshot application in applications)
         {
             if (!_history.TryGetValue(application.Application.LogicalApplicationId, out BoundedTimeSeries<ApplicationHistoryPoint>? series))
             {
+                if (_history.Count >= MaximumApplicationHistorySeries)
+                {
+                    continue;
+                }
+
                 series = new BoundedTimeSeries<ApplicationHistoryPoint>(OneMinuteCapacity);
                 _history.Add(application.Application.LogicalApplicationId, series);
             }

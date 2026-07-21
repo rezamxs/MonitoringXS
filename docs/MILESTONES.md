@@ -2,27 +2,31 @@
 
 ## Milestone 0 - Repository foundation
 
-Status: implementation complete; validation is partial because the Windows App SDK runtime package cannot currently be downloaded reliably; see `VALIDATION.md`.
+Status: complete and validated; see `VALIDATION.md`.
 
 - [x] Inspect and select available skills.
 - [x] Define repository rules and core documentation.
 - [x] Scaffold the modular solution.
 - [x] Configure dependency injection, logging, tests, design tokens, VS Code, and Git hygiene files.
-- [x] Install and validate the .NET 10 SDK for non-UI projects.
-- [x] Build every non-UI project and run every automated test.
-- [ ] Restore/build the WinUI project, launch it, and complete visual/keyboard validation after NuGet can download the Windows App SDK runtime.
+- [x] Install and validate the .NET 10 SDK.
+- [x] Restore and build the complete solution, including WinUI XAML compilation.
+- [x] Run every automated test and launch the x64 WinUI application.
 
 ## Milestone 1 - Application discovery
 
-Status: in progress.
+Status: complete and validated; see `VALIDATION.md` for the successful smoke run, 44 passing tests, and the final environment-specific NuGet warning/launch-attempt notes.
 
 - [x] Enumerate processes with PID/start-time instance identity and cached executable metadata.
 - [x] Filter known infrastructure and service-session processes.
 - [x] Keep known user-facing Microsoft applications visible.
 - [x] Implement initial logical grouping, game/launcher separation, VS Code ancestry rules, and portable path heuristics.
 - [x] Add focused attribution tests.
-- [ ] Add installed Win32 and MSIX catalogs, package identity/AppUserModelID, icon/signature caches, and user overrides.
-- [ ] Replace remaining path-only installed/portable decisions with catalog-backed evidence.
+- [x] Add bounded installed Win32 and MSIX application catalogs.
+- [x] Map process package family/full-name identity and AppUserModelID to package applications.
+- [x] Add bounded executable metadata, embedded-signature, and icon extraction caches.
+- [x] Persist bounded user attribution overrides with validated, atomic JSON updates.
+- [x] Replace path-only installed/portable decisions with catalog-backed evidence and report confidence plus human-readable reasons.
+- [x] Add automated coverage for catalogs, package mapping, caches, overrides, classification, PID reuse identity, and false-positive boundaries.
 
 ## Milestone 2 - Core metrics
 
@@ -32,8 +36,11 @@ Status: in progress.
 - [x] Real process-wide I/O counters, read/write rates, cumulative bytes, and operation counts.
 - [x] Logical-application aggregation with explicit partial/lower-bound semantics.
 - [x] One-second live loop and bounded one-minute CPU history.
-- [ ] Add physical-disk-only attribution (the current process I/O counters cover all process I/O and are not labelled as disk).
-- [ ] Add collector diagnostics and broader process-exit/access-denied coverage.
+- [x] Add bounded physical-disk ETW attribution with read/write rates, operation counts, session totals, and explicit separation from Process I/O.
+- [x] Normalize ETW and process-start timestamps to UTC before PID-reuse checks; discard ambiguous batches after ETW loss.
+- [x] Add collector diagnostics and deterministic warming-up, zero, partial, access-denied, cancellation, and PID-reuse coverage.
+- [x] Complete a one-time elevated runtime smoke with real `Available` physical-disk rates, logical-workload attribution, visible lower-bound semantics, and verified ETW-session release after normal shutdown.
+- [ ] Exercise an actual OS PID-reuse occurrence during an elevated runtime capture; the UTC-domain rejection path is deterministic-test-covered, but no PID reuse occurred in the recorded manual smoke.
 
 ## Milestone 3 - Network and GPU
 
@@ -59,4 +66,4 @@ Status: in progress.
 
 Real process discovery, infrastructure filtering, multi-process grouping, portable separation, real CPU/memory, logical tab opening, real one-minute chart, Beginner/Advanced disclosure, successful Release build, and passing focused tests.
 
-Implementation status: discovery, initial rules, CPU/memory/process-I/O collection, aggregation, bounded one-minute history, cards, logical tabs, disclosure, and focused tests are present. All 20 automated tests pass and every non-UI project builds without warnings. The complete solution build, application launch, XAML validation, and UI review remain blocked by unreliable download of `Microsoft.WindowsAppSDK.Runtime` from NuGet.
+Implementation status: stable. Runtime/visual/keyboard/Automation smoke testing populated real application cards, kept section labels out of the tab order, opened a logical application tab by keyboard, exposed live metrics and classification evidence, stayed responsive, and met the steady CPU/working-set targets on the recorded validation machine. Final restore/build/test/launch results are recorded in `VALIDATION.md`.

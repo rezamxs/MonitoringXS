@@ -1,31 +1,38 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
 
 namespace MonitoringXS.App.ViewModels;
 
-public sealed partial class ApplicationCardViewModel : ObservableObject
+public sealed partial class ApplicationCardViewModel : ObservableObject, IApplicationListItemViewModel
 {
     [ObservableProperty]
-    private string _displayName = string.Empty;
+    public partial string DisplayName { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private string _publisher = "Publisher unavailable";
+    public partial string Publisher { get; set; } = "Publisher unavailable";
 
     [ObservableProperty]
-    private string _cpuText = "Warming up";
+    public partial string CpuText { get; set; } = "Warming up";
 
     [ObservableProperty]
-    private string _memoryText = "Unavailable";
+    public partial string MemoryText { get; set; } = "Unavailable";
 
     [ObservableProperty]
-    private string _ioText = "Unavailable";
+    public partial string IoText { get; set; } = "Unavailable";
 
     [ObservableProperty]
-    private string _processCountText = string.Empty;
+    public partial string PhysicalDiskText { get; set; } = "Warming up";
 
     [ObservableProperty]
-    private string _statusText = "Running";
+    public partial string ProcessCountText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string StatusText { get; set; } = "Running";
+
+    [ObservableProperty]
+    public partial string AutomationName { get; set; } = "Running application";
 
     public required string LogicalApplicationId { get; init; }
 
@@ -44,18 +51,22 @@ public sealed partial class ApplicationCardViewModel : ObservableObject
         CpuText = FormatCpu(snapshot.CpuPercent);
         MemoryText = FormatBytes(snapshot.WorkingSetBytes);
         IoText = $"{FormatRate(snapshot.IoReadBytesPerSecond)} read · {FormatRate(snapshot.IoWriteBytesPerSecond)} write";
+        PhysicalDiskText = $"{FormatRate(snapshot.PhysicalDisk.ReadBytesPerSecond)} read / {FormatRate(snapshot.PhysicalDisk.WriteBytesPerSecond)} write";
         ProcessCountText = snapshot.ProcessCount == 1 ? "1 process" : $"{snapshot.ProcessCount} processes";
         bool hasPartialMetric = snapshot.CpuPercent.Availability == MetricAvailability.Partial
             || snapshot.WorkingSetBytes.Availability == MetricAvailability.Partial
             || snapshot.IoReadBytesPerSecond.Availability == MetricAvailability.Partial
-            || snapshot.IoWriteBytesPerSecond.Availability == MetricAvailability.Partial;
+            || snapshot.IoWriteBytesPerSecond.Availability == MetricAvailability.Partial
+            || snapshot.PhysicalDisk.ReadBytesPerSecond.Availability == MetricAvailability.Partial
+            || snapshot.PhysicalDisk.WriteBytesPerSecond.Availability == MetricAvailability.Partial;
         StatusText = hasPartialMetric
             ? "Running · partial metrics"
             : snapshot.CpuPercent.IsAvailable ? "Running · live" : "Running · metrics warming up";
+        AutomationName = $"{DisplayName}. {StatusText}. CPU {CpuText}. Memory {MemoryText}. Physical disk {PhysicalDiskText}. {ProcessCountText}.";
     }
 
     private static string FormatCpu(MetricValue<double> metric) => metric.IsAvailable
-        ? $"{PartialPrefix(metric)}{metric.Value:0.0}%"
+        ? $"{PartialPrefix(metric)}{metric.Value!.Value.ToString("0.0", CultureInfo.InvariantCulture)}%"
         : metric.Availability == MetricAvailability.WarmingUp ? "Warming up" : "Unavailable";
 
     private static string FormatBytes(MetricValue<long> metric)
@@ -67,8 +78,8 @@ public sealed partial class ApplicationCardViewModel : ObservableObject
 
         double bytes = metric.Value!.Value;
         return PartialPrefix(metric) + (bytes >= 1024d * 1024d * 1024d
-            ? $"{bytes / (1024d * 1024d * 1024d):0.00} GB"
-            : $"{bytes / (1024d * 1024d):0} MB");
+            ? $"{(bytes / (1024d * 1024d * 1024d)).ToString("0.00", CultureInfo.InvariantCulture)} GB"
+            : $"{(bytes / (1024d * 1024d)).ToString("0", CultureInfo.InvariantCulture)} MB");
     }
 
     private static string FormatRate(MetricValue<double> metric)
@@ -80,10 +91,10 @@ public sealed partial class ApplicationCardViewModel : ObservableObject
 
         double bytesPerSecond = metric.Value!.Value;
         string value = bytesPerSecond >= 1024d * 1024d
-            ? $"{bytesPerSecond / (1024d * 1024d):0.0} MB/s"
+            ? $"{(bytesPerSecond / (1024d * 1024d)).ToString("0.0", CultureInfo.InvariantCulture)} MB/s"
             : bytesPerSecond >= 1024d
-                ? $"{bytesPerSecond / 1024d:0.0} KB/s"
-                : $"{bytesPerSecond:0} B/s";
+                ? $"{(bytesPerSecond / 1024d).ToString("0.0", CultureInfo.InvariantCulture)} KB/s"
+                : $"{bytesPerSecond.ToString("0", CultureInfo.InvariantCulture)} B/s";
         return PartialPrefix(metric) + value;
     }
 

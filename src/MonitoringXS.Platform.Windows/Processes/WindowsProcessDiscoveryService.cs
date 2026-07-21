@@ -1,125 +1,157 @@
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
+using MonitoringXS.Platform.Windows.Metadata;
 
 namespace MonitoringXS.Platform.Windows.Processes;
 
 public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
 {
-    private readonly ConcurrentDictionary<ProcessInstanceId, CachedMetadata> _metadataCache = new();
+    private const int MetadataCacheCapacity = 512;
+    private static readonly TimeSpan MetadataRevalidationInterval = TimeSpan.FromMinutes(10);
+    private readonly IExecutableMetadataProvider _metadataProvider;
+    private readonly object _cacheGate = new();
+    private readonly Dictionary<int, NativeProcessDetails.ProcessDetails> _processDetailsByPid = [];
+    private readonly Dictionary<string, MetadataCacheEntry> _metadataByPath = new(StringComparer.OrdinalIgnoreCase);
 
-    public ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken)
+    public WindowsProcessDiscoveryService()
+        : this(new ExecutableMetadataProvider())
     {
-        IReadOnlyDictionary<int, int> parents = NativeProcessTree.SnapshotParents();
-        List<ProcessDescriptor> descriptors = [];
-        HashSet<ProcessInstanceId> liveInstances = [];
-
-        foreach (Process process in Process.GetProcesses())
-        {
-            using (process)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                ProcessDescriptor? descriptor = TryDescribe(process, parents);
-                if (descriptor is null)
-                {
-                    continue;
-                }
-
-                liveInstances.Add(descriptor.InstanceId);
-                descriptors.Add(descriptor);
-            }
-        }
-
-        if (_metadataCache.Count > liveInstances.Count + 128)
-        {
-            foreach (ProcessInstanceId key in _metadataCache.Keys)
-            {
-                if (!liveInstances.Contains(key))
-                {
-                    _metadataCache.TryRemove(key, out _);
-                }
-            }
-        }
-
-        return ValueTask.FromResult<IReadOnlyList<ProcessDescriptor>>(descriptors);
     }
 
-    private ProcessDescriptor? TryDescribe(Process process, IReadOnlyDictionary<int, int> parents)
+    public WindowsProcessDiscoveryService(IExecutableMetadataProvider metadataProvider)
     {
-        try
+        _metadataProvider = metadataProvider;
+    }
+
+    public async ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyDictionary<int, NativeWindowSnapshot.WindowDescriptor> windows = NativeWindowSnapshot.Capture();
+        List<BasicProcessDescriptor> basics = [];
+        HashSet<int> liveProcessIds = [];
+
+        foreach (NativeProcessTree.ProcessEntry process in NativeProcessTree.Snapshot())
         {
-            DateTimeOffset startTime = new(process.StartTime.ToUniversalTime(), TimeSpan.Zero);
-            ProcessInstanceId instanceId = new(process.Id, startTime);
-            bool hasVisibleWindow = process.MainWindowHandle != nint.Zero;
-            string? title = hasVisibleWindow ? NullIfWhitespace(process.MainWindowTitle) : null;
-            int sessionId = TryGetSessionId(process);
+            cancellationToken.ThrowIfCancellationRequested();
+            liveProcessIds.Add(process.ProcessId);
+            windows.TryGetValue(process.ProcessId, out NativeWindowSnapshot.WindowDescriptor? window);
+            NativeProcessDetails.ProcessDetails? cached;
+            lock (_cacheGate)
+            {
+                _processDetailsByPid.TryGetValue(process.ProcessId, out cached);
+            }
 
-            CachedMetadata metadata = _metadataCache.GetOrAdd(instanceId, _ => ReadMetadata(process));
-            parents.TryGetValue(process.Id, out int parentId);
-
-            return new ProcessDescriptor(
-                instanceId,
-                process.ProcessName,
-                metadata.ExecutablePath,
-                metadata.ProductName,
-                metadata.FileDescription,
-                metadata.Publisher,
-                title,
-                parentId == 0 ? null : parentId,
-                sessionId == 0,
-                hasVisibleWindow);
+            NativeProcessDetails.ProcessDetails? details = NativeProcessDetails.TryRead(process.ProcessId, cached);
+            BasicProcessDescriptor? descriptor = TryDescribeBasic(process, window, details);
+            if (descriptor is not null)
+            {
+                basics.Add(descriptor);
+                lock (_cacheGate)
+                {
+                    _processDetailsByPid[process.ProcessId] = details!;
+                }
+            }
         }
-        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception)
+
+        lock (_cacheGate)
+        {
+            foreach (int stalePid in _processDetailsByPid.Keys.Where(pid => !liveProcessIds.Contains(pid)).ToArray())
+            {
+                _processDetailsByPid.Remove(stalePid);
+            }
+        }
+
+        Dictionary<string, ExecutableMetadata> metadataByPath = new(StringComparer.OrdinalIgnoreCase);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        HashSet<string> liveMetadataPaths = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string path in basics
+            .Where(item => !item.IsServiceSession && item.HasVisibleWindow)
+            .Select(item => item.ExecutablePath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            liveMetadataPaths.Add(path);
+            MetadataCacheEntry? cached;
+            lock (_cacheGate)
+            {
+                _metadataByPath.TryGetValue(path, out cached);
+            }
+
+            if (cached is not null && now < cached.RevalidateAt)
+            {
+                metadataByPath[path] = cached.Metadata;
+                continue;
+            }
+
+            ExecutableMetadata metadata = await _metadataProvider.GetMetadataAsync(path, cancellationToken);
+            metadataByPath[path] = metadata;
+            lock (_cacheGate)
+            {
+                if (_metadataByPath.ContainsKey(path) || _metadataByPath.Count < MetadataCacheCapacity)
+                {
+                    _metadataByPath[path] = new MetadataCacheEntry(
+                        metadata,
+                        now.Add(MetadataRevalidationInterval));
+                }
+            }
+        }
+
+        lock (_cacheGate)
+        {
+            foreach (string stalePath in _metadataByPath.Keys
+                .Where(path => !liveMetadataPaths.Contains(path))
+                .ToArray())
+            {
+                _metadataByPath.Remove(stalePath);
+            }
+        }
+
+        return basics.Select(item => item.ToProcessDescriptor(
+            item.ExecutablePath is not null ? metadataByPath.GetValueOrDefault(item.ExecutablePath) : null)).ToArray();
+    }
+
+    private static BasicProcessDescriptor? TryDescribeBasic(
+        NativeProcessTree.ProcessEntry process,
+        NativeWindowSnapshot.WindowDescriptor? window,
+        NativeProcessDetails.ProcessDetails? details)
+    {
+        if (details is null)
         {
             return null;
         }
+
+        return new BasicProcessDescriptor(
+            new ProcessInstanceId(process.ProcessId, details.StartTimeUtc),
+            process.ExecutableName,
+            details.ExecutablePath,
+            window?.Title,
+            process.ParentProcessId,
+            details.IsServiceSession,
+            window is not null);
     }
 
-    private static CachedMetadata ReadMetadata(Process process)
+    private sealed record BasicProcessDescriptor(
+        ProcessInstanceId InstanceId,
+        string ProcessName,
+        string? ExecutablePath,
+        string? MainWindowTitle,
+        int? ParentProcessId,
+        bool IsServiceSession,
+        bool HasVisibleWindow)
     {
-        try
-        {
-            string? path = process.MainModule?.FileName;
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return CachedMetadata.Empty;
-            }
-
-            FileVersionInfo version = FileVersionInfo.GetVersionInfo(path);
-            return new CachedMetadata(
-                path,
-                NullIfWhitespace(version.ProductName),
-                NullIfWhitespace(version.FileDescription),
-                NullIfWhitespace(version.CompanyName));
-        }
-        catch (Exception exception) when (exception is InvalidOperationException
-            or System.ComponentModel.Win32Exception
-            or UnauthorizedAccessException
-            or NotSupportedException
-            or IOException
-            or System.Security.SecurityException)
-        {
-            return CachedMetadata.Empty;
-        }
+        public ProcessDescriptor ToProcessDescriptor(ExecutableMetadata? metadata) => new(
+            InstanceId,
+            ProcessName,
+            ExecutablePath,
+            metadata?.ProductName,
+            metadata?.FileDescription,
+            metadata?.CompanyName,
+            MainWindowTitle,
+            ParentProcessId,
+            IsServiceSession,
+            HasVisibleWindow);
     }
 
-    private static int TryGetSessionId(Process process)
-    {
-        try
-        {
-            return process.SessionId;
-        }
-        catch (InvalidOperationException)
-        {
-            return -1;
-        }
-    }
-
-    private static string? NullIfWhitespace(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private sealed record CachedMetadata(string? ExecutablePath, string? ProductName, string? FileDescription, string? Publisher)
-    {
-        public static CachedMetadata Empty { get; } = new(null, null, null, null);
-    }
+    private sealed record MetadataCacheEntry(ExecutableMetadata Metadata, DateTimeOffset RevalidateAt);
 }

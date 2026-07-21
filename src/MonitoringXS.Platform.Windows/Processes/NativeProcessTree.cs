@@ -7,31 +7,43 @@ internal static class NativeProcessTree
 {
     private const uint Th32csSnapProcess = 0x00000002;
 
-    public static IReadOnlyDictionary<int, int> SnapshotParents()
+    public static IReadOnlyList<ProcessEntry> Snapshot()
     {
         using SafeSnapshotHandle snapshot = CreateToolhelp32Snapshot(Th32csSnapProcess, 0);
         if (snapshot.IsInvalid)
         {
-            return new Dictionary<int, int>();
+            return [];
         }
 
         ProcessEntry32 entry = new() { Size = (uint)Marshal.SizeOf<ProcessEntry32>() };
-        Dictionary<int, int> parents = [];
+        List<ProcessEntry> processes = [];
 
         if (!Process32First(snapshot, ref entry))
         {
-            return parents;
+            return processes;
         }
 
         do
         {
-            parents[checked((int)entry.ProcessId)] = checked((int)entry.ParentProcessId);
+            if (entry.ProcessId <= int.MaxValue && !string.IsNullOrWhiteSpace(entry.ExecutableFile))
+            {
+                int parentId = entry.ParentProcessId <= int.MaxValue
+                    ? (int)entry.ParentProcessId
+                    : 0;
+                processes.Add(new ProcessEntry(
+                    (int)entry.ProcessId,
+                    parentId == 0 ? null : parentId,
+                    entry.ExecutableFile));
+            }
+
             entry.Size = (uint)Marshal.SizeOf<ProcessEntry32>();
         }
         while (Process32Next(snapshot, ref entry));
 
-        return parents;
+        return processes;
     }
+
+    internal sealed record ProcessEntry(int ProcessId, int? ParentProcessId, string ExecutableName);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern SafeSnapshotHandle CreateToolhelp32Snapshot(uint flags, uint processId);

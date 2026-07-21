@@ -2,7 +2,7 @@
 
 ## Sampling
 
-Live sampling defaults to one second. Each sample carries a monotonic capture interval and wall-clock timestamp. PID plus process start time identifies a process instance and prevents PID-reuse contamination.
+Live sampling defaults to one second. Each sample carries a UTC wall-clock timestamp. PID plus process start time identifies a process instance and prevents PID-reuse contamination.
 
 ## CPU
 
@@ -14,13 +14,19 @@ Beginner Mode displays working set bytes. Advanced fields may add private workin
 
 ## Process I/O
 
-The current vertical slice calls Windows `GetProcessIoCounters` behind a platform abstraction. It calculates read/write bytes per second from cumulative counter deltas and retains cumulative read/write bytes and operation counts. These counters cover all I/O operations performed by a process, so the product labels them **Process I/O**, not disk activity. A first sample is `WarmingUp`; access-denied and failed reads remain unavailable.
+The current vertical slice reads process CPU time, working set, and `GetProcessIoCounters` through one limited Windows process handle behind a platform abstraction. It calculates read/write bytes per second from cumulative counter deltas and retains cumulative read/write bytes and operation counts. These counters cover all I/O operations performed by a process, so the product labels them **Process I/O**, not disk activity. A first sample is `WarmingUp`; access-denied and failed reads remain unavailable.
 
 If one process in a logical application cannot be sampled, an aggregate based on the remaining processes is marked `Partial` and displayed as a lower bound. It is never presented as a complete application total.
 
-## Disk, network, and GPU
+## Physical disk (ETW)
 
-Physical-disk rates require a disk-specific attribution source such as ETW and are not yet implemented. A future `Current I/O Share` is the application's share of attributed application disk I/O, not drive active time. Network and GPU collectors must distinguish unavailable from zero and expose collection limitations without suppressing other metrics.
+Physical-disk read/write bytes and operation counts come from kernel ETW disk-init and disk-completion events. The Windows layer correlates each bounded IRP identity from init to completion, maps the issuing thread to a PID when needed, normalizes the ETW `TimeStamp` to UTC, and emits no QPC-relative timestamp. If a thread was already alive when the session began, a limited thread handle is used only long enough to query its owning PID and is closed immediately. The collector accepts an event only when its UTC timestamp is at or after the matching `ProcessInstanceId.StartTimeUtc`; raw QPC and UTC values are never compared.
+
+Read/write rates use attributed bytes observed during the actual UTC capture interval. Session totals begin when this Monitoring XS ETW source starts; they are not lifetime process counters. A healthy interval with no event is a real zero after the first `WarmingUp` capture. These metrics are labelled **Physical disk (ETW)** and remain distinct from **Process I/O**.
+
+ETW access denied, session conflict, cancellation, loss, queue overflow, and unattributed events are explicit states. ETW loss or local queue overflow makes retained mapped values `Partial` lower bounds. Global unattributed traffic remains visible in diagnostics but does not incorrectly downgrade an otherwise complete mapped application. A correctly rejected pre-start event belongs to the old PID instance and likewise does not downgrade the current instance. When ETW reports lost events, the current event batch plus thread and IRP maps are discarded before further attribution to avoid stale-thread/PID contamination.
+
+A future `Current I/O Share` is the application's share of attributed application disk I/O, not drive active time. Network and GPU collectors must distinguish unavailable from zero and expose collection limitations without suppressing other metrics.
 
 ## Services
 

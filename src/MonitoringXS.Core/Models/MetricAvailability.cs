@@ -5,6 +5,7 @@ public enum MetricAvailability
     Available,
     Partial,
     WarmingUp,
+    Unavailable,
     AccessDenied,
     Unsupported,
     Error

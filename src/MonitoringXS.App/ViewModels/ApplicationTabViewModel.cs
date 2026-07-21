@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
@@ -8,57 +8,82 @@ namespace MonitoringXS.App.ViewModels;
 public sealed partial class ApplicationTabViewModel : ObservableObject
 {
     [ObservableProperty]
-    private string _title;
+    public partial string Title { get; set; }
 
     [ObservableProperty]
-    private string _cpuText = "Warming up";
+    public partial string CpuText { get; set; } = "Warming up";
 
     [ObservableProperty]
-    private string _memoryText = "Unavailable";
+    public partial string MemoryText { get; set; } = "Unavailable";
 
     [ObservableProperty]
-    private string _ioReadText = "Unavailable";
+    public partial string IoReadText { get; set; } = "Unavailable";
 
     [ObservableProperty]
-    private string _ioWriteText = "Unavailable";
+    public partial string IoWriteText { get; set; } = "Unavailable";
 
     [ObservableProperty]
-    private string _processSummary = string.Empty;
+    public partial string PhysicalDiskReadText { get; set; } = "Warming up";
 
     [ObservableProperty]
-    private string _classificationReason = string.Empty;
+    public partial string PhysicalDiskWriteText { get; set; } = "Warming up";
+
+    [ObservableProperty]
+    public partial string PhysicalDiskStatusText { get; set; } = "Warming up";
+
+    [ObservableProperty]
+    public partial string PhysicalDiskTotalsText { get; set; } = "Unavailable";
+
+    [ObservableProperty]
+    public partial string PhysicalDiskOperationsText { get; set; } = "Unavailable";
+
+    [ObservableProperty]
+    public partial string PhysicalDiskDiagnosticsText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ProcessSummary { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ClassificationReason { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ClassificationConfidence { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial IList<double?> CpuSamples { get; set; } = Array.Empty<double?>();
 
     public ApplicationTabViewModel(string logicalApplicationId, string title)
     {
         LogicalApplicationId = logicalApplicationId;
-        _title = title;
+        Title = title;
     }
 
     public string LogicalApplicationId { get; }
-
-    public ObservableCollection<double?> CpuSamples { get; } = [];
 
     public void Update(ApplicationMetricSnapshot snapshot, IReadOnlyList<ApplicationHistoryPoint> history)
     {
         Title = snapshot.Application.DisplayName;
         CpuText = snapshot.CpuPercent.IsAvailable
-            ? $"{PartialPrefix(snapshot.CpuPercent)}{snapshot.CpuPercent.Value:0.0}%"
+            ? $"{PartialPrefix(snapshot.CpuPercent)}{snapshot.CpuPercent.Value!.Value.ToString("0.0", CultureInfo.InvariantCulture)}%"
             : snapshot.CpuPercent.Availability == MetricAvailability.WarmingUp ? "Warming up" : "Unavailable";
         MemoryText = FormatMemory(snapshot.WorkingSetBytes);
         IoReadText = FormatRate(snapshot.IoReadBytesPerSecond);
         IoWriteText = FormatRate(snapshot.IoWriteBytesPerSecond);
+        PhysicalDiskReadText = FormatRate(snapshot.PhysicalDisk.ReadBytesPerSecond);
+        PhysicalDiskWriteText = FormatRate(snapshot.PhysicalDisk.WriteBytesPerSecond);
+        PhysicalDiskStatusText = FormatAvailability(snapshot.PhysicalDisk.ReadBytesPerSecond);
+        PhysicalDiskTotalsText = $"Read {FormatBytes(snapshot.PhysicalDisk.SessionReadBytes)} / Write {FormatBytes(snapshot.PhysicalDisk.SessionWriteBytes)}";
+        PhysicalDiskOperationsText = $"Read {FormatCount(snapshot.PhysicalDisk.SessionReadOperationCount)} / Write {FormatCount(snapshot.PhysicalDisk.SessionWriteOperationCount)}";
+        PhysicalDiskCollectorDiagnostics diagnostics = snapshot.PhysicalDisk.Diagnostics;
+        PhysicalDiskDiagnosticsText = $"Events {diagnostics.EventsObserved}; rate {diagnostics.EventRatePerSecond.ToString("0", CultureInfo.InvariantCulture)}/s; queue {diagnostics.CurrentQueueDepth}/{diagnostics.MaximumQueueDepth} max; dropped {diagnostics.QueueEventsDropped}; ETW lost {diagnostics.EtwEventsLost}; buffer {diagnostics.EtwBufferSizeMegabytes} MB; unattributed {diagnostics.UnattributedEvents}; PID-reuse rejected {diagnostics.PidReuseEventsRejected}.";
         ProcessSummary = $"{snapshot.ProcessCount} process{(snapshot.ProcessCount == 1 ? string.Empty : "es")} · {snapshot.Application.Disposition}";
         ClassificationReason = snapshot.Application.ClassificationReason;
-
-        CpuSamples.Clear();
-        foreach (ApplicationHistoryPoint point in history)
-        {
-            CpuSamples.Add(point.CpuPercent);
-        }
+        ClassificationConfidence = $"{snapshot.Application.Confidence} confidence";
+        CpuSamples = history.Select(point => point.CpuPercent).ToArray();
     }
 
     private static string FormatMemory(MetricValue<long> metric) => metric.IsAvailable
-        ? $"{PartialPrefix(metric)}{metric.Value!.Value / (1024d * 1024d):0} MB"
+        ? $"{PartialPrefix(metric)}{(metric.Value!.Value / (1024d * 1024d)).ToString("0", CultureInfo.InvariantCulture)} MB"
         : "Unavailable";
 
     private static string FormatRate(MetricValue<double> metric)
@@ -70,12 +95,46 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
 
         double bytesPerSecond = metric.Value!.Value;
         string value = bytesPerSecond >= 1024d * 1024d
-            ? $"{bytesPerSecond / (1024d * 1024d):0.0} MB/s"
+            ? $"{(bytesPerSecond / (1024d * 1024d)).ToString("0.0", CultureInfo.InvariantCulture)} MB/s"
             : bytesPerSecond >= 1024d
-                ? $"{bytesPerSecond / 1024d:0.0} KB/s"
-                : $"{bytesPerSecond:0} B/s";
+                ? $"{(bytesPerSecond / 1024d).ToString("0.0", CultureInfo.InvariantCulture)} KB/s"
+                : $"{bytesPerSecond.ToString("0", CultureInfo.InvariantCulture)} B/s";
         return PartialPrefix(metric) + value;
     }
+
+    private static string FormatBytes(MetricValue<ulong> metric)
+    {
+        if (!metric.IsAvailable)
+        {
+            return FormatAvailability(metric);
+        }
+
+        double bytes = metric.Value!.Value;
+        string value = bytes >= 1024d * 1024d * 1024d
+            ? $"{(bytes / (1024d * 1024d * 1024d)).ToString("0.00", CultureInfo.InvariantCulture)} GB"
+            : bytes >= 1024d * 1024d
+                ? $"{(bytes / (1024d * 1024d)).ToString("0.0", CultureInfo.InvariantCulture)} MB"
+                : bytes >= 1024d
+                    ? $"{(bytes / 1024d).ToString("0.0", CultureInfo.InvariantCulture)} KB"
+                    : $"{bytes.ToString("0", CultureInfo.InvariantCulture)} B";
+        return PartialPrefix(metric) + value;
+    }
+
+    private static string FormatCount(MetricValue<ulong> metric) => metric.IsAvailable
+        ? PartialPrefix(metric) + metric.Value!.Value.ToString("N0", CultureInfo.InvariantCulture)
+        : FormatAvailability(metric);
+
+    private static string FormatAvailability<T>(MetricValue<T> metric)
+        where T : struct => metric.Availability switch
+        {
+            MetricAvailability.Available => "Available",
+            MetricAvailability.Partial => "Partial (lower bound)",
+            MetricAvailability.WarmingUp => "Warming up",
+            MetricAvailability.AccessDenied => "Access denied",
+            MetricAvailability.Unsupported => "Unsupported",
+            MetricAvailability.Unavailable => "Unavailable",
+            _ => "Error"
+        };
 
     private static string PartialPrefix<T>(MetricValue<T> metric) where T : struct =>
         metric.IsComplete ? string.Empty : "≥ ";

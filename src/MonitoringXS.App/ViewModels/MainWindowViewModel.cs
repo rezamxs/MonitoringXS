@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using MonitoringXS.Application;
@@ -12,25 +13,35 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly Dictionary<string, ApplicationCardViewModel> _cards = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ApplicationTabViewModel> _openTabs = new(StringComparer.Ordinal);
+    private readonly ApplicationSectionViewModel _installedSection = new(
+        "Installed applications",
+        "Select an application to open its live tab. Windows infrastructure and services are excluded.");
+    private readonly ApplicationSectionViewModel _portableSection = new(
+        "Portable & unregistered apps",
+        "Executables without catalog-backed installation evidence remain separate.");
 
     [ObservableProperty]
-    private bool _isAdvancedMode;
+    public partial bool IsAdvancedMode { get; set; }
 
     [ObservableProperty]
-    private string _statusMessage = "Discovering running applications…";
+    public partial string StatusMessage { get; set; } = "Discovering running applications…";
 
     [ObservableProperty]
-    private DateTimeOffset _lastUpdated;
+    public partial DateTimeOffset LastUpdated { get; set; }
 
     public MainWindowViewModel(MonitoringCoordinator coordinator, ILogger<MainWindowViewModel> logger)
     {
         _coordinator = coordinator;
         _logger = logger;
+        ApplicationItems.Add(_installedSection);
+        ApplicationItems.Add(_portableSection);
     }
 
     public ObservableCollection<ApplicationCardViewModel> InstalledApplications { get; } = [];
 
     public ObservableCollection<ApplicationCardViewModel> PortableApplications { get; } = [];
+
+    public ObservableCollection<IApplicationListItemViewModel> ApplicationItems { get; } = [];
 
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
@@ -44,14 +55,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
             UpdateCollection(PortableApplications, snapshot.PortableApplications, snapshot.OneMinuteHistory);
             UpdateOpenTabs(snapshot);
             LastUpdated = snapshot.CapturedAt.ToLocalTime();
-            StatusMessage = $"{InstalledApplications.Count} installed · {PortableApplications.Count} portable · updated {LastUpdated:HH:mm:ss}";
+            StatusMessage = string.Create(
+                CultureInfo.InvariantCulture,
+                $"{InstalledApplications.Count} installed · {PortableApplications.Count} portable · updated {LastUpdated:HH:mm:ss}");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Monitoring refresh failed.");
+            LogMonitoringRefreshFailed(_logger, exception);
             StatusMessage = "Some monitoring data is temporarily unavailable. Retrying…";
         }
     }
@@ -83,6 +96,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         foreach (ApplicationCardViewModel stale in target.Where(item => !liveIds.Contains(item.LogicalApplicationId)).ToArray())
         {
             target.Remove(stale);
+            ApplicationItems.Remove(stale);
             _cards.Remove(stale.LogicalApplicationId);
         }
 
@@ -97,6 +111,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 };
                 _cards.Add(card.LogicalApplicationId, card);
                 target.Add(card);
+                if (ReferenceEquals(target, InstalledApplications))
+                {
+                    int portableSectionIndex = ApplicationItems.IndexOf(_portableSection);
+                    ApplicationItems.Insert(portableSectionIndex, card);
+                }
+                else
+                {
+                    ApplicationItems.Add(card);
+                }
             }
 
             history.TryGetValue(card.LogicalApplicationId, out IReadOnlyList<ApplicationHistoryPoint>? points);
@@ -119,4 +142,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
         }
     }
+
+    [LoggerMessage(EventId = 1, Level = LogLevel.Error, Message = "Monitoring refresh failed.")]
+    private static partial void LogMonitoringRefreshFailed(ILogger logger, Exception exception);
 }
