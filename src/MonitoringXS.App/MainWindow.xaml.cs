@@ -97,11 +97,16 @@ public sealed partial class MainWindow : Window, IDisposable
         args.ItemContainer.IsHitTestVisible = isApplication;
         if (args.Item is IApplicationListItemViewModel item)
         {
-            AutomationProperties.SetName(args.ItemContainer, item.AutomationName);
+            args.ItemContainer.SetBinding(AutomationProperties.NameProperty, new Binding
+            {
+                Source = item,
+                Path = new PropertyPath(nameof(IApplicationListItemViewModel.AutomationName)),
+                Mode = BindingMode.OneWay
+            });
         }
         else
         {
-            AutomationProperties.SetName(args.ItemContainer, string.Empty);
+            args.ItemContainer.ClearValue(AutomationProperties.NameProperty);
         }
     }
 

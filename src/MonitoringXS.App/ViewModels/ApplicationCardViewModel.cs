@@ -72,7 +72,13 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         StatusText = hasPartialMetric
             ? "Running · partial metrics"
             : snapshot.CpuPercent.IsAvailable ? "Running · live" : "Running · metrics warming up";
-        AutomationName = $"{DisplayName}. {StatusText}. CPU {CpuText}. Memory {MemoryText}. Physical disk {PhysicalDiskText}. Network {NetworkText}, {NetworkStatusText}. {ProcessCountText}.";
+        string physicalDiskAccessibleText = FormatAccessibleMetricPair(
+            PhysicalDiskText,
+            snapshot.PhysicalDisk.ReadBytesPerSecond);
+        string networkAccessibleText = FormatAccessibleMetricPair(
+            NetworkText,
+            snapshot.Network.DownloadBytesPerSecond);
+        AutomationName = $"{DisplayName}. {StatusText}. CPU {CpuText}. Memory {MemoryText}. Process I/O {IoText}. Physical disk {physicalDiskAccessibleText}. Network {networkAccessibleText}.";
     }
 
     private static string FormatCpu(MetricValue<double> metric) => metric.IsAvailable
@@ -110,6 +116,14 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
 
     private static string PartialPrefix<T>(MetricValue<T> metric) where T : struct =>
         metric.IsComplete ? string.Empty : "≥ ";
+
+    private static string FormatAccessibleMetricPair(string values, MetricValue<double> availability) =>
+        availability.Availability switch
+        {
+            MetricAvailability.Available => values,
+            MetricAvailability.Partial => $"{values}, partial lower bound",
+            _ => FormatAvailability(availability)
+        };
 
     private static string FormatAvailability<T>(MetricValue<T> metric)
         where T : struct => metric.Availability switch
