@@ -204,70 +204,68 @@
 
         <DataTemplate x:Key="ApplicationCardTemplate" x:DataType="vm:ApplicationCardViewModel">
             <Border
-                Margin="0,0,0,10"
                 Padding="16"
                 AutomationProperties.Name="{x:Bind AutomationName, Mode=OneWay}"
-                Background="{StaticResource SurfaceBrush}"
+                Background="Transparent"
                 BorderBrush="{StaticResource SubtleBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="12">
                 <Grid ColumnSpacing="16">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="92" />
-                        <ColumnDefinition Width="112" />
-                        <ColumnDefinition Width="190" />
-                        <ColumnDefinition Width="200" />
-                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="1.25*" />
+                        <ColumnDefinition Width="0.55*" />
+                        <ColumnDefinition Width="0.75*" />
+                        <ColumnDefinition Width="1.3*" />
+                        <ColumnDefinition Width="1.3*" />
+                        <ColumnDefinition Width="1.3*" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center" Spacing="3">
+                    <StackPanel VerticalAlignment="Center" Spacing="4">
                         <TextBlock
-                            FontSize="16"
-                            FontWeight="SemiBold"
-                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Style="{StaticResource CardIdentityStyle}"
                             Text="{x:Bind DisplayName, Mode=OneWay}"
                             TextTrimming="CharacterEllipsis" />
                         <TextBlock
-                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Style="{StaticResource CardSupportingTextStyle}"
                             Text="{x:Bind Publisher, Mode=OneWay}"
                             TextTrimming="CharacterEllipsis" />
                         <TextBlock
-                            Foreground="{StaticResource SecondaryTextBrush}"
+                            FontWeight="SemiBold"
+                            Style="{StaticResource CardSupportingTextStyle}"
                             Text="{x:Bind StatusText, Mode=OneWay}" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
-                        <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="CPU" />
-                        <TextBlock Style="{StaticResource MetricValueStyle}" Text="{x:Bind CpuText, Mode=OneWay}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5">
+                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="CPU" />
+                        <TextBlock Style="{StaticResource CardPrimaryMetricValueStyle}" Text="{x:Bind CpuText, Mode=OneWay}" />
                     </StackPanel>
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="3">
-                        <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Memory" />
-                        <TextBlock Style="{StaticResource MetricValueStyle}" Text="{x:Bind MemoryText, Mode=OneWay}" />
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="4">
+                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Memory" />
+                        <TextBlock Style="{StaticResource CardPrimaryMetricValueStyle}" Text="{x:Bind MemoryText, Mode=OneWay}" />
                         <TextBlock
-                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Style="{StaticResource CardSupportingTextStyle}"
                             Text="{x:Bind ProcessCountText, Mode=OneWay}" />
                     </StackPanel>
-                    <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="3">
-                        <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Process I/O" />
+                    <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="5">
+                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Process I/O" />
                         <TextBlock
-                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Style="{StaticResource CardMetricValueStyle}"
                             Text="{x:Bind IoText, Mode=OneWay}"
-                            TextTrimming="CharacterEllipsis" />
+                            TextWrapping="Wrap" />
                     </StackPanel>
-                    <StackPanel Grid.Column="4" VerticalAlignment="Center" Spacing="3">
-                        <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Physical disk (ETW)" />
+                    <StackPanel Grid.Column="4" VerticalAlignment="Center" Spacing="5">
+                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Physical disk (ETW)" />
                         <TextBlock
-                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Style="{StaticResource CardMetricValueStyle}"
                             Text="{x:Bind PhysicalDiskText, Mode=OneWay}"
-                            TextTrimming="CharacterEllipsis" />
+                            TextWrapping="Wrap" />
                     </StackPanel>
-                    <StackPanel Grid.Column="5" VerticalAlignment="Center" Spacing="3">
-                        <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Network" />
+                    <StackPanel Grid.Column="5" VerticalAlignment="Center" Spacing="4">
+                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Network" />
                         <TextBlock
-                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Style="{StaticResource CardMetricValueStyle}"
                             Text="{x:Bind NetworkText, Mode=OneWay}"
-                            TextTrimming="CharacterEllipsis" />
+                            TextWrapping="Wrap" />
                         <TextBlock
-                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Style="{StaticResource CardSupportingTextStyle}"
                             Text="{x:Bind NetworkStatusText, Mode=OneWay}" />
                     </StackPanel>
                 </Grid>
@@ -291,19 +289,38 @@
             ApplicationTemplate="{StaticResource ApplicationCardTemplate}"
             SectionTemplate="{StaticResource ApplicationSectionTemplate}" />
 
-        <Style x:Key="ApplicationListItemStyle" TargetType="ListViewItem">
+        <Style x:Key="ApplicationCardListItemStyle" TargetType="ListViewItem">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+            <Setter Property="CornerRadius" Value="12" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="MinHeight" Value="98" />
+            <Setter Property="Padding" Value="0" />
             <Setter Property="UseSystemFocusVisuals" Value="True" />
+        </Style>
+        <Style x:Key="ApplicationSectionListItemStyle" TargetType="ListViewItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
         </Style>
         </Grid.Resources>
 
-        <Grid>
-        <NavigationView
-            x:Name="PrimaryNavigation"
-            IsBackButtonVisible="Collapsed"
-            IsSettingsVisible="False"
-            PaneDisplayMode="LeftCompact"
-            PaneTitle="Monitoring XS">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TitleBar
+            x:Name="AppTitleBar"
+            Background="{StaticResource PageBrush}"
+            Subtitle="Logical application monitor"
+            Title="Monitoring XS" />
+        <Grid Grid.Row="1">
+            <NavigationView
+                x:Name="PrimaryNavigation"
+                IsBackButtonVisible="Collapsed"
+                IsSettingsVisible="False"
+                PaneDisplayMode="LeftCompact"
+                PaneTitle="Monitoring XS">
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Dashboard" Icon="Home" IsEnabled="False" Tag="dashboard" />
                 <NavigationViewItem Content="Running Apps" Icon="AllApps" IsSelected="True" Tag="running" />
@@ -322,11 +339,11 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <Grid Margin="24,20,24,14" ColumnSpacing="16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
+                        <Grid Margin="24,18,24,14" RowSpacing="14">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
                             <StackPanel Spacing="4">
                                 <TextBlock
                                     FontSize="28"
@@ -338,12 +355,40 @@
                                     Foreground="{StaticResource SecondaryTextBrush}"
                                     Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
                             </StackPanel>
-                            <ToggleSwitch
-                                Grid.Column="1"
-                                Header="Advanced mode"
-                                IsOn="{x:Bind ViewModel.IsAdvancedMode, Mode=TwoWay}"
-                                Toggled="AdvancedMode_Toggled"
-                                AutomationProperties.Name="Show advanced application information" />
+                            <Grid Grid.Row="1" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource SecondaryTextBrush}"
+                                    Text="Sort" />
+                                <ComboBox
+                                    Grid.Column="1"
+                                    Width="172"
+                                    AutomationProperties.Name="Sort applications by"
+                                    DisplayMemberPath="Label"
+                                    ItemsSource="{x:Bind ViewModel.SortOptions, Mode=OneTime}"
+                                    SelectedItem="{x:Bind ViewModel.SelectedSortOption, Mode=TwoWay}" />
+                                <Button
+                                    Grid.Column="2"
+                                    HorizontalAlignment="Left"
+                                    MinWidth="116"
+                                    AutomationProperties.Name="{x:Bind ViewModel.SortDirectionAutomationName, Mode=OneWay}"
+                                    Click="SortDirection_Click"
+                                    Content="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}"
+                                    ToolTipService.ToolTip="Change sort direction" />
+                                <ToggleSwitch
+                                    Grid.Column="3"
+                                    AutomationProperties.Name="Show advanced application information"
+                                    Header="Advanced mode"
+                                    IsOn="{x:Bind ViewModel.IsAdvancedMode, Mode=TwoWay}"
+                                    Toggled="AdvancedMode_Toggled" />
+                            </Grid>
                         </Grid>
                         <ListView
                             Grid.Row="1"
@@ -352,10 +397,13 @@
                             ContainerContentChanging="ApplicationList_ContainerContentChanging"
                             IsItemClickEnabled="True"
                             ItemClick="ApplicationList_ItemClick"
-                            ItemContainerStyle="{StaticResource ApplicationListItemStyle}"
                             ItemsSource="{x:Bind ViewModel.ApplicationItems, Mode=OneWay}"
                             ItemTemplateSelector="{StaticResource ApplicationListTemplateSelector}"
-                            SelectionMode="None">
+                            SelectedItem="{x:Bind ViewModel.SelectedApplication, Mode=TwoWay}"
+                            SelectionMode="Single">
+                            <ListView.Resources>
+                                <x:Boolean x:Key="ListViewItemSelectionCheckMarkVisualEnabled">False</x:Boolean>
+                            </ListView.Resources>
                             <ListView.Header>
                                 <Border
                                     x:Name="AdvancedModeNotice"
@@ -376,7 +424,7 @@
                     </Grid>
                 </TabViewItem>
             </TabView>
-        </NavigationView>
+            </NavigationView>
         </Grid>
     </Grid>
 </Window>

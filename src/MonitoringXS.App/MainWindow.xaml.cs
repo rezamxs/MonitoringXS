@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Windowing;
 using MonitoringXS.App.ViewModels;
 using Windows.Graphics;
 
@@ -17,12 +18,24 @@ public sealed partial class MainWindow : Window, IDisposable
     {
         ViewModel = viewModel;
         InitializeComponent();
+        ConfigureTitleBar();
         AppWindow.Resize(new SizeInt32(1180, 760));
         Root.Loaded += Root_Loaded;
         Closed += MainWindow_Closed;
     }
 
     public MainWindowViewModel ViewModel { get; }
+
+    private void ConfigureTitleBar()
+    {
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(AppTitleBar);
+
+        if (AppWindowTitleBar.IsCustomizationSupported())
+        {
+            AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+        }
+    }
 
     private async void Root_Loaded(object sender, RoutedEventArgs args)
     {
@@ -93,6 +106,10 @@ public sealed partial class MainWindow : Window, IDisposable
         }
 
         bool isApplication = args.Item is ApplicationCardViewModel;
+        args.ItemContainer.Style = (Style)Root.Resources[
+            isApplication
+                ? "ApplicationCardListItemStyle"
+                : "ApplicationSectionListItemStyle"];
         args.ItemContainer.IsTabStop = isApplication;
         args.ItemContainer.IsHitTestVisible = isApplication;
         if (args.Item is IApplicationListItemViewModel item)
@@ -130,6 +147,9 @@ public sealed partial class MainWindow : Window, IDisposable
             AdvancedModeNotice.Visibility = toggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
         }
     }
+
+    private void SortDirection_Click(object sender, RoutedEventArgs args) =>
+        ViewModel.ToggleSortDirection();
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
