@@ -7,6 +7,15 @@
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <TreatWarningsAsErrors Condition="'$(CI)' == 'true'">true</TreatWarningsAsErrors>
+    <Authors>rezaalizadeh</Authors>
+    <Company>rezam_xs</Company>
+    <Product>Monitoring XS</Product>
+    <Description>A low-overhead Windows resource monitor for logical applications rather than raw process lists.</Description>
+    <Copyright>Copyright (c) 2026 rezam_xs</Copyright>
+    <RepositoryUrl>https://github.com/rezamxs/MonitoringXS</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/rezamxs/MonitoringXS</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- Static factories on MetricValue<T> keep availability construction explicit at call sites. -->
     <NoWarn>$(NoWarn);CA1000;CA1416</NoWarn>
   </PropertyGroup>

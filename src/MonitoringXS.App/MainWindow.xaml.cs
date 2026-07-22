@@ -97,6 +97,7 @@ public sealed partial class MainWindow : Window, IDisposable
         args.ItemContainer.IsHitTestVisible = isApplication;
         if (args.Item is IApplicationListItemViewModel item)
         {
+            // Keep screen-reader text live; a one-time assignment would stay on warm-up values after refresh.
             args.ItemContainer.SetBinding(AutomationProperties.NameProperty, new Binding
             {
                 Source = item,

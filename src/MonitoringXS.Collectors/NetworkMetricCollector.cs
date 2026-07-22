@@ -65,6 +65,7 @@ public sealed class NetworkMetricCollector : INetworkMetricCollector
                 continue;
             }
 
+            // Both timestamps are UTC; newest-start-first prevents an old PID lifetime from receiving this event.
             ProcessDescriptor? matching = candidates.FirstOrDefault(
                 candidate => networkEvent.TimestampUtc >= candidate.InstanceId.StartTimeUtc);
             if (matching is null)

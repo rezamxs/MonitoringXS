@@ -22,6 +22,7 @@
 
 ## Coding conventions
 
+- Follow `docs/ENGINEERING_STYLE.md` for naming, file organization, expected failures, logging, and comments.
 - Use C# with nullable reference types, implicit usings, deterministic builds, and warnings as errors in CI.
 - Prefer immutable records and explicit result types for expected failures.
 - Use asynchronous APIs and cancellation tokens for I/O and long-running work.

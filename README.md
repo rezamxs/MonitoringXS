@@ -6,6 +6,14 @@ Windows Task Manager shows many separate processes, even when several of them be
 
 The project is still under development. Some parts work, but several planned features are not finished yet.
 
+## Author and direction
+
+Monitoring XS is created and maintained by [rezaalizadeh](https://github.com/rezamxs), using the public alias `rezamxs`.
+
+The project direction is simple: build a clean, accurate, low-overhead Windows application that helps people monitor logical applications instead of confusing raw process lists.
+
+Copyright (c) 2026 `rezam_xs`. The source is available under the MIT License.
+
 ## Why I started this project
 
 I wanted a simpler way to see which applications are using my computer resources.
@@ -81,6 +89,9 @@ Packaging profiles will be added before the release milestone. Some monitoring d
 
 - [Product specification](docs/PRODUCT_SPEC.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [Engineering style](docs/ENGINEERING_STYLE.md)
+- [Logical applications and honest metrics decision](docs/adr/0001-logical-applications-and-honest-metrics.md)
+- [Shared kernel metrics session decision](docs/adr/0002-shared-kernel-metrics-session.md)
 - [Application attribution](docs/APPLICATION_ATTRIBUTION.md)
 - [Metric semantics](docs/METRICS.md)
 - [Precision Glass design system](docs/DESIGN_SYSTEM.md)

@@ -20,6 +20,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
     public const int EtwBufferSizeMegabytes = 32;
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMinutes(1);
     private const uint ThreadQueryLimitedInformation = 0x0800;
+    // Callbacks use TryWrite below: a full queue drops and counts the new event instead of blocking ETW processing.
     private readonly Channel<PhysicalDiskIoEvent> _events = Channel.CreateBounded<PhysicalDiskIoEvent>(
         new BoundedChannelOptions(EventQueueCapacity)
         {
@@ -282,6 +283,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
     {
         try
         {
+            // Session ownership stays explicit: never restart or replace a same-name session owned elsewhere.
             TraceEventSessionOptions options = TraceEventSessionOptions.Create | TraceEventSessionOptions.NoRestartOnCreate;
             using TraceEventSession session = new(SessionName, options)
             {

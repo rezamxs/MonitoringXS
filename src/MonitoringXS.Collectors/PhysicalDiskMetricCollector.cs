@@ -67,6 +67,7 @@ public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
                 continue;
             }
 
+            // Both timestamps are UTC; newest-start-first prevents an old PID lifetime from receiving this event.
             ProcessDescriptor? matching = candidates.FirstOrDefault(
                 candidate => diskEvent.TimestampUtc >= candidate.InstanceId.StartTimeUtc);
             if (matching is null)

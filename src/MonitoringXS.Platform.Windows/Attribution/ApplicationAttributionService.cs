@@ -88,6 +88,7 @@ public sealed class ApplicationAttributionService : IApplicationAttributionServi
             candidates.Add(await AttributeOneAsync(process, byPid, catalogs, overrides, cancellationToken));
         }
 
+        // A background helper is included only when the same logical application has a visible peer.
         HashSet<string> visibleApplicationIds = candidates
             .Where(item => item.Result.Application is not null
                 && (item.Result.Process.HasVisibleWindow || !item.RequiresVisiblePeer))

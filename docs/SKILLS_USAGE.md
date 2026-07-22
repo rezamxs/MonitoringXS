@@ -25,3 +25,8 @@ Skill guidance is subordinate to native Windows conventions and this product con
 
 - `fixing-accessibility` was applied directly to the stale application-card accessible name. The WinUI `ListViewItem` now uses a one-way binding to the observable view-model name instead of a one-time container assignment. Keyboard behavior and native list semantics were preserved.
 - The requested `context-engineering`, `test-driven-development`, `debugging-and-error-recovery`, `code-review-and-quality`, `performance-optimization`, `documentation-and-adrs`, and `git-workflow-and-versioning` skills were not installed in this session. Their engineering practices were followed manually; they are not claimed as executed skills.
+
+## 2026-07-22 authorship and engineering style
+
+- `fixing-accessibility` was used as a constraint while reviewing authorship and About-related metadata. No control, focus behavior, accessible name, or keyboard path was changed.
+- The requested `context-engineering`, `code-review-and-quality`, `documentation-and-adrs`, `code-simplification`, and `git-workflow-and-versioning` skills were not installed in this session. Their names are not recorded as executed skills.
