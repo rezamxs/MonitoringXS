@@ -47,7 +47,7 @@ Physical disk monitoring may need Administrator access on some Windows systems. 
 The current repository has:
 
 - a successful Release build
-- 60 passing tests
+- 85 passing tests
 - no failed or skipped tests
 - validated ETW physical-disk monitoring on the development machine
 

@@ -26,7 +26,13 @@ Kernel ETW can require administrator rights or membership in **Performance Log U
 
 The kernel provider must be enabled before accessing the TraceEvent source/parser; current builds enforce this ordering. If an older build reports `The kernel provider must be enabled first and only once in a session`, rebuild before retrying.
 
-Check a suspected stale session from an Administrator shell with `logman query MonitoringXS.PhysicalDisk.v1 -ets`. The app deliberately will not replace an existing same-name session. Stop it only after confirming that no Monitoring XS process owns it. ETW loss or local queue overflow is shown as `Partial` because displayed mapped values are lower bounds; unattributed events remain visible in diagnostics without contaminating mapped applications.
+Check a suspected stale session from an Administrator shell with `logman query MonitoringXS.KernelMetrics.v1 -ets`. The app deliberately will not replace an existing same-name session. Stop it only after confirming that no Monitoring XS process owns it. ETW loss or local queue overflow is shown as `Partial` because displayed mapped values are lower bounds; unattributed events remain visible in diagnostics without contaminating mapped applications.
+
+## Network (ETW) is unavailable
+
+Network and physical-disk events share the fixed, neutral, versioned `MonitoringXS.KernelMetrics.v1` kernel session so the app does not start competing kernel sessions. The same access-denied and session-conflict checks apply. Normal execution remains unelevated and the app must keep CPU, memory, and Process I/O available when kernel ETW is unavailable.
+
+`Partial` means observed rates are lower bounds because ETW or the local bounded queue lost events. Retained-session totals stay partial after confirmed loss. TCP or UDP counts can be unavailable independently when Windows cannot return a complete IPv4 and IPv6 owner-PID table snapshot.
 
 ## Attribution overrides are unavailable
 

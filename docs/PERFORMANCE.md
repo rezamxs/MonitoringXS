@@ -16,6 +16,8 @@ Implementation rules:
 - thread-to-PID state is capped at 32,768 entries and removed on thread end or cleared after ETW loss;
 - init-to-completion IRP correlation is capped at 32,768 entries and cleared after ETW loss;
 - one fixed ETW session is started lazily, retried no more than once per minute after failure, and stopped on application shutdown.
+- network ETW callbacks use a separate non-blocking bounded queue of 16,384 events; overflow is counted and reported with lower-bound semantics;
+- TCP/UDP owner-PID table reads reject buffers larger than 16 MiB and run outside ETW callbacks.
 
 Measurements must record hardware, OS build, build configuration, duration, sample interval, app count, CPU, working set, and database state.
 
@@ -52,3 +54,15 @@ After the sparkline resize redraw was moved out of the active XAML layout pass, 
 - The UI was responsive at every sample, normal close succeeded, `dotnet run` returned 0, and Event Viewer recorded no new crash.
 
 The result meets the current below-1%-idle-CPU and approximately-200-MB working-set targets on this validation machine. Broader hardware profiling remains release work.
+
+## 2026-07-21 Milestone 3A unelevated idle measurement
+
+The x64 Release application was measured after adding the network collector. Kernel ETW returned `AccessDenied`, so this is an idle UI/process measurement and not a network-workload performance claim.
+
+- Warm-up: 30.517 seconds.
+- Steady interval: 60.675 seconds with 60 working-set samples.
+- CPU: 0.444% of total eight-logical-processor capacity.
+- Working set: 151,945,216 bytes minimum, 154,113,229 bytes average, 155,783,168 bytes maximum, and 151,961,600 bytes final.
+- The process was responsive for every sample.
+
+The automation service could not complete the requested close interaction after the measurement, so clean shutdown is not claimed for this run. `logman` confirmed that no `MonitoringXS.PhysicalDisk.v1` ETW session was active.

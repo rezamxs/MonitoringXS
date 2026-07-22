@@ -336,3 +336,62 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validation\Inv
 - After a 30-second warm-up, the 60.739-second idle interval used 0.637% of total eight-logical-processor capacity. Working set was 149,823,488 bytes minimum, 152,630,524 bytes average, 158,068,736 bytes maximum, and 153,739,264 bytes at the final sample.
 
 Before deletion, all ten files in `.artifacts\ElevatedSmoke` were confirmed ignored and untracked. Those reproducible files, totaling 25,198,196 bytes, were deleted; the directory is empty. `.gitignore` already excludes `.artifacts/`.
+
+## 2026-07-21 Milestone 3A network implementation and partial runtime validation
+
+The implementation uses the existing fixed kernel ETW session with the `NetworkTCPIP` keyword. Typed IPv4/IPv6 TCP and UDP send/receive events provide PID and byte count. ETW timestamps are converted to UTC before comparison with `ProcessInstanceId.StartTimeUtc`. Network events have a separate bounded 16,384-event queue; event loss and overflow use persistent lower-bound session semantics. Current TCP/UDP counts use bounded IP Helper owner-PID table snapshots without retaining addresses or ports.
+
+No dependency was added or updated. `Microsoft.Diagnostics.Tracing.TraceEvent` remains centrally pinned at 3.2.5, and the global NuGet cache was not cleared.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release
+dotnet test MonitoringXS.sln -c Release
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Release --no-build
+```
+
+Actual results:
+
+- The first sandboxed restore failed only because NuGet signature metadata returned TLS `NU1301`. The approved normal-network retry restored all 14 projects successfully.
+- The full Release build succeeded with 0 warnings and 0 errors in 00:02:21.48.
+- All 83 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Integration 35, and Storage 4.
+- Deterministic network coverage includes download/upload aggregation, rates, retained-session totals, logical-application separation, UTC PID-reuse rejection, process exit, warming up, healthy zero, unavailable/partial states, ETW loss, queue overflow, access denied, unsupported, session conflict, cancellation, queue diagnostics, and endpoint snapshots.
+- `MonitoringXS.App.exe` started as PID 15724. A visible responsive main window titled `Monitoring XS` with handle 25167104 was observed. UI Automation read cards for Google Chrome, Visual Studio Code, and Monitoring XS and found the separate Network field.
+- The normal unelevated collector status was `Access denied` for all observed cards. No network rate, controlled-browser attribution, event rate, queue depth, dropped/lost count, or unattributed-event result is claimed because the kernel session did not start. Process I/O and Physical disk remained separate fields.
+- After a 30.517-second warm-up, a 60.675-second steady interval used 0.444% of total eight-logical-processor capacity. Working set was 151,945,216 bytes minimum, 154,113,229 bytes average, 155,783,168 bytes maximum, and 151,961,600 bytes final. The process was responsive for all 60 samples.
+- A normal close request issued through the restricted process API returned `False`; the app and `dotnet run` processes therefore remained alive and clean shutdown is not claimed. `logman query MonitoringXS.PhysicalDisk.v1 -ets` reported `Data Collector Set was not found`, so no ETW session was left active.
+
+Milestone 3A remains partial until a permitted runtime can observe real browser traffic attribution and a clean normal shutdown. No elevated retry, automatic UAC request, GPU work, history, actions, packaging, commit, or push was performed.
+
+## 2026-07-22 Milestone 3A accessibility and session stabilization
+
+The existing uncommitted Milestone 3A worktree was preserved on `feature/m3a-network-stabilization`. Before editing it contained 18 modified tracked files and 15 untracked files; the tracked diff was 516 insertions and 26 deletions.
+
+The stale application-card UI Automation name was reproduced before the fix: the `ListViewItem` continued to announce `CPU Warming up` and an old memory value while its visible text had already changed to live values. The container name had been assigned once from `ContainerContentChanging`, so later `ApplicationCardViewModel.AutomationName` notifications had no binding target. The fix binds `AutomationProperties.Name` one-way to the observable view-model property and keeps the existing keyboard/focus behavior. The accessible text now includes the application and running state, CPU, memory, Process I/O, Physical disk state, and Network state without publisher or diagnostic detail.
+
+The shared disk/network kernel session was renamed from the disk-specific `MonitoringXS.PhysicalDisk.v1` to the neutral versioned `MonitoringXS.KernelMetrics.v1`. Network production events still come from the kernel `NetworkTCPIP` provider; no random, fake, or placeholder production values were added.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release
+dotnet test MonitoringXS.sln -c Release
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+```
+
+Actual results:
+
+- Restore succeeded with all projects up to date. The global NuGet cache was not cleared.
+- The full Release build succeeded with 0 warnings and 0 errors in 00:00:28.70.
+- All 85 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Integration 36, Storage 4, and App 1.
+- The new deterministic App regression test first failed against the old accessible text because Process I/O was absent. It then passed after the binding/text fix. A second integration test protects the neutral versioned session name.
+- `MonitoringXS.App.exe` started as PID 10232. A visible main window titled `Monitoring XS` with native handle 17499984 was observed.
+- Six application-card accessible names changed from `metrics warming up` to live CPU, memory, and Process I/O values. Chrome reached CPU 2.8%, memory 3.15 GB, Process I/O 868.7 KB/s read and 222.7 KB/s write during the observation. These are process-counter values, not Network or Physical disk values.
+- Each updated accessible name exposed separate Process I/O, Physical disk, and Network states. The unelevated kernel session returned `Access denied` for Physical disk and Network; no zero or fabricated kernel metric was displayed.
+- Keyboard Enter opened an application tab. The UI was responsive at every sample, no new Application Error event was recorded, normal close succeeded, and `dotnet run` exited with code 0.
+- After exit, `logman query MonitoringXS.KernelMetrics.v1 -ets` and a compatibility check for the old `MonitoringXS.PhysicalDisk.v1` name both returned `Data Collector Set was not found`.
+
+No elevated run was performed. Real ETW Network rates, controlled browser traffic attribution, event rate, queue depth, dropped events, ETW loss, and endpoint counts could not be observed because this unelevated machine returned `Access denied`. Milestone 3A therefore remains incomplete; `MILESTONES.md` was not advanced.
