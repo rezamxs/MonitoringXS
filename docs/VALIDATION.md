@@ -395,3 +395,48 @@ Actual results:
 - After exit, `logman query MonitoringXS.KernelMetrics.v1 -ets` and a compatibility check for the old `MonitoringXS.PhysicalDisk.v1` name both returned `Data Collector Set was not found`.
 
 No elevated run was performed. Real ETW Network rates, controlled browser traffic attribution, event rate, queue depth, dropped events, ETW loss, and endpoint counts could not be observed because this unelevated machine returned `Access denied`. Milestone 3A therefore remains incomplete; `MILESTONES.md` was not advanced.
+
+## 2026-07-22 Milestone 3A elevated network runtime validation
+
+The final runtime pass was launched from an Administrator PowerShell session. Before launch, both `MonitoringXS.KernelMetrics.v1` and the retired `MonitoringXS.PhysicalDisk.v1` session name were absent. No automatic elevation, service, driver, helper, package change, or global NuGet-cache cleanup was used.
+
+Commands executed:
+
+```powershell
+dotnet build MonitoringXS.sln -c Release
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+```
+
+Build and test results:
+
+- The final Release build succeeded with 0 warnings and 0 errors in 00:00:14.40.
+- All 85 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Integration 36, Storage 4, and App 1.
+
+The controlled browser workload used Google Chrome with Cloudflare's documented speed-test endpoints. It requested a 100,000,000-byte download from `https://speed.cloudflare.com/__down` and posted a 26,214,400-byte form body to `https://speed.cloudflare.com/__up`. Monitoring XS observed the Chrome session total move from 2.6 MB downloaded / 135.0 KB uploaded to 54.5 MB downloaded / 8.9 MB uploaded during the recorded interval. These are the values actually observed by the application; the requested transfer sizes are not reported as completed transfer totals.
+
+Actual UI and attribution observations:
+
+- Physical disk and Network were both live numeric metrics rather than `Access denied`. The Network status was `Available; reason None.` Elevation was required on this machine because the earlier unelevated pass returned `Access denied`.
+- Google Chrome reached 1.6 MB/s download and 3.6 MB/s upload. Both rates were displayed on the Google Chrome logical application.
+- The largest unrelated download was Telegram Desktop at 10.4 KB/s. The largest unrelated upload was Visual Studio Code at 6.8 KB/s. Neither received a workload-scale spike comparable with Chrome.
+- At the peak Chrome upload sample, the card separately showed Process I/O at 1.6 MB/s read / 1.6 MB/s write, Physical disk at 1.8 MB/s read / 97.1 KB/s write, and Network at 983 B/s down / 3.6 MB/s up. At the peak download sample, Network was 1.6 MB/s down / 1.3 KB/s up while the other two metric groups remained separately labeled.
+- The UI remained responsive for all 85 card samples. UI Automation recorded 0 errors while switching between the running-app list and Chrome detail tab.
+
+Maximum observed Network diagnostics were:
+
+- event rate: 1,005 events/s;
+- current queue depth: 1,055;
+- maximum queue depth: 1,762 of the bounded 16,384-event queue;
+- queue-dropped events: 0;
+- ETW-lost events: 0;
+- unattributed events: 0;
+- PID-reuse rejected events: 0;
+- endpoint counts: 20 TCP connections and 12 UDP endpoints;
+- completeness: complete, with no lower-bound interval in this pass.
+
+While the application was running, `logman` reported `MonitoringXS.KernelMetrics.v1` as active with a 64 KB buffer size, 0 buffers lost, and 46 buffers written. A separate elevated lifecycle pass used native `GetExitCodeProcess` observation and confirmed a normal close request, `MonitoringXS.App.exe` exit code 0, `dotnet run` exit code 0, no remaining `MonitoringXS.App` process, and absence of both the current and retired ETW session names after exit.
+
+No actual OS PID reuse occurred during this pass (`PID-reuse rejected 0`). PID/start-time protection remains covered by deterministic UTC-domain tests. This runtime result is from one development machine and does not replace validation on other Windows versions, hardware, network conditions, or security policies.
+
+Milestone 3A acceptance criteria are satisfied on the recorded development machine. GPU work was not started.

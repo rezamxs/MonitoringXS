@@ -34,13 +34,13 @@ Currently working:
 - memory usage
 - Process I/O
 - physical disk monitoring through ETW
+- network monitoring through ETW
 - application tabs
 - beginner and advanced views
 - keyboard navigation
 
 Not finished yet:
 
-- network monitoring
 - GPU and VRAM monitoring
 - 24-hour history
 - application close, restart and force-stop actions
@@ -48,7 +48,7 @@ Not finished yet:
 - installer and release package
 - final UI pages and testing
 
-Physical disk monitoring may need Administrator access on some Windows systems. Without that permission, the application should show Access denied instead of displaying a fake value.
+Physical disk and network monitoring may need Administrator access on some Windows systems. Without that permission, the application should show Access denied instead of displaying a fake value.
 
 ## Validation
 
@@ -58,6 +58,7 @@ The current repository has:
 - 85 passing tests
 - no failed or skipped tests
 - validated ETW physical-disk monitoring on the development machine
+- validated ETW network attribution with controlled Chrome traffic on the development machine
 
 These results only describe the current development environment and do not mean the application is ready for a public release.
 

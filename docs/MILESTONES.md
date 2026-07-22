@@ -47,13 +47,13 @@ Status: in progress.
 
 ### Milestone 3A - Network
 
-Status: implementation and deterministic validation complete; runtime attribution validation pending.
+Status: complete and validated on the development machine; see `VALIDATION.md`.
 
 - [x] Add real per-process TCP/UDP ETW byte attribution with UTC PID-reuse protection.
 - [x] Add bounded queues, retained-session totals, endpoint counts, diagnostics, and honest availability/lower-bound states.
 - [x] Aggregate network values into existing logical applications without mixing them with Process I/O or physical disk.
 - [x] Add focused Beginner/Advanced UI fields and deterministic tests.
-- [ ] Complete and record a controlled real-browser runtime attribution and performance smoke.
+- [x] Complete and record a controlled real-browser runtime attribution and performance smoke.
 
 ### Milestone 3B - GPU
 
