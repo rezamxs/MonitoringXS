@@ -15,9 +15,29 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Polyline
+        <Grid
+            Margin="16,12,16,8"
+            IsHitTestVisible="False">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Border
+                Grid.Row="1"
+                VerticalAlignment="Top"
+                BorderBrush="{StaticResource SubtleBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Opacity="0.55" />
+            <Border
+                Grid.Row="2"
+                VerticalAlignment="Top"
+                BorderBrush="{StaticResource SubtleBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Opacity="0.55" />
+        </Grid>
+        <Path
             x:Name="Line"
-            Margin="8"
             Stroke="{StaticResource DataAccentBrush}"
             StrokeLineJoin="Round"
             StrokeThickness="2" />

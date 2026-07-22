@@ -1,5 +1,6 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using MonitoringXS.App.Controls;
 using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
 
@@ -68,7 +69,7 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
     public partial string ClassificationConfidence { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial IList<double?> CpuSamples { get; set; } = Array.Empty<double?>();
+    public partial IList<CpuHistorySample> CpuSamples { get; set; } = Array.Empty<CpuHistorySample>();
 
     public ApplicationTabViewModel(string logicalApplicationId, string title)
     {
@@ -104,7 +105,7 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
         ProcessSummary = $"{snapshot.ProcessCount} process{(snapshot.ProcessCount == 1 ? string.Empty : "es")} · {snapshot.Application.Disposition}";
         ClassificationReason = snapshot.Application.ClassificationReason;
         ClassificationConfidence = $"{snapshot.Application.Confidence} confidence";
-        CpuSamples = history.Select(point => point.CpuPercent).ToArray();
+        CpuSamples = CpuHistorySeries.Create(history).ToArray();
     }
 
     private static string FormatMemory(MetricValue<long> metric) => metric.IsAvailable

@@ -11,7 +11,7 @@ public sealed partial class MetricSparkline : UserControl
 {
     public static readonly DependencyProperty SamplesProperty = DependencyProperty.Register(
         nameof(Samples),
-        typeof(IList<double?>),
+        typeof(IList<CpuHistorySample>),
         typeof(MetricSparkline),
         new PropertyMetadata(null, OnSamplesChanged));
 
@@ -25,9 +25,9 @@ public sealed partial class MetricSparkline : UserControl
         Unloaded += OnUnloaded;
     }
 
-    public IList<double?>? Samples
+    public IList<CpuHistorySample>? Samples
     {
-        get => (IList<double?>?)GetValue(SamplesProperty);
+        get => (IList<CpuHistorySample>?)GetValue(SamplesProperty);
         set => SetValue(SamplesProperty, value);
     }
 
@@ -78,29 +78,35 @@ public sealed partial class MetricSparkline : UserControl
 
     private void Redraw()
     {
-        double[] values = Samples?.Where(value => value.HasValue).Select(value => value!.Value).ToArray() ?? [];
-        bool hasSeries = values.Length >= 2 && ChartRoot.ActualWidth > 24 && ChartRoot.ActualHeight > 48;
+        MetricSparklineLayout layout = MetricSparklineLayout.Create(
+            Samples?.ToArray() ?? [],
+            ChartRoot.ActualWidth,
+            ChartRoot.ActualHeight);
+        bool hasSeries = layout.Segments.Count > 0;
         EmptyState.Visibility = hasSeries ? Visibility.Collapsed : Visibility.Visible;
         Line.Visibility = hasSeries ? Visibility.Visible : Visibility.Collapsed;
-        Line.Points.Clear();
+        PathGeometry geometry = new();
 
-        if (!hasSeries)
+        foreach (IReadOnlyList<MetricSparklinePoint> segment in layout.Segments)
         {
-            Summary.Text = "CPU history is warming up. Unavailable samples are not drawn as zero.";
-            return;
+            PathFigure figure = new()
+            {
+                StartPoint = new Point(segment[0].X, segment[0].Y)
+            };
+            foreach (MetricSparklinePoint point in segment.Skip(1))
+            {
+                figure.Segments.Add(new LineSegment
+                {
+                    Point = new Point(point.X, point.Y)
+                });
+            }
+
+            geometry.Figures.Add(figure);
         }
 
-        double width = Math.Max(1, ChartRoot.ActualWidth - 32);
-        double height = Math.Max(1, ChartRoot.ActualHeight - 52);
-        double peak = Math.Max(1, values.Max());
-        for (int index = 0; index < values.Length; index++)
-        {
-            double x = 16 + width * index / Math.Max(1, values.Length - 1);
-            double y = 12 + height * (1 - values[index] / peak);
-            Line.Points.Add(new Point(x, y));
-        }
+        Line.Data = geometry;
 
-        Summary.Text = $"Last {values.Length} real samples · peak {peak:0.0}% of total CPU capacity.";
+        Summary.Text = layout.Summary;
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args) => Unsubscribe();
