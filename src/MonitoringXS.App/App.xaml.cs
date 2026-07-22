@@ -67,9 +67,15 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<IProcessResourceCounterReader, WindowsProcessResourceCounterReader>();
         services.AddSingleton<IProcessMetricCollector, ProcessMetricCollector>();
         services.AddSingleton<IMetricAggregationService, MetricAggregationService>();
-        services.AddSingleton<IPhysicalDiskEventSource, EtwPhysicalDiskEventSource>();
+        services.AddSingleton<EtwPhysicalDiskEventSource>();
+        services.AddSingleton<IPhysicalDiskEventSource>(provider =>
+            provider.GetRequiredService<EtwPhysicalDiskEventSource>());
+        services.AddSingleton<INetworkEventSource>(provider =>
+            provider.GetRequiredService<EtwPhysicalDiskEventSource>());
         services.AddSingleton<IPhysicalDiskMetricCollector, PhysicalDiskMetricCollector>();
         services.AddSingleton<IPhysicalDiskAggregationService, PhysicalDiskAggregationService>();
+        services.AddSingleton<INetworkMetricCollector, NetworkMetricCollector>();
+        services.AddSingleton<INetworkMetricAggregationService, NetworkMetricAggregationService>();
         services.AddSingleton<MonitoringCoordinator>();
         services.AddSingleton<MainWindowViewModel>();
         return services.BuildServiceProvider(validateScopes: true);

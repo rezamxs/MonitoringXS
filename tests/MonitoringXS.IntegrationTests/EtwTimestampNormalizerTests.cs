@@ -19,6 +19,7 @@ public sealed class EtwTimestampNormalizerTests
     public void EventQueueAndThreadMapAreExplicitlyBounded()
     {
         Assert.Equal(16_384, EtwPhysicalDiskEventSource.EventQueueCapacity);
+        Assert.Equal(16_384, EtwPhysicalDiskEventSource.NetworkEventQueueCapacity);
         Assert.Equal(32_768, EtwPhysicalDiskEventSource.ThreadMapCapacity);
         Assert.Equal(32_768, EtwPhysicalDiskEventSource.IrpMapCapacity);
         Assert.Equal(32, EtwPhysicalDiskEventSource.EtwBufferSizeMegabytes);

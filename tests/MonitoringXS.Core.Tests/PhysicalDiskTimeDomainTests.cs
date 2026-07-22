@@ -25,4 +25,22 @@ public sealed class PhysicalDiskTimeDomainTests
         Assert.Equal(TimeSpan.Zero, diskEvent.TimestampUtc.Offset);
         Assert.Equal(localDomain.UtcDateTime, diskEvent.TimestampUtc.UtcDateTime);
     }
+
+    [Fact]
+    public void NetworkEventNormalizesTimestampToSameUtcDomainAsProcessIdentity()
+    {
+        DateTimeOffset localDomain = new(2026, 7, 21, 12, 0, 1, TimeSpan.FromHours(3.5));
+
+        ProcessInstanceId process = new(42, localDomain.AddSeconds(-1));
+        NetworkTrafficEvent networkEvent = new(
+            42,
+            localDomain,
+            NetworkDirection.Download,
+            NetworkTransport.Tcp,
+            4096);
+
+        Assert.Equal(TimeSpan.Zero, process.StartTimeUtc.Offset);
+        Assert.Equal(TimeSpan.Zero, networkEvent.TimestampUtc.Offset);
+        Assert.True(networkEvent.TimestampUtc >= process.StartTimeUtc);
+    }
 }

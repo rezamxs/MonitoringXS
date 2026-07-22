@@ -1,0 +1,32 @@
+namespace MonitoringXS.Core.Models;
+
+public sealed record NetworkTrafficEvent
+{
+    public NetworkTrafficEvent(
+        int processId,
+        DateTimeOffset timestamp,
+        NetworkDirection direction,
+        NetworkTransport transport,
+        int transferSize)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(processId);
+        ArgumentOutOfRangeException.ThrowIfNegative(transferSize);
+
+        ProcessId = processId;
+        TimestampUtc = timestamp.ToUniversalTime();
+        Direction = direction;
+        Transport = transport;
+        TransferSize = transferSize;
+    }
+
+    public int ProcessId { get; }
+
+    // Raw QPC-relative values never cross the Windows platform boundary.
+    public DateTimeOffset TimestampUtc { get; }
+
+    public NetworkDirection Direction { get; }
+
+    public NetworkTransport Transport { get; }
+
+    public int TransferSize { get; }
+}

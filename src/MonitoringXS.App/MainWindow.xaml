@@ -113,6 +113,44 @@
                             Text="{Binding PhysicalDiskStatusText}" />
                     </StackPanel>
                     <StackPanel Spacing="10">
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Network (ETW)" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border
+                                Padding="16"
+                                AutomationProperties.Name="Network download rate"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource SubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Download" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding NetworkDownloadText}" />
+                                </StackPanel>
+                            </Border>
+                            <Border
+                                Grid.Column="1"
+                                Padding="16"
+                                AutomationProperties.Name="Network upload rate"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource SubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Upload" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding NetworkUploadText}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                        <TextBlock
+                            AutomationProperties.LiveSetting="Polite"
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="{Binding NetworkStatusText}" />
+                    </StackPanel>
+                    <StackPanel Spacing="10">
                         <TextBlock Style="{StaticResource SectionTitleStyle}" Text="CPU · last minute" />
                         <controls:MetricSparkline
                             AutomationProperties.Name="CPU history for the selected application"
@@ -141,9 +179,22 @@
                                 Foreground="{StaticResource SecondaryTextBrush}"
                                 Text="{Binding PhysicalDiskDiagnosticsText}"
                                 TextWrapping="Wrap" />
+                            <TextBlock FontWeight="SemiBold" Text="Network session details" />
                             <TextBlock
                                 Foreground="{StaticResource SecondaryTextBrush}"
-                                Text="Process-level tables, command lines, GPU, network, and security fields are not implemented in this vertical slice."
+                                Text="{Binding NetworkTotalsText}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="{Binding NetworkEndpointsText}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="{Binding NetworkDiagnosticsText}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="Process-level tables, command lines, GPU, and security fields are not implemented in this vertical slice."
                                 TextWrapping="Wrap" />
                         </StackPanel>
                     </Expander>
@@ -163,10 +214,11 @@
                 <Grid ColumnSpacing="16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="92" />
                         <ColumnDefinition Width="112" />
-                        <ColumnDefinition Width="128" />
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="240" />
+                        <ColumnDefinition Width="190" />
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="200" />
                     </Grid.ColumnDefinitions>
                     <StackPanel VerticalAlignment="Center" Spacing="3">
                         <TextBlock
@@ -207,6 +259,16 @@
                             Foreground="{StaticResource PrimaryTextBrush}"
                             Text="{x:Bind PhysicalDiskText, Mode=OneWay}"
                             TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="5" VerticalAlignment="Center" Spacing="3">
+                        <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Network" />
+                        <TextBlock
+                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Text="{x:Bind NetworkText, Mode=OneWay}"
+                            TextTrimming="CharacterEllipsis" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="{x:Bind NetworkStatusText, Mode=OneWay}" />
                     </StackPanel>
                 </Grid>
             </Border>
