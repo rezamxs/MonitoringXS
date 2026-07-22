@@ -61,7 +61,14 @@ Status: complete and validated on the development machine; see `VALIDATION.md`.
 
 ## Milestone 4 - Product UI
 
-- Dashboard, Running Apps, Portable Apps, logical app tabs, modes, charts, themes, scaling, keyboard, and screen reader validation.
+Status: in progress.
+
+- [x] Add stable installed/portable application sorting for name, CPU, memory, Process I/O, Physical disk, Network, and process count.
+- [x] Preserve selection, keyboard focus, and logical application tabs while live metrics reorder cards.
+- [x] Integrate a restrained WinUI title bar while retaining Windows caption buttons, drag, and double-click behavior.
+- [x] Refine application-card identity, primary metric, supporting metric, and unavailable-state hierarchy.
+- [ ] Complete Dashboard and Portable Apps pages, remaining final UI pages, and final chart work.
+- [ ] Complete dark-theme, High Contrast, 150-200% scaling, Windows 11 Snap Layout, and broader screen-reader validation.
 
 ## Milestone 5 - History
 

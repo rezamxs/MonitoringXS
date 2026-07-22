@@ -440,3 +440,39 @@ While the application was running, `logman` reported `MonitoringXS.KernelMetrics
 No actual OS PID reuse occurred during this pass (`PID-reuse rejected 0`). PID/start-time protection remains covered by deterministic UTC-domain tests. This runtime result is from one development machine and does not replace validation on other Windows versions, hardware, network conditions, or security policies.
 
 Milestone 3A acceptance criteria are satisfied on the recorded development machine. GPU work was not started.
+
+## 2026-07-22 Milestone 4 sorting, title bar, and card hierarchy validation
+
+This focused UI pass did not change collectors, attribution, metric semantics, GPU, history, application actions, or packaging. Sorting is applied separately inside the installed and portable sections. Available and partial measured values use their real numeric value; warming-up, denied, unsupported, and other unavailable states remain after measured values in both directions. Equal values use application name as the stable secondary key. Live metric reordering is limited to a five-second interval, while user and membership changes apply immediately.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug --no-restore
+```
+
+Actual build and test results:
+
+- The sandboxed restore failed with NuGet TLS/credential `NU1301`. The same command succeeded with normal network access and reported all projects up to date. No package version changed and the global NuGet cache was not cleared.
+- The final Release build succeeded with 0 warnings and 0 errors in 00:01:23.73.
+- All 96 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Integration 36, Storage 4, and App 12.
+- New deterministic App tests cover all seven sort fields, both name directions, measured-before-unavailable behavior in both metric directions, application-name tie breaking, partial lower-bound values, combined read/write or download/upload rates, card identity preservation, and the five-second anti-jitter policy including forced refresh and clock rollback.
+
+Actual WinUI and UI Automation observations on Windows 10 build 19045 at 96 DPI:
+
+- A visible responsive `Monitoring XS` window opened. UI Automation exposed the native Minimize, Maximize, and Close buttons plus a `Monitoring XS` title-bar element.
+- All seven fields were selected in ascending and descending directions: Application name, CPU usage, Memory usage, Process I/O rate, Physical Disk rate, Network rate, and Process count. Installed and portable applications remained in separate sections.
+- Physical Disk and Network both honestly showed `Access denied` in this unelevated pass. Because every observed card was unavailable for those two fields, both directions used application name as their stable secondary order; no unavailable value was treated as zero.
+- Chrome selection was `True` before cycling through all sort fields and remained `True` afterward. During a separate 12-second CPU-sort observation, Chrome remained selected and keyboard-focused in every sample.
+- Chrome's accessible card name changed as live CPU and memory changed. CPU values observed during that interval ranged from 12.6% to 23.8%, and working set moved from 2.36 GB to 2.38 GB. The card order had one distinct value during the interval, with no visible one-second reorder jitter.
+- Keyboard Enter on the focused Chrome card opened `Google Chrome application tab`. That tab remained open after returning to Running Apps and changing the sort field.
+- Double-clicking the custom drag region changed the window from its 1180 x 760 restored bounds to maximized and a second double-click restored it. A drag moved the restored bounds from `(52, 52)` to `(114, 88)`. The native Minimize button minimized the window and Windows restored it normally.
+- The light theme was visually inspected at 1366 x 768 and 100% scaling. Metric text wrapped at the available width, selection remained visible, and no decorative animation or shadow was added. The final screenshot is `.artifacts/ui-polish-after.png`; it is ignored by Git.
+- Dark theme, High Contrast, 150-200% scaling, Windows 11 Snap Layout, and a broader screen-reader pass were not executed on this Windows 10/96-DPI environment and remain open Milestone 4 validation work.
+- A normal close request returned `True`; `MonitoringXS.App` and its `dotnet run` parent both exited, and no process remained. This shell did not retain a numeric exit code, so exit code zero is not claimed for this pass.
+- After exit, both `MonitoringXS.KernelMetrics.v1` and the retired `MonitoringXS.PhysicalDisk.v1` query returned `Data Collector Set was not found`.
+
+The UI refinement is validated for the observed Windows 10 light-theme environment. Milestone 4 remains in progress because the other product pages and the unexecuted theme, scaling, Snap Layout, and screen-reader checks are still required.
