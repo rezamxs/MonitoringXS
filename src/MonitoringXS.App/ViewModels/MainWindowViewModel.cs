@@ -9,6 +9,18 @@ namespace MonitoringXS.App.ViewModels;
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
+    private static readonly TimeSpan LiveSortInterval = TimeSpan.FromSeconds(5);
+    private static readonly IReadOnlyList<ApplicationSortOption> AvailableSortOptions =
+    [
+        new(ApplicationSortField.ApplicationName, "Application name"),
+        new(ApplicationSortField.CpuUsage, "CPU usage"),
+        new(ApplicationSortField.MemoryUsage, "Memory usage"),
+        new(ApplicationSortField.ProcessIoRate, "Process I/O rate"),
+        new(ApplicationSortField.PhysicalDiskRate, "Physical Disk rate"),
+        new(ApplicationSortField.NetworkRate, "Network rate"),
+        new(ApplicationSortField.ProcessCount, "Process count")
+    ];
+
     private readonly MonitoringCoordinator _coordinator;
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly Dictionary<string, ApplicationCardViewModel> _cards = new(StringComparer.Ordinal);
@@ -19,6 +31,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly ApplicationSectionViewModel _portableSection = new(
         "Portable & unregistered apps",
         "Executables without catalog-backed installation evidence remain separate.");
+    private DateTimeOffset _lastLiveSortAt = DateTimeOffset.MinValue;
 
     [ObservableProperty]
     public partial bool IsAdvancedMode { get; set; }
@@ -28,6 +41,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     public partial DateTimeOffset LastUpdated { get; set; }
+
+    [ObservableProperty]
+    public partial ApplicationSortOption SelectedSortOption { get; set; } = AvailableSortOptions[0];
+
+    [ObservableProperty]
+    public partial bool IsSortDescending { get; set; }
+
+    [ObservableProperty]
+    public partial ApplicationCardViewModel? SelectedApplication { get; set; }
 
     public MainWindowViewModel(MonitoringCoordinator coordinator, ILogger<MainWindowViewModel> logger)
     {
@@ -43,6 +65,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<IApplicationListItemViewModel> ApplicationItems { get; } = [];
 
+    public IReadOnlyList<ApplicationSortOption> SortOptions { get; } = AvailableSortOptions;
+
+    public string SortDirectionLabel => IsSortDescending ? "Descending ↓" : "Ascending ↑";
+
+    public string SortDirectionAutomationName => IsSortDescending
+        ? "Sort direction descending. Activate to change to ascending."
+        : "Sort direction ascending. Activate to change to descending.";
+
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
         try
@@ -51,8 +81,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 async () => await _coordinator.CaptureAsync(cancellationToken),
                 cancellationToken);
 
-            UpdateCollection(InstalledApplications, snapshot.InstalledApplications, snapshot.OneMinuteHistory);
-            UpdateCollection(PortableApplications, snapshot.PortableApplications, snapshot.OneMinuteHistory);
+            bool membershipChanged = UpdateCollection(
+                InstalledApplications,
+                snapshot.InstalledApplications,
+                snapshot.OneMinuteHistory);
+            membershipChanged |= UpdateCollection(
+                PortableApplications,
+                snapshot.PortableApplications,
+                snapshot.OneMinuteHistory);
+            ApplyCurrentSort(snapshot.CapturedAt, force: membershipChanged);
             UpdateOpenTabs(snapshot);
             LastUpdated = snapshot.CapturedAt.ToLocalTime();
             StatusMessage = string.Create(
@@ -87,17 +124,25 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public void CloseTab(string logicalApplicationId) => _openTabs.Remove(logicalApplicationId);
 
-    private void UpdateCollection(
+    public void ToggleSortDirection() => IsSortDescending = !IsSortDescending;
+
+    private bool UpdateCollection(
         ObservableCollection<ApplicationCardViewModel> target,
         IReadOnlyList<ApplicationMetricSnapshot> snapshots,
         IReadOnlyDictionary<string, IReadOnlyList<ApplicationHistoryPoint>> history)
     {
+        bool membershipChanged = false;
         HashSet<string> liveIds = snapshots.Select(item => item.Application.LogicalApplicationId).ToHashSet(StringComparer.Ordinal);
         foreach (ApplicationCardViewModel stale in target.Where(item => !liveIds.Contains(item.LogicalApplicationId)).ToArray())
         {
+            if (ReferenceEquals(SelectedApplication, stale))
+            {
+                SelectedApplication = null;
+            }
+
             target.Remove(stale);
-            ApplicationItems.Remove(stale);
             _cards.Remove(stale.LogicalApplicationId);
+            membershipChanged = true;
         }
 
         foreach (ApplicationMetricSnapshot snapshot in snapshots)
@@ -111,20 +156,93 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 };
                 _cards.Add(card.LogicalApplicationId, card);
                 target.Add(card);
-                if (ReferenceEquals(target, InstalledApplications))
-                {
-                    int portableSectionIndex = ApplicationItems.IndexOf(_portableSection);
-                    ApplicationItems.Insert(portableSectionIndex, card);
-                }
-                else
-                {
-                    ApplicationItems.Add(card);
-                }
+                membershipChanged = true;
             }
 
             history.TryGetValue(card.LogicalApplicationId, out IReadOnlyList<ApplicationHistoryPoint>? points);
             card.Update(snapshot, points ?? []);
         }
+
+        return membershipChanged;
+    }
+
+    private void ApplyCurrentSort(DateTimeOffset capturedAt, bool force)
+    {
+        ApplicationCardViewModel? selectedApplication = SelectedApplication;
+        bool sortDue = ApplicationSortRefreshPolicy.IsRefreshDue(
+            _lastLiveSortAt,
+            capturedAt,
+            LiveSortInterval,
+            force);
+        if (sortDue)
+        {
+            ApplyOrder(
+                InstalledApplications,
+                ApplicationCardSorter.Sort(
+                    InstalledApplications,
+                    SelectedSortOption.Field,
+                    IsSortDescending));
+            ApplyOrder(
+                PortableApplications,
+                ApplicationCardSorter.Sort(
+                    PortableApplications,
+                    SelectedSortOption.Field,
+                    IsSortDescending));
+            _lastLiveSortAt = capturedAt;
+        }
+
+        List<IApplicationListItemViewModel> desiredItems =
+        [
+            _installedSection,
+            .. InstalledApplications,
+            _portableSection,
+            .. PortableApplications
+        ];
+        ApplyOrder(ApplicationItems, desiredItems);
+
+        if (sortDue && selectedApplication is not null && _cards.ContainsKey(selectedApplication.LogicalApplicationId))
+        {
+            SelectedApplication = selectedApplication;
+            OnPropertyChanged(nameof(SelectedApplication));
+        }
+    }
+
+    private static void ApplyOrder<T>(ObservableCollection<T> collection, IReadOnlyList<T> desiredOrder)
+        where T : class
+    {
+        for (int desiredIndex = 0; desiredIndex < desiredOrder.Count; desiredIndex++)
+        {
+            T desiredItem = desiredOrder[desiredIndex];
+            if (desiredIndex < collection.Count && ReferenceEquals(collection[desiredIndex], desiredItem))
+            {
+                continue;
+            }
+
+            int currentIndex = collection.IndexOf(desiredItem);
+            if (currentIndex >= 0)
+            {
+                collection.Move(currentIndex, desiredIndex);
+            }
+            else
+            {
+                collection.Insert(desiredIndex, desiredItem);
+            }
+        }
+
+        while (collection.Count > desiredOrder.Count)
+        {
+            collection.RemoveAt(collection.Count - 1);
+        }
+    }
+
+    partial void OnSelectedSortOptionChanged(ApplicationSortOption value) =>
+        ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
+
+    partial void OnIsSortDescendingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(SortDirectionLabel));
+        OnPropertyChanged(nameof(SortDirectionAutomationName));
+        ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
     }
 
     private void UpdateOpenTabs(MonitoringDashboardSnapshot dashboard)
