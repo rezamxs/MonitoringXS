@@ -26,7 +26,17 @@ Read/write rates use attributed bytes observed during the actual UTC capture int
 
 ETW access denied, session conflict, cancellation, loss, queue overflow, and unattributed events are explicit states. ETW loss or local queue overflow makes retained mapped values `Partial` lower bounds. Global unattributed traffic remains visible in diagnostics but does not incorrectly downgrade an otherwise complete mapped application. A correctly rejected pre-start event belongs to the old PID instance and likewise does not downgrade the current instance. When ETW reports lost events, the current event batch plus thread and IRP maps are discarded before further attribution to avoid stale-thread/PID contamination.
 
-A future `Current I/O Share` is the application's share of attributed application disk I/O, not drive active time. Network and GPU collectors must distinguish unavailable from zero and expose collection limitations without suppressing other metrics.
+A future `Current I/O Share` is the application's share of attributed application disk I/O, not drive active time.
+
+## Network (ETW)
+
+Download and upload bytes come from typed kernel TCP/UDP send and receive events for IPv4 and IPv6. Monitoring XS reads the event PID and byte count but does not retain packet payloads, URLs, ports, or addresses. The Windows layer converts the ETW wall-clock timestamp to UTC before the collector compares it with `ProcessInstanceId.StartTimeUtc`.
+
+Rates use bytes attributed during the actual UTC capture interval. Retained-session totals start with this Monitoring XS session and are not lifetime process counters. The first healthy capture is `WarmingUp`; a later healthy interval with no traffic is a real zero. Network remains separate from Process I/O and physical disk.
+
+The network queue is bounded. ETW event loss or local queue overflow makes the affected interval `Partial`, and retained-session totals stay `Partial` lower bounds until the collector session resets. Access denied, unsupported platforms, same-name session conflicts, resource exhaustion, and collector errors remain explicit and never become zero.
+
+Current TCP connection and UDP endpoint counts use bounded owner-PID IP Helper table snapshots. A count is shown only when both IPv4 and IPv6 tables for that protocol were read successfully; otherwise that count is unavailable.
 
 ## Services
 

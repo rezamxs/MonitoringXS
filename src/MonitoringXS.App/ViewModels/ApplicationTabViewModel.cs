@@ -41,6 +41,24 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
     public partial string PhysicalDiskDiagnosticsText { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string NetworkDownloadText { get; set; } = "Warming up";
+
+    [ObservableProperty]
+    public partial string NetworkUploadText { get; set; } = "Warming up";
+
+    [ObservableProperty]
+    public partial string NetworkStatusText { get; set; } = "Warming up";
+
+    [ObservableProperty]
+    public partial string NetworkTotalsText { get; set; } = "Unavailable";
+
+    [ObservableProperty]
+    public partial string NetworkEndpointsText { get; set; } = "Unavailable";
+
+    [ObservableProperty]
+    public partial string NetworkDiagnosticsText { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string ProcessSummary { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -76,6 +94,13 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
         PhysicalDiskOperationsText = $"Read {FormatCount(snapshot.PhysicalDisk.SessionReadOperationCount)} / Write {FormatCount(snapshot.PhysicalDisk.SessionWriteOperationCount)}";
         PhysicalDiskCollectorDiagnostics diagnostics = snapshot.PhysicalDisk.Diagnostics;
         PhysicalDiskDiagnosticsText = $"Events {diagnostics.EventsObserved}; rate {diagnostics.EventRatePerSecond.ToString("0", CultureInfo.InvariantCulture)}/s; queue {diagnostics.CurrentQueueDepth}/{diagnostics.MaximumQueueDepth} max; dropped {diagnostics.QueueEventsDropped}; ETW lost {diagnostics.EtwEventsLost}; buffer {diagnostics.EtwBufferSizeMegabytes} MB; unattributed {diagnostics.UnattributedEvents}; PID-reuse rejected {diagnostics.PidReuseEventsRejected}.";
+        NetworkDownloadText = FormatRate(snapshot.Network.DownloadBytesPerSecond);
+        NetworkUploadText = FormatRate(snapshot.Network.UploadBytesPerSecond);
+        NetworkStatusText = $"{FormatAvailability(snapshot.Network.DownloadBytesPerSecond)}; reason {snapshot.Network.Reason}.";
+        NetworkTotalsText = $"Downloaded {FormatBytes(snapshot.Network.SessionDownloadedBytes)} / Uploaded {FormatBytes(snapshot.Network.SessionUploadedBytes)}";
+        NetworkEndpointsText = $"TCP connections {FormatCount(snapshot.Network.ActiveTcpConnectionCount)} / UDP endpoints {FormatCount(snapshot.Network.UdpEndpointCount)}";
+        NetworkCollectorDiagnostics networkDiagnostics = snapshot.Network.Diagnostics;
+        NetworkDiagnosticsText = $"Events {networkDiagnostics.EventsObserved}; rate {networkDiagnostics.EventRatePerSecond.ToString("0", CultureInfo.InvariantCulture)}/s; queue {networkDiagnostics.CurrentQueueDepth}/{networkDiagnostics.MaximumQueueDepth} max; dropped {networkDiagnostics.QueueEventsDropped}; ETW lost {networkDiagnostics.EtwEventsLost}; unattributed {networkDiagnostics.UnattributedEvents}; PID-reuse rejected {networkDiagnostics.PidReuseEventsRejected}; completeness {(networkDiagnostics.SessionTotalsAreLowerBounds ? "lower bound" : "complete")}.";
         ProcessSummary = $"{snapshot.ProcessCount} process{(snapshot.ProcessCount == 1 ? string.Empty : "es")} · {snapshot.Application.Disposition}";
         ClassificationReason = snapshot.Application.ClassificationReason;
         ClassificationConfidence = $"{snapshot.Application.Confidence} confidence";
@@ -121,6 +146,10 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
     }
 
     private static string FormatCount(MetricValue<ulong> metric) => metric.IsAvailable
+        ? PartialPrefix(metric) + metric.Value!.Value.ToString("N0", CultureInfo.InvariantCulture)
+        : FormatAvailability(metric);
+
+    private static string FormatCount(MetricValue<int> metric) => metric.IsAvailable
         ? PartialPrefix(metric) + metric.Value!.Value.ToString("N0", CultureInfo.InvariantCulture)
         : FormatAvailability(metric);
 

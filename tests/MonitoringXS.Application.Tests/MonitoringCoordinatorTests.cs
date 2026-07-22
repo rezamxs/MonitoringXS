@@ -91,6 +91,30 @@ public sealed class MonitoringCoordinatorTests
         Assert.Equal(123d, snapshot.PhysicalDisk.ReadBytesPerSecond.Value);
     }
 
+    [Fact]
+    public async Task CaptureAsyncMergesNetworkWithoutReplacingProcessIoOrPhysicalDisk()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        ProcessDescriptor process = new(new ProcessInstanceId(47, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
+        ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
+        MonitoringCoordinator coordinator = new(
+            new Discovery(process),
+            new Attribution(process, identity),
+            new Collector(process),
+            new Aggregator(identity, process),
+            new PhysicalCollector(process),
+            new PhysicalAggregator(identity),
+            new NetworkCollector(process),
+            new NetworkAggregator(identity));
+
+        MonitoringDashboardSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
+        Assert.Equal(123d, snapshot.PhysicalDisk.ReadBytesPerSecond.Value);
+        Assert.Equal(789d, snapshot.Network.DownloadBytesPerSecond.Value);
+    }
+
     private sealed class Discovery(ProcessDescriptor process) : IProcessDiscoveryService
     {
         public ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken) => ValueTask.FromResult<IReadOnlyList<ProcessDescriptor>>([process]);
@@ -195,6 +219,40 @@ public sealed class MonitoringCoordinatorTests
                     metrics[0].SessionWriteBytes,
                     metrics[0].SessionReadOperationCount,
                     metrics[0].SessionWriteOperationCount,
+                    metrics[0].Diagnostics)
+            };
+    }
+
+    private sealed class NetworkCollector(ProcessDescriptor process) : INetworkMetricCollector
+    {
+        public ValueTask<IReadOnlyList<NetworkProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAt,
+            CancellationToken cancellationToken) => ValueTask.FromResult<IReadOnlyList<NetworkProcessSample>>([new(
+                process.InstanceId,
+                capturedAt.ToUniversalTime(),
+                MetricValue<double>.Available(789),
+                MetricValue<double>.Available(987),
+                MetricValue<ulong>.Available(789),
+                MetricValue<ulong>.Available(987),
+                MetricValue<int>.Unavailable(MetricAvailability.Unsupported),
+                MetricValue<int>.Unavailable(MetricAvailability.Unsupported),
+                default)]);
+    }
+
+    private sealed class NetworkAggregator(ApplicationIdentity identity) : INetworkMetricAggregationService
+    {
+        public IReadOnlyDictionary<string, NetworkMetricSet> Aggregate(
+            IReadOnlyList<AttributionResult> attribution,
+            IReadOnlyList<NetworkProcessSample> metrics) => new Dictionary<string, NetworkMetricSet>(StringComparer.Ordinal)
+            {
+                [identity.LogicalApplicationId] = new(
+                    metrics[0].DownloadBytesPerSecond,
+                    metrics[0].UploadBytesPerSecond,
+                    metrics[0].SessionDownloadedBytes,
+                    metrics[0].SessionUploadedBytes,
+                    metrics[0].ActiveTcpConnectionCount,
+                    metrics[0].UdpEndpointCount,
                     metrics[0].Diagnostics)
             };
     }

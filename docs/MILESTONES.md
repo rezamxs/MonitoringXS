@@ -45,7 +45,19 @@ Status: in progress.
 
 ## Milestone 3 - Network and GPU
 
-- Per-process ETW/network attribution, GPU engine counters, multiple-adapter handling, and honest availability states.
+### Milestone 3A - Network
+
+Status: complete and validated on the development machine; see `VALIDATION.md`.
+
+- [x] Add real per-process TCP/UDP ETW byte attribution with UTC PID-reuse protection.
+- [x] Add bounded queues, retained-session totals, endpoint counts, diagnostics, and honest availability/lower-bound states.
+- [x] Aggregate network values into existing logical applications without mixing them with Process I/O or physical disk.
+- [x] Add focused Beginner/Advanced UI fields and deterministic tests.
+- [x] Complete and record a controlled real-browser runtime attribution and performance smoke.
+
+### Milestone 3B - GPU
+
+- GPU engine counters, VRAM, multiple-adapter handling, and honest availability states.
 
 ## Milestone 4 - Product UI
 

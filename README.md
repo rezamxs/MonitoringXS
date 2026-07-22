@@ -6,6 +6,14 @@ Windows Task Manager shows many separate processes, even when several of them be
 
 The project is still under development. Some parts work, but several planned features are not finished yet.
 
+## Author and direction
+
+Monitoring XS is created and maintained by [rezaalizadeh](https://github.com/rezamxs), using the public alias `rezamxs`.
+
+The project direction is simple: build a clean, accurate, low-overhead Windows application that helps people monitor logical applications instead of confusing raw process lists.
+
+Copyright (c) 2026 `rezam_xs`. The source is available under the MIT License.
+
 ## Why I started this project
 
 I wanted a simpler way to see which applications are using my computer resources.
@@ -26,13 +34,13 @@ Currently working:
 - memory usage
 - Process I/O
 - physical disk monitoring through ETW
+- network monitoring through ETW
 - application tabs
 - beginner and advanced views
 - keyboard navigation
 
 Not finished yet:
 
-- network monitoring
 - GPU and VRAM monitoring
 - 24-hour history
 - application close, restart and force-stop actions
@@ -40,16 +48,17 @@ Not finished yet:
 - installer and release package
 - final UI pages and testing
 
-Physical disk monitoring may need Administrator access on some Windows systems. Without that permission, the application should show Access denied instead of displaying a fake value.
+Physical disk and network monitoring may need Administrator access on some Windows systems. Without that permission, the application should show Access denied instead of displaying a fake value.
 
 ## Validation
 
 The current repository has:
 
 - a successful Release build
-- 60 passing tests
+- 85 passing tests
 - no failed or skipped tests
 - validated ETW physical-disk monitoring on the development machine
+- validated ETW network attribution with controlled Chrome traffic on the development machine
 
 These results only describe the current development environment and do not mean the application is ready for a public release.
 
@@ -81,6 +90,9 @@ Packaging profiles will be added before the release milestone. Some monitoring d
 
 - [Product specification](docs/PRODUCT_SPEC.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [Engineering style](docs/ENGINEERING_STYLE.md)
+- [Logical applications and honest metrics decision](docs/adr/0001-logical-applications-and-honest-metrics.md)
+- [Shared kernel metrics session decision](docs/adr/0002-shared-kernel-metrics-session.md)
 - [Application attribution](docs/APPLICATION_ATTRIBUTION.md)
 - [Metric semantics](docs/METRICS.md)
 - [Precision Glass design system](docs/DESIGN_SYSTEM.md)

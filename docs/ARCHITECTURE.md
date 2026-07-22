@@ -15,15 +15,16 @@ ElevatedHelper   -> Platform.Windows -> Core
 1. `IProcessDiscoveryService` uses one Toolhelp process snapshot, one top-level-window snapshot, and limited process handles to produce best-effort descriptors with a stable PID-plus-start-time key. Live PID/path details and visible executable metadata are bounded and revalidated without enumerating process modules every second.
 2. `IApplicationAttributionService` combines Win32/MSIX catalogs, package identity/AppUserModelID, signatures, ancestry, known rules, and persistent user overrides into logical applications with evidence, confidence, and disposition.
 3. Platform readers expose a single-handle CPU-time, working-set, and process-I/O snapshot with expected availability failures; collectors calculate deltas without depending on UI or calling Win32 directly.
-4. `EtwPhysicalDiskEventSource` owns one real-time kernel session with only disk-I/O and thread keywords. It immediately converts ETW wall-clock timestamps to UTC, uses a bounded thread-to-PID map and bounded event queue, and never exposes raw QPC-relative time outside the Windows platform layer.
+4. `EtwPhysicalDiskEventSource` owns one shared real-time kernel session named `MonitoringXS.KernelMetrics.v1` with disk-I/O, thread, and network TCP/IP keywords. Physical-disk and network events use separate bounded queues. ETW callbacks only normalize and enqueue data; they never wait for a consumer.
 5. The physical-disk collector compares each event only with the UTC-normalized PID-plus-start-time identity, rejects pre-start events caused by PID reuse, and exposes loss/drop counters rather than silently treating incomplete data as complete.
-6. `IMetricAggregationService` and `IPhysicalDiskAggregationService` aggregate only confidently attributed application processes. Process I/O and physical disk remain separate metric families.
-7. The application coordinator samples only processes included in application totals, bounds live one-minute history to 512 application series, and publishes immutable snapshots. SQLite history remains deferred to Milestone 5.
-8. ViewModels project snapshots into virtualized WinUI collections and bounded chart buffers.
+6. The network collector uses the PID carried by typed kernel TCP/UDP send/receive events, normalizes event time to UTC before PID-reuse checks, and keeps rates and retained-session totals separate from Process I/O and physical disk. IP Helper owner-PID tables provide current TCP/UDP counts when both IPv4 and IPv6 snapshots succeed.
+7. `IMetricAggregationService`, `IPhysicalDiskAggregationService`, and `INetworkMetricAggregationService` aggregate only confidently attributed application processes.
+8. The application coordinator samples only processes included in application totals, bounds live one-minute history to 512 application series, and publishes immutable snapshots. SQLite history remains deferred to Milestone 5.
+9. ViewModels project snapshots into virtualized WinUI collections and bounded chart buffers.
 
 ## Failure model
 
-Process exit, access denied, missing counters, ETW session conflicts/loss, and protected processes are expected states. Platform operations return structured availability/results. A collector failure degrades only its metric. Cancellation stops ETW processing and is propagated during shutdown and refresh replacement.
+Process exit, access denied, missing counters, ETW session conflicts/loss, queue overflow, and protected processes are expected states. Platform operations return structured availability/results. A collector failure degrades only its metric. Cancellation stops ETW processing and is propagated during shutdown and refresh replacement.
 
 ## Privilege boundary
 

@@ -14,6 +14,8 @@ public sealed class MonitoringCoordinator
     private readonly IMetricAggregationService _aggregation;
     private readonly IPhysicalDiskMetricCollector? _physicalDiskCollector;
     private readonly IPhysicalDiskAggregationService? _physicalDiskAggregation;
+    private readonly INetworkMetricCollector? _networkCollector;
+    private readonly INetworkMetricAggregationService? _networkAggregation;
     private readonly Dictionary<string, BoundedTimeSeries<ApplicationHistoryPoint>> _history = new(StringComparer.Ordinal);
 
     public MonitoringCoordinator(
@@ -22,7 +24,9 @@ public sealed class MonitoringCoordinator
         IProcessMetricCollector collector,
         IMetricAggregationService aggregation,
         IPhysicalDiskMetricCollector? physicalDiskCollector = null,
-        IPhysicalDiskAggregationService? physicalDiskAggregation = null)
+        IPhysicalDiskAggregationService? physicalDiskAggregation = null,
+        INetworkMetricCollector? networkCollector = null,
+        INetworkMetricAggregationService? networkAggregation = null)
     {
         _discovery = discovery;
         _attribution = attribution;
@@ -30,6 +34,8 @@ public sealed class MonitoringCoordinator
         _aggregation = aggregation;
         _physicalDiskCollector = physicalDiskCollector;
         _physicalDiskAggregation = physicalDiskAggregation;
+        _networkCollector = networkCollector;
+        _networkAggregation = networkAggregation;
     }
 
     public async ValueTask<MonitoringDashboardSnapshot> CaptureAsync(CancellationToken cancellationToken)
@@ -59,6 +65,23 @@ public sealed class MonitoringCoordinator
                     application.Application.LogicalApplicationId,
                     out PhysicalDiskMetricSet? physicalDisk)
                     ? application with { PhysicalDisk = physicalDisk }
+                    : application)
+                .ToArray();
+        }
+
+        if (_networkCollector is not null && _networkAggregation is not null)
+        {
+            IReadOnlyList<NetworkProcessSample> networkSamples = await _networkCollector.CollectAsync(
+                attributedProcesses,
+                capturedAt,
+                cancellationToken);
+            IReadOnlyDictionary<string, NetworkMetricSet> networkByApplication =
+                _networkAggregation.Aggregate(attribution, networkSamples);
+            applications = applications
+                .Select(application => networkByApplication.TryGetValue(
+                    application.Application.LogicalApplicationId,
+                    out NetworkMetricSet? network)
+                    ? application with { Network = network }
                     : application)
                 .ToArray();
         }

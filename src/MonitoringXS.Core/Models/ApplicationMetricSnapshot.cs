@@ -17,4 +17,9 @@ public sealed record ApplicationMetricSnapshot(
     public PhysicalDiskMetricSet PhysicalDisk { get; init; } = PhysicalDiskMetricSet.Unavailable(
         MetricAvailability.Unsupported,
         "Physical-disk attribution is not configured.");
+
+    public NetworkMetricSet Network { get; init; } = NetworkMetricSet.Unavailable(
+        MetricAvailability.Unsupported,
+        NetworkAvailabilityReason.Unsupported,
+        "Network attribution is not configured.");
 }
