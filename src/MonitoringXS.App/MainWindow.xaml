@@ -204,70 +204,134 @@
 
         <DataTemplate x:Key="ApplicationCardTemplate" x:DataType="vm:ApplicationCardViewModel">
             <Border
-                Padding="16"
+                Padding="14"
                 AutomationProperties.Name="{x:Bind AutomationName, Mode=OneWay}"
                 Background="Transparent"
                 BorderBrush="{StaticResource SubtleBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="12">
-                <Grid ColumnSpacing="16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.25*" />
-                        <ColumnDefinition Width="0.55*" />
-                        <ColumnDefinition Width="0.75*" />
-                        <ColumnDefinition Width="1.3*" />
-                        <ColumnDefinition Width="1.3*" />
-                        <ColumnDefinition Width="1.3*" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center" Spacing="4">
-                        <TextBlock
-                            Style="{StaticResource CardIdentityStyle}"
-                            Text="{x:Bind DisplayName, Mode=OneWay}"
-                            TextTrimming="CharacterEllipsis" />
-                        <TextBlock
-                            Style="{StaticResource CardSupportingTextStyle}"
-                            Text="{x:Bind Publisher, Mode=OneWay}"
-                            TextTrimming="CharacterEllipsis" />
-                        <TextBlock
-                            FontWeight="SemiBold"
-                            Style="{StaticResource CardSupportingTextStyle}"
-                            Text="{x:Bind StatusText, Mode=OneWay}" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5">
-                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="CPU" />
-                        <TextBlock Style="{StaticResource CardPrimaryMetricValueStyle}" Text="{x:Bind CpuText, Mode=OneWay}" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="4">
-                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Memory" />
-                        <TextBlock Style="{StaticResource CardPrimaryMetricValueStyle}" Text="{x:Bind MemoryText, Mode=OneWay}" />
-                        <TextBlock
-                            Style="{StaticResource CardSupportingTextStyle}"
-                            Text="{x:Bind ProcessCountText, Mode=OneWay}" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="5">
-                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Process I/O" />
-                        <TextBlock
-                            Style="{StaticResource CardMetricValueStyle}"
-                            Text="{x:Bind IoText, Mode=OneWay}"
-                            TextWrapping="Wrap" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="4" VerticalAlignment="Center" Spacing="5">
-                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Physical disk (ETW)" />
-                        <TextBlock
-                            Style="{StaticResource CardMetricValueStyle}"
-                            Text="{x:Bind PhysicalDiskText, Mode=OneWay}"
-                            TextWrapping="Wrap" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="5" VerticalAlignment="Center" Spacing="4">
-                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Network" />
-                        <TextBlock
-                            Style="{StaticResource CardMetricValueStyle}"
-                            Text="{x:Bind NetworkText, Mode=OneWay}"
-                            TextWrapping="Wrap" />
-                        <TextBlock
-                            Style="{StaticResource CardSupportingTextStyle}"
-                            Text="{x:Bind NetworkStatusText, Mode=OneWay}" />
-                    </StackPanel>
+                <Grid RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            Margin="0,4,12,4"
+                            VerticalAlignment="Center"
+                            Spacing="4">
+                            <TextBlock
+                                Style="{StaticResource CardIdentityStyle}"
+                                Text="{x:Bind DisplayName, Mode=OneWay}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                Style="{StaticResource CardSupportingTextStyle}"
+                                Text="{x:Bind Publisher, Mode=OneWay}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Style="{StaticResource CardSupportingTextStyle}"
+                                Text="{x:Bind StatusText, Mode=OneWay}" />
+                        </StackPanel>
+                        <Grid Grid.Column="1" ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border
+                                MinWidth="132"
+                                Style="{StaticResource CardPrimaryMetricPanelStyle}"
+                                ToolTipService.ToolTip="{x:Bind CpuStatusText, Mode=OneWay}">
+                                <StackPanel VerticalAlignment="Center" Spacing="4">
+                                    <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="CPU" />
+                                    <TextBlock Style="{StaticResource CardPrimaryMetricValueStyle}" Text="{x:Bind CpuText, Mode=OneWay}" />
+                                    <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind CpuStatusText, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+                            <Border
+                                Grid.Column="1"
+                                MinWidth="154"
+                                Style="{StaticResource CardPrimaryMetricPanelStyle}"
+                                ToolTipService.ToolTip="{x:Bind MemoryStatusText, Mode=OneWay}">
+                                <StackPanel VerticalAlignment="Center" Spacing="4">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Memory" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Right"
+                                            Style="{StaticResource CardSupportingTextStyle}"
+                                            Text="{x:Bind ProcessCountText, Mode=OneWay}" />
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource CardPrimaryMetricValueStyle}" Text="{x:Bind MemoryText, Mode=OneWay}" />
+                                    <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind MemoryStatusText, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                    <Border
+                        Grid.Row="1"
+                        Padding="0,12,0,0"
+                        BorderBrush="{StaticResource SubtleBorderBrush}"
+                        BorderThickness="0,1,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel
+                                Margin="0,0,16,0"
+                                Spacing="4"
+                                ToolTipService.ToolTip="{x:Bind IoStatusText, Mode=OneWay}">
+                                <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Process I/O" />
+                                <TextBlock
+                                    Style="{StaticResource CardMetricValueStyle}"
+                                    Text="{x:Bind IoText, Mode=OneWay}"
+                                    TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind IoStatusText, Mode=OneWay}" />
+                            </StackPanel>
+                            <Border
+                                Grid.Column="1"
+                                Padding="16,0"
+                                BorderBrush="{StaticResource SubtleBorderBrush}"
+                                BorderThickness="1,0,0,0">
+                                <StackPanel
+                                    Spacing="4"
+                                    ToolTipService.ToolTip="{x:Bind PhysicalDiskStatusText, Mode=OneWay}">
+                                    <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Physical disk" />
+                                    <TextBlock
+                                        Style="{StaticResource CardMetricValueStyle}"
+                                        Text="{x:Bind PhysicalDiskText, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind PhysicalDiskStatusText, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+                            <Border
+                                Grid.Column="2"
+                                Padding="16,0,0,0"
+                                BorderBrush="{StaticResource SubtleBorderBrush}"
+                                BorderThickness="1,0,0,0">
+                                <StackPanel
+                                    Spacing="4"
+                                    ToolTipService.ToolTip="{x:Bind NetworkStatusText, Mode=OneWay}">
+                                    <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Network" />
+                                    <TextBlock
+                                        Style="{StaticResource CardMetricValueStyle}"
+                                        Text="{x:Bind NetworkText, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind NetworkStatusText, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -294,7 +358,7 @@
             <Setter Property="CornerRadius" Value="12" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Margin" Value="0,0,0,10" />
-            <Setter Property="MinHeight" Value="98" />
+            <Setter Property="MinHeight" Value="122" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="UseSystemFocusVisuals" Value="True" />
         </Style>
@@ -309,28 +373,50 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <TitleBar
-            x:Name="AppTitleBar"
-            Background="{StaticResource PageBrush}"
-            Subtitle="Logical application monitor"
-            Title="Monitoring XS" />
+        <Grid Background="{StaticResource PageBrush}">
+            <TitleBar
+                x:Name="AppTitleBar"
+                AutoRefreshDragRegions="True"
+                Background="{StaticResource PageBrush}"
+                Title="Monitoring XS" />
+            <Border
+                VerticalAlignment="Bottom"
+                BorderBrush="{StaticResource SubtleBorderBrush}"
+                BorderThickness="0,0,0,1" />
+        </Grid>
         <Grid Grid.Row="1">
             <NavigationView
                 x:Name="PrimaryNavigation"
+                Background="{StaticResource PageBrush}"
                 IsBackButtonVisible="Collapsed"
                 IsSettingsVisible="False"
                 PaneDisplayMode="LeftCompact"
                 PaneTitle="Monitoring XS">
+            <NavigationView.Resources>
+                <StaticResource x:Key="NavigationViewItemBackgroundSelected" ResourceKey="SurfaceRaisedBrush" />
+                <StaticResource x:Key="NavigationViewItemBackgroundSelectedPointerOver" ResourceKey="SurfaceRaisedBrush" />
+                <StaticResource x:Key="NavigationViewItemBorderBrushSelected" ResourceKey="SubtleBorderBrush" />
+                <StaticResource x:Key="NavigationViewSelectionIndicatorForeground" ResourceKey="PriorityAccentBrush" />
+                <x:Double x:Key="NavigationViewSelectionIndicatorWidth">4</x:Double>
+            </NavigationView.Resources>
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Dashboard" Icon="Home" IsEnabled="False" Tag="dashboard" />
-                <NavigationViewItem Content="Running Apps" Icon="AllApps" IsSelected="True" Tag="running" />
-                <NavigationViewItem Content="Portable Apps" Icon="OpenFile" IsEnabled="False" Tag="portable" />
-                <NavigationViewItem Content="History" Icon="Clock" IsEnabled="False" Tag="history" />
-                <NavigationViewItem Content="Settings" Icon="Setting" IsEnabled="False" Tag="settings" />
-                <NavigationViewItem Content="About" Icon="Help" IsEnabled="False" Tag="about" />
+                <NavigationViewItem Content="Dashboard" Icon="Home" IsEnabled="False" Tag="dashboard" ToolTipService.ToolTip="Dashboard" />
+                <NavigationViewItem
+                    Content="Running Apps"
+                    FontWeight="SemiBold"
+                    Icon="AllApps"
+                    IsSelected="True"
+                    Tag="running"
+                    ToolTipService.ToolTip="Running Apps"
+                    UseSystemFocusVisuals="True" />
+                <NavigationViewItem Content="Portable Apps" Icon="OpenFile" IsEnabled="False" Tag="portable" ToolTipService.ToolTip="Portable Apps" />
+                <NavigationViewItem Content="History" Icon="Clock" IsEnabled="False" Tag="history" ToolTipService.ToolTip="History" />
+                <NavigationViewItem Content="Settings" Icon="Setting" IsEnabled="False" Tag="settings" ToolTipService.ToolTip="Settings" />
+                <NavigationViewItem Content="About" Icon="Help" IsEnabled="False" Tag="about" ToolTipService.ToolTip="About" />
             </NavigationView.MenuItems>
             <TabView
                 x:Name="WorkspaceTabs"
+                Background="{StaticResource PageBrush}"
                 IsAddTabButtonVisible="False"
                 TabCloseRequested="WorkspaceTabs_TabCloseRequested">
                 <TabViewItem Header="Running Apps" IsClosable="False">
@@ -339,60 +425,120 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <Grid Margin="24,18,24,14" RowSpacing="14">
+                        <Grid
+                            MaxWidth="1120"
+                            Margin="24,16,24,12"
+                            HorizontalAlignment="Stretch"
+                            RowSpacing="12">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            <StackPanel Spacing="4">
-                                <TextBlock
-                                    FontSize="28"
-                                    FontWeight="SemiBold"
-                                    Foreground="{StaticResource PrimaryTextBrush}"
-                                    Text="Running applications" />
-                                <TextBlock
-                                    AutomationProperties.LiveSetting="Polite"
-                                    Foreground="{StaticResource SecondaryTextBrush}"
-                                    Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
-                            </StackPanel>
-                            <Grid Grid.Row="1" ColumnSpacing="12">
+                            <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock
-                                    VerticalAlignment="Center"
-                                    FontWeight="SemiBold"
-                                    Foreground="{StaticResource SecondaryTextBrush}"
-                                    Text="Sort" />
-                                <ComboBox
+                                <StackPanel Spacing="4">
+                                    <TextBlock
+                                        FontSize="28"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource PrimaryTextBrush}"
+                                        Text="Running applications" />
+                                    <TextBlock
+                                        AutomationProperties.LiveSetting="Polite"
+                                        Foreground="{StaticResource SecondaryTextBrush}"
+                                        Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
+                                </StackPanel>
+                                <StackPanel
                                     Grid.Column="1"
-                                    Width="172"
-                                    AutomationProperties.Name="Sort applications by"
-                                    DisplayMemberPath="Label"
-                                    ItemsSource="{x:Bind ViewModel.SortOptions, Mode=OneTime}"
-                                    SelectedItem="{x:Bind ViewModel.SelectedSortOption, Mode=TwoWay}" />
-                                <Button
-                                    Grid.Column="2"
-                                    HorizontalAlignment="Left"
-                                    MinWidth="116"
-                                    AutomationProperties.Name="{x:Bind ViewModel.SortDirectionAutomationName, Mode=OneWay}"
-                                    Click="SortDirection_Click"
-                                    Content="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}"
-                                    ToolTipService.ToolTip="Change sort direction" />
-                                <ToggleSwitch
-                                    Grid.Column="3"
-                                    AutomationProperties.Name="Show advanced application information"
-                                    Header="Advanced mode"
-                                    IsOn="{x:Bind ViewModel.IsAdvancedMode, Mode=TwoWay}"
-                                    Toggled="AdvancedMode_Toggled" />
+                                    VerticalAlignment="Center"
+                                    Spacing="4">
+                                    <TextBlock
+                                        FontFamily="Segoe UI Variable"
+                                        Foreground="{StaticResource SecondaryTextBrush}"
+                                        Text="Appearance" />
+                                    <ComboBox
+                                        x:Name="AppearanceSelector"
+                                        Width="124"
+                                        AutomationProperties.Name="Application appearance"
+                                        DisplayMemberPath="Label"
+                                        ItemsSource="{x:Bind AppearanceOptions, Mode=OneTime}"
+                                        SelectedItem="{x:Bind SelectedAppearanceOption, Mode=OneTime}"
+                                        SelectionChanged="AppearanceSelector_SelectionChanged"
+                                        ToolTipService.ToolTip="Choose System, Light, or Dark appearance" />
+                                </StackPanel>
                             </Grid>
+                            <Border
+                                Grid.Row="1"
+                                Padding="10"
+                                Background="{StaticResource SurfaceRaisedBrush}"
+                                BorderBrush="{StaticResource SubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontFamily="Segoe UI Variable"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource SecondaryTextBrush}"
+                                        Text="Sort by" />
+                                    <ComboBox
+                                        Grid.Column="1"
+                                        Width="180"
+                                        AutomationProperties.Name="Sort applications by"
+                                        DisplayMemberPath="Label"
+                                        ItemsSource="{x:Bind ViewModel.SortOptions, Mode=OneTime}"
+                                        SelectedItem="{x:Bind ViewModel.SelectedSortOption, Mode=TwoWay}" />
+                                    <Button
+                                        Grid.Column="2"
+                                        Width="40"
+                                        MinWidth="40"
+                                        AutomationProperties.Name="{x:Bind ViewModel.SortDirectionAutomationName, Mode=OneWay}"
+                                        Click="SortDirection_Click"
+                                        Content="{x:Bind ViewModel.SortDirectionGlyph, Mode=OneWay}"
+                                        ToolTipService.ToolTip="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}" />
+                                    <Border
+                                        Grid.Column="4"
+                                        Width="1"
+                                        Height="24"
+                                        Margin="8,0"
+                                        VerticalAlignment="Center"
+                                        Background="{StaticResource SubtleBorderBrush}" />
+                                    <StackPanel
+                                        Grid.Column="5"
+                                        VerticalAlignment="Center"
+                                        Orientation="Horizontal"
+                                        Spacing="8">
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontFamily="Segoe UI Variable"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource PrimaryTextBrush}"
+                                            Text="Advanced" />
+                                        <ToggleSwitch
+                                            AutomationProperties.Name="Show advanced application information"
+                                            IsOn="{x:Bind ViewModel.IsAdvancedMode, Mode=TwoWay}"
+                                            OffContent=""
+                                            OnContent=""
+                                            Toggled="AdvancedMode_Toggled" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                         </Grid>
                         <ListView
                             Grid.Row="1"
+                            MaxWidth="1120"
                             Margin="24,0,24,24"
+                            HorizontalAlignment="Stretch"
                             AutomationProperties.Name="Running applications"
                             ContainerContentChanging="ApplicationList_ContainerContentChanging"
                             IsItemClickEnabled="True"

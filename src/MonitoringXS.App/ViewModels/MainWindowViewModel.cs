@@ -69,6 +69,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public string SortDirectionLabel => IsSortDescending ? "Descending ↓" : "Ascending ↑";
 
+    public string SortDirectionGlyph => IsSortDescending ? "↓" : "↑";
+
     public string SortDirectionAutomationName => IsSortDescending
         ? "Sort direction descending. Activate to change to ascending."
         : "Sort direction ascending. Activate to change to descending.";
@@ -241,6 +243,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     partial void OnIsSortDescendingChanged(bool value)
     {
         OnPropertyChanged(nameof(SortDirectionLabel));
+        OnPropertyChanged(nameof(SortDirectionGlyph));
         OnPropertyChanged(nameof(SortDirectionAutomationName));
         ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
     }

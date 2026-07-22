@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
+using MonitoringXS.App.Appearance;
 using MonitoringXS.App.ViewModels;
 using MonitoringXS.Application;
 using MonitoringXS.Collectors;
@@ -32,7 +33,12 @@ public partial class App : Microsoft.UI.Xaml.Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        _window = new MainWindow(_services.GetRequiredService<MainWindowViewModel>());
+        IAppearancePreferenceStore appearanceStore = _services.GetRequiredService<IAppearancePreferenceStore>();
+        AppearanceMode appearance = appearanceStore.Load();
+        _window = new MainWindow(
+            _services.GetRequiredService<MainWindowViewModel>(),
+            appearanceStore,
+            appearance);
         _window.Closed += Window_Closed;
         _window.Activate();
     }
@@ -61,6 +67,12 @@ public partial class App : Microsoft.UI.Xaml.Application
             string localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string path = Path.Combine(localData, "MonitoringXS", "attribution-overrides.json");
             return new JsonUserAttributionOverrideStore(path);
+        });
+        services.AddSingleton<IAppearancePreferenceStore>(_ =>
+        {
+            string localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string path = Path.Combine(localData, "MonitoringXS", "appearance.txt");
+            return new FileAppearancePreferenceStore(path);
         });
         services.AddSingleton<IProcessDiscoveryService, WindowsProcessDiscoveryService>();
         services.AddSingleton<IApplicationAttributionService, ApplicationAttributionService>();

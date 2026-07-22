@@ -3,7 +3,9 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Windowing;
+using MonitoringXS.App.Appearance;
 using MonitoringXS.App.ViewModels;
+using MonitoringXS.Platform.Windows.Accessibility;
 using Windows.Graphics;
 
 namespace MonitoringXS.App;
@@ -12,19 +14,38 @@ public sealed partial class MainWindow : Window, IDisposable
 {
     private readonly CancellationTokenSource _shutdown = new();
     private readonly Dictionary<string, TabViewItem> _applicationTabs = new(StringComparer.Ordinal);
+    private readonly IAppearancePreferenceStore _appearancePreferenceStore;
     private bool _disposed;
+    private bool _appearanceSelectionReady;
 
-    public MainWindow(MainWindowViewModel viewModel)
+    public MainWindow(
+        MainWindowViewModel viewModel,
+        IAppearancePreferenceStore appearancePreferenceStore,
+        AppearanceMode appearance)
     {
         ViewModel = viewModel;
+        _appearancePreferenceStore = appearancePreferenceStore;
+        SelectedAppearanceOption = AppearanceOptions.Single(option => option.Mode == appearance);
         InitializeComponent();
         ConfigureTitleBar();
+        Root.ActualThemeChanged += Root_ActualThemeChanged;
+        ApplyAppearance(appearance);
+        _appearanceSelectionReady = true;
         AppWindow.Resize(new SizeInt32(1180, 760));
         Root.Loaded += Root_Loaded;
         Closed += MainWindow_Closed;
     }
 
     public MainWindowViewModel ViewModel { get; }
+
+    public IReadOnlyList<AppearanceOption> AppearanceOptions { get; } =
+    [
+        new(AppearanceMode.System, "System"),
+        new(AppearanceMode.Light, "Light"),
+        new(AppearanceMode.Dark, "Dark")
+    ];
+
+    public AppearanceOption SelectedAppearanceOption { get; }
 
     private void ConfigureTitleBar()
     {
@@ -34,7 +55,80 @@ public sealed partial class MainWindow : Window, IDisposable
         if (AppWindowTitleBar.IsCustomizationSupported())
         {
             AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+            UpdateCaptionButtonColors();
         }
+    }
+
+    private async void AppearanceSelector_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs args)
+    {
+        if (!_appearanceSelectionReady || AppearanceSelector.SelectedItem is not AppearanceOption option)
+        {
+            return;
+        }
+
+        ApplyAppearance(option.Mode);
+        await _appearancePreferenceStore.SaveAsync(option.Mode, CancellationToken.None);
+    }
+
+    private void ApplyAppearance(AppearanceMode appearance)
+    {
+        AppearanceThemeChoice theme = AppearanceThemeResolver.Resolve(
+            appearance,
+            WindowsHighContrastReader.IsEnabled());
+        Root.RequestedTheme = theme switch
+        {
+            AppearanceThemeChoice.Light => ElementTheme.Light,
+            AppearanceThemeChoice.Dark => ElementTheme.Dark,
+            _ => ElementTheme.Default
+        };
+        UpdateCaptionButtonColors();
+    }
+
+    private void Root_ActualThemeChanged(FrameworkElement sender, object args) =>
+        UpdateCaptionButtonColors();
+
+    private void UpdateCaptionButtonColors()
+    {
+        if (!AppWindowTitleBar.IsCustomizationSupported())
+        {
+            return;
+        }
+
+        AppWindowTitleBar titleBar = AppWindow.TitleBar;
+        if (WindowsHighContrastReader.IsEnabled())
+        {
+            titleBar.ButtonForegroundColor = null;
+            titleBar.ButtonHoverForegroundColor = null;
+            titleBar.ButtonPressedForegroundColor = null;
+            titleBar.ButtonInactiveForegroundColor = null;
+            titleBar.ButtonBackgroundColor = null;
+            titleBar.ButtonHoverBackgroundColor = null;
+            titleBar.ButtonPressedBackgroundColor = null;
+            titleBar.ButtonInactiveBackgroundColor = null;
+            return;
+        }
+
+        bool dark = Root.ActualTheme == ElementTheme.Dark;
+        Windows.UI.Color foreground = dark
+            ? Microsoft.UI.ColorHelper.FromArgb(255, 242, 247, 250)
+            : Microsoft.UI.ColorHelper.FromArgb(255, 17, 27, 36);
+        Windows.UI.Color inactiveForeground = dark
+            ? Microsoft.UI.ColorHelper.FromArgb(255, 169, 186, 198)
+            : Microsoft.UI.ColorHelper.FromArgb(255, 82, 101, 117);
+        titleBar.ButtonForegroundColor = foreground;
+        titleBar.ButtonHoverForegroundColor = foreground;
+        titleBar.ButtonPressedForegroundColor = foreground;
+        titleBar.ButtonInactiveForegroundColor = inactiveForeground;
+        titleBar.ButtonBackgroundColor = Microsoft.UI.Colors.Transparent;
+        titleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
+        titleBar.ButtonHoverBackgroundColor = dark
+            ? Microsoft.UI.ColorHelper.FromArgb(24, 255, 255, 255)
+            : Microsoft.UI.ColorHelper.FromArgb(16, 0, 0, 0);
+        titleBar.ButtonPressedBackgroundColor = dark
+            ? Microsoft.UI.ColorHelper.FromArgb(42, 255, 255, 255)
+            : Microsoft.UI.ColorHelper.FromArgb(28, 0, 0, 0);
     }
 
     private async void Root_Loaded(object sender, RoutedEventArgs args)
@@ -164,6 +258,7 @@ public sealed partial class MainWindow : Window, IDisposable
         }
 
         _disposed = true;
+        Root.ActualThemeChanged -= Root_ActualThemeChanged;
         _shutdown.Cancel();
     }
 }
