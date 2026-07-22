@@ -67,6 +67,8 @@ Status: in progress.
 - [x] Preserve selection, keyboard focus, and logical application tabs while live metrics reorder cards.
 - [x] Integrate a restrained WinUI title bar while retaining Windows caption buttons, drag, and double-click behavior.
 - [x] Refine application-card identity, primary metric, supporting metric, and unavailable-state hierarchy.
+- [x] Add runtime System, Light, and Dark appearance modes with a persisted lightweight preference.
+- [x] Repair the one-minute CPU chart so ordered timestamps, duplicate samples, unavailable gaps, invalid numbers, and real zero values render honestly.
 - [ ] Complete Dashboard and Portable Apps pages, remaining final UI pages, and final chart work.
 - [ ] Complete dark-theme, High Contrast, 150-200% scaling, Windows 11 Snap Layout, and broader screen-reader validation.
 

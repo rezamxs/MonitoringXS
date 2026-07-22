@@ -14,13 +14,17 @@ Precision Glass is calm, technical, and application-centric. Depth supports grou
 
 ## Components
 
-Application cards put identity and running state first, CPU and memory second, and supporting Process I/O, Physical disk, and Network data third. Metric labels remain quieter than their values. Long rate or unavailable text wraps instead of disappearing. Native list selection and focus visuals remain visible.
+Application cards use two tiers. The upper tier keeps application identity and running state dominant, with CPU and memory in compact primary panels. The lower tier keeps Process I/O, Physical disk, and Network visually secondary. Matching unavailable directions collapse to one honest state, while supporting text preserves `Access denied`, `Partial`, `Warming up`, `Unsupported`, or other availability detail. Partial values retain their measured lower bound. Native list selection and focus visuals remain visible.
+
+Running Apps uses one compact toolbar for sorting and Advanced mode. The content column is fluid up to approximately 1120 px and must not introduce horizontal scrolling. The active navigation item combines the native selection marker, a background shape, and the standard keyboard focus indication instead of relying on color alone.
 
 Running-application sorting stays inside the installed and portable sections. Measured values sort before unavailable states in both directions. Equal values use application name as a stable secondary key. Metric-driven reordering is limited to once every five seconds, while an explicit user change applies immediately. Reordering preserves the selected application, keyboard focus, and open tabs.
 
-The app title bar uses the native WinUI `TitleBar` and system caption buttons. The app does not draw replacement minimize, maximize, or close buttons. The title bar remains the drag and double-click region so Windows keeps its normal window behavior.
+The app title bar uses the native WinUI `TitleBar` and system caption buttons. The app does not draw replacement minimize, maximize, or close buttons. The title bar remains the drag and double-click region so Windows keeps its normal window behavior. Caption-button foreground, inactive, hover, and pressed colors follow the app's effective Light or Dark theme. High Contrast returns those colors to Windows.
 
-Charts use crisp strokes, readable units, a bounded point count, and an explicit unavailable state. Destructive operations use `ContentDialog` with a direct data-loss warning.
+Charts use crisp strokes, readable units, a bounded point count, and an explicit unavailable state. CPU history retains UTC timestamps, orders samples, keeps the last duplicate timestamp, rejects invalid numeric values, and leaves unavailable intervals as visible gaps instead of connecting them or converting them to zero. Destructive operations use `ContentDialog` with a direct data-loss warning.
+
+Appearance has exactly three modes: System, Light, and Dark. System follows the Windows app theme. Light uses cool neutral surfaces rather than pure white throughout; Dark separates graphite window, navigation, toolbar, card, and chart surfaces. Electric Cyan remains the data accent, while Violet is limited to selection and priority. High Contrast resources map to the user's `SystemColor*` choices.
 
 ## Motion and rendering
 

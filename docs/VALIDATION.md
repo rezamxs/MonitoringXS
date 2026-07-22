@@ -476,3 +476,91 @@ Actual WinUI and UI Automation observations on Windows 10 build 19045 at 96 DPI:
 - After exit, both `MonitoringXS.KernelMetrics.v1` and the retired `MonitoringXS.PhysicalDisk.v1` query returned `Data Collector Set was not found`.
 
 The UI refinement is validated for the observed Windows 10 light-theme environment. Milestone 4 remains in progress because the other product pages and the unexecuted theme, scaling, Snap Layout, and screen-reader checks are still required.
+
+## 2026-07-23 two-tier application-card validation
+
+This focused visual correction changed only the Running Apps presentation and its view-model formatting. Collectors, attribution, metric models, package versions, project configuration, and unrelated pages were not changed.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet test MonitoringXS.sln -c Release --no-build -m:1
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+```
+
+Actual build and test results:
+
+- The sandboxed restore failed with NuGet repository-signature TLS/credential `NU1301`. The same restore succeeded with normal network access and reported every project up to date. The global NuGet cache was not cleared.
+- The initial Release build succeeded in 00:01:15.76 with 0 warnings and 0 errors. The final Release build after the tests succeeded in 00:00:39.59 with the same clean result.
+- The first solution-wide parallel test run passed Core 4, Application 5, Collectors 35, Storage 4, and Integration 36, but the xUnit runner failed while discovering the WinUI App assembly after reporting that its test process did not return valid JSON. The App assembly then passed independently with 17 tests. A final sequential solution run with `-m:1` passed all 101 tests with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Storage 4, Integration 36, and App 17.
+- New deterministic App tests verify that matching denied, warming-up, unavailable, and unsupported directions collapse to one visible state, partial pairs keep their measured lower-bound values, and the card's accessible text follows metric changes.
+
+Actual WinUI and UI Automation observations on Windows 10 build 19045 at 96 DPI:
+
+- A visible responsive `Monitoring XS` window opened at 1180 x 760. UI Automation exposed three application cards and the native Minimize, Maximize, and Close buttons.
+- The first card's accessible name changed from CPU 8.9% and memory 2.10 GB to CPU 7.7% and memory 2.09 GB after three seconds. It continued to include application identity, running state, Process I/O, Physical disk state, and Network state. No `Unavailable read` or `Unavailable write` duplication was exposed.
+- CPU and memory were visually primary. Process I/O, Physical disk, and Network stayed in a separate secondary tier. Physical disk and Network honestly displayed `Unavailable` with the supporting reason `Access denied`; neither was displayed as zero.
+- Advanced mode changed from Off to On and returned to Off through its UI Automation Toggle pattern. The sort-direction control changed from ascending to descending and updated its accessible action name.
+- Keyboard focus and Enter on the Visual Studio Code card opened `Visual Studio Code application tab`. The UI remained responsive.
+- The shared content column remained fluid at its normal width. Additional width-stress observations at 787 x 760 and 590 x 760 showed no horizontal scrollbar; long identity text ellipsized and secondary values wrapped. These are width proxies, not claims of actual 150% or 200% DPI validation.
+- A normal close request succeeded and `MonitoringXS.App` exited without a remaining application process. The surrounding command wrapper timed out, so a numeric `dotnet run` exit code is not claimed.
+- The final light-theme screenshot is `.artifacts/ui-two-tier-final-100.png`; it is ignored by Git.
+
+Actual 150% and 200% display scaling, Dark theme, High Contrast, Windows 11 Snap Layout, and a broader screen-reader pass were not executed because this machine remained at 96 DPI in its current light-theme user session. Milestone 4 therefore remains in progress.
+
+## 2026-07-23 title-bar, live-chart, and appearance validation
+
+The incoming worktree already contained the uncommitted two-tier application-card pass. It was preserved. This task did not change collectors, attribution, metric aggregation, package versions, GPU, history storage, actions, or unrelated pages.
+
+### Reproduced causes
+
+- The native Close, Minimize, Maximize, and Restore hit targets were present at 48 x 48 and their physical actions worked before the fix. The reproduced regression was that inactive caption glyphs were nearly invisible against the Light title-bar surface. `ExtendsContentIntoTitleBar` left caption drawing with `AppWindowTitleBar`, but the application never synchronized its foreground, inactive, hover, or pressed colors with the effective XAML theme.
+- The existing one-minute CPU line rendered and changed in the initial live run, so a frozen renderer was not reproduced. Source review and deterministic tests reproduced four concrete correctness defects: timestamps were discarded, duplicate/out-of-order timestamps were not normalized, unavailable samples were removed so the line connected across missing intervals, and NaN/Infinity could create invalid geometry. The scaling floor `Math.Max(1, peak)` was also reused as the displayed peak, so a real all-zero history was described as a 1.0% peak.
+- During implementation, creating `Windows.UI.ViewManagement.AccessibilitySettings` in this unpackaged Windows 10 process caused a startup fail-fast with `E_NOINTERFACE (0x80004002)` and `Microsoft.UI.Xaml.dll` exception `0xc000027b`. It was removed rather than caught. High Contrast is now read through `SPI_GETHIGHCONTRAST` in `MonitoringXS.Platform.Windows`, and High Contrast brushes use the user's dynamic `SystemColor*` values.
+
+### Implementation and automated validation
+
+- Caption-button colors now follow the effective Light or Dark theme. When High Contrast is active, all caption color overrides are cleared so Windows owns them.
+- The chart now receives bounded timestamped samples. Projection sorts them, keeps the last duplicate timestamp, retains unavailable gaps, rejects negative and non-finite values, and keeps at most 60 samples. The renderer creates separate path figures for contiguous real intervals and reports the real peak independently from the minimum drawing scale.
+- Appearance offers exactly System, Light, and Dark. The selection is stored atomically as `%LOCALAPPDATA%\MonitoringXS\appearance.txt`. System maps to `ElementTheme.Default`. No SQLite or Settings subsystem was added.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release
+dotnet test MonitoringXS.sln -c Release
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+```
+
+Observed command results:
+
+- Sandboxed restore/build attempts encountered only NuGet TLS/credential `NU1301`. The same exact restore and build commands succeeded with normal network access. No package version changed and the global NuGet cache was not cleared.
+- The full Release build succeeded with 0 warnings and 0 errors.
+- All 114 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Storage 4, Integration 36, and App 30.
+- New App tests cover timestamp ordering, last-duplicate selection, 60-sample bounding, unavailable gaps, invalid numbers, honest real-zero peak reporting, the three appearance values, invalid-preference fallback, and High Contrast resolving to System.
+
+### Actual runtime observations
+
+- System, Light, and Dark were selected through the accessible ComboBox without restarting. Light used cool neutral page, toolbar, primary metric, and card surfaces. Dark used distinct graphite page/navigation, blue-gray toolbar and card surfaces, cyan metric values, violet selection, and readable borders.
+- `Dark` was written to the preference file, the app was closed and restarted, and UI Automation observed Dark selected after restart. The test then returned the preference to `System` through the UI.
+- At 96 DPI, the native caption buttons remained separate from XAML content. Physical clicks verified Minimize, Maximize, Restore, and Close. Double-click maximized and restored the window. A drag moved it from `(122,32)` to `(182,62)`. The Alt+Space system menu was visibly observed with Restore, Move, Size, Minimize, Maximize, Close, and Alt+F4. Native hover and pressed states were captured, and the physical Close hit target exited `MonitoringXS.App` without a remaining process.
+- The chart was observed continuously for 60.159 seconds with 55 UI Automation samples. CPU stayed real and non-zero, ranging from 2.7% to 19.2% in the recorded values. Seven distinct peak summaries were observed, and the process was responsive at every sample.
+- Resizing to 900 x 700 left a visible 787 x 120 chart. Closing the Visual Studio Code tab and reopening it with keyboard Enter reconnected immediately to 60 real samples. The chart remained visible after scrolling and continued updating.
+- Physical disk and Network continued to show `Unavailable` with `Access denied` in this unelevated run; neither was converted to zero or mixed with Process I/O.
+- `SPI_GETHIGHCONTRAST` reported that High Contrast was not enabled in this session. High Contrast resource mapping compiled, but an actual High Contrast visual pass was not executed.
+
+Screenshots created under ignored `.artifacts`:
+
+- `theme-system.png`
+- `theme-light.png`
+- `theme-dark.png`
+- `chart-repaired-dark.png`
+- `caption-hover-dark.png`
+- `caption-pressed-dark.png`
+- `system-menu.png`
+
+Actual 150% and 200% display scaling, a real High Contrast session, and Windows 11 Snap Layout were not available on this Windows 10/96-DPI machine. The branch therefore remains ready for focused visual review, not final Milestone 4 completion.

@@ -55,7 +55,7 @@ Physical disk and network monitoring may need Administrator access on some Windo
 The current repository has:
 
 - a successful Release build
-- 96 passing tests
+- 114 passing tests
 - no failed or skipped tests
 - validated ETW physical-disk monitoring on the development machine
 - validated ETW network attribution with controlled Chrome traffic on the development machine
