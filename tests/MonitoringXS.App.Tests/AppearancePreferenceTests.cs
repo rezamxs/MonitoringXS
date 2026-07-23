@@ -26,4 +26,10 @@ public sealed class AppearancePreferenceTests
 
         Assert.Equal(AppearanceThemeChoice.System, result);
     }
+
+    [Theory]
+    [InlineData(false, "Currently Light")]
+    [InlineData(true, "Currently Dark")]
+    public void ResolvedStateUsesTheActualTheme(bool isDark, string expected) =>
+        Assert.Equal(expected, AppearancePresentation.ResolvedStateLabel(isDark));
 }

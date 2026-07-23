@@ -38,3 +38,9 @@ public static class AppearanceThemeResolver
                 _ => AppearanceThemeChoice.System
             };
 }
+
+internal static class AppearancePresentation
+{
+    public static string ResolvedStateLabel(bool isDark) =>
+        isDark ? "Currently Dark" : "Currently Light";
+}

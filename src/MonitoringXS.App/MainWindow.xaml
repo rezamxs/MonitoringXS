@@ -461,13 +461,18 @@
                                         Text="Appearance" />
                                     <ComboBox
                                         x:Name="AppearanceSelector"
-                                        Width="124"
+                                        Width="196"
                                         AutomationProperties.Name="Application appearance"
                                         DisplayMemberPath="Label"
                                         ItemsSource="{x:Bind AppearanceOptions, Mode=OneTime}"
                                         SelectedItem="{x:Bind SelectedAppearanceOption, Mode=OneTime}"
                                         SelectionChanged="AppearanceSelector_SelectionChanged"
-                                        ToolTipService.ToolTip="Choose System, Light, or Dark appearance" />
+                                        ToolTipService.ToolTip="System follows Windows. Light and Dark stay fixed." />
+                                    <TextBlock
+                                        x:Name="ResolvedAppearanceText"
+                                        AutomationProperties.LiveSetting="Polite"
+                                        FontFamily="Segoe UI Variable"
+                                        Foreground="{StaticResource SecondaryTextBrush}" />
                                 </StackPanel>
                             </Grid>
                             <Border

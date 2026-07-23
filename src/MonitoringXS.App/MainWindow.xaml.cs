@@ -40,7 +40,7 @@ public sealed partial class MainWindow : Window, IDisposable
 
     public IReadOnlyList<AppearanceOption> AppearanceOptions { get; } =
     [
-        new(AppearanceMode.System, "System"),
+        new(AppearanceMode.System, "System — follows Windows"),
         new(AppearanceMode.Light, "Light"),
         new(AppearanceMode.Dark, "Dark")
     ];
@@ -84,10 +84,28 @@ public sealed partial class MainWindow : Window, IDisposable
             _ => ElementTheme.Default
         };
         UpdateCaptionButtonColors();
+        UpdateResolvedAppearanceState();
     }
 
-    private void Root_ActualThemeChanged(FrameworkElement sender, object args) =>
+    private void Root_ActualThemeChanged(FrameworkElement sender, object args)
+    {
         UpdateCaptionButtonColors();
+        UpdateResolvedAppearanceState();
+    }
+
+    private void UpdateResolvedAppearanceState()
+    {
+        string resolvedState = AppearancePresentation.ResolvedStateLabel(
+            Root.ActualTheme == ElementTheme.Dark);
+        ResolvedAppearanceText.Text = resolvedState;
+
+        if (AppearanceSelector.SelectedItem is AppearanceOption option)
+        {
+            AutomationProperties.SetName(
+                AppearanceSelector,
+                $"Application appearance. {option.Label}. {resolvedState}.");
+        }
+    }
 
     private void UpdateCaptionButtonColors()
     {
