@@ -564,3 +564,50 @@ Screenshots created under ignored `.artifacts`:
 - `system-menu.png`
 
 Actual 150% and 200% display scaling, a real High Contrast session, and Windows 11 Snap Layout were not available on this Windows 10/96-DPI machine. The branch therefore remains ready for focused visual review, not final Milestone 4 completion.
+
+## 2026-07-23 sorting semantics and resolved-appearance validation
+
+This pass clarified existing sorting and appearance behavior without changing collectors, attribution, metric models, the application-card layout, chart implementation, title-bar implementation, or package versions.
+
+Commands executed:
+
+```powershell
+dotnet build MonitoringXS.sln -c Release
+dotnet test MonitoringXS.sln -c Release
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+```
+
+Build and test results:
+
+- The first sandboxed build attempt failed during restore with NuGet TLS/credential `NU1301`. Repeating the same build command with normal network access succeeded in 00:01:30.92 with 0 warnings and 0 errors. The global NuGet cache was not cleared.
+- All 150 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Integration 36, Storage 4, and App 66.
+- New deterministic App tests cover all numeric fields in both directions, name and numeric smart defaults in the actual `MainWindowViewModel`, manual reversal, measured-before-unavailable ordering, deterministic name ordering when all values are unavailable, the comparable-data decision, direction accessibility text, and resolved appearance text.
+
+Observed sorting behavior:
+
+- Application name selected `A to Z` and reversed to `Z to A`.
+- CPU, Memory, Process I/O, Physical Disk, Network, and process count each selected `Highest to lowest` as their new-field default and reversed to `Lowest to highest`.
+- Every direction was stated in the visible button text and its accessible action name; the control was not arrow-only.
+- Two installed cards remained between the Installed section header and the Portable section header. Three portable or unregistered cards remained after the Portable header.
+- Memory and process-count ordering visibly reversed with the observed values. Some CPU and Process I/O orders matched name order when current values were equal; this was not treated as a sorting failure.
+- Physical Disk and Network were `Access denied` for every visible application in this unelevated run. Both fields displayed `No comparable data`, kept deterministic A-to-Z ordering inside each section in both directions, and never converted unavailable values to zero. Selecting CPU, Memory, Process I/O, or process count removed the message.
+- During a 12-second CPU-sort interval, Visual Studio Code remained selected in all 12 samples. While Monitoring XS remained the foreground window, the card also remained keyboard-focused in every sample. A previously opened Visual Studio Code tab remained present during the sort and refresh interval.
+- Live CPU values and accessible card text changed every second, while card order changed only at the existing multi-second sort boundaries. The deterministic five-second policy remained covered by automated tests.
+
+Observed appearance behavior:
+
+- The Windows `AppsUseLightTheme` value was `1`. Selecting `System — follows Windows` resolved to `Currently Light` and persisted `System`.
+- Forced Light resolved to `Currently Light` and persisted `Light`. Forced Dark resolved to `Currently Dark` and persisted `Dark`.
+- The application was closed while Dark was selected and restarted. UI Automation observed `Application appearance. Dark. Currently Dark.` and the preference file still contained `Dark`. The preference was then returned through the UI to `System`, which resolved to `Currently Light`.
+- A live Windows application-theme change was not performed, so System reacting to a Light-to-Dark OS change is not claimed. The implementation uses `ElementTheme.Default` and listens for `ActualThemeChanged`; validation here only confirms the current Light system state.
+
+Regression observations:
+
+- The Visual Studio Code tab closed through its native tab close button, keyboard Tab moved focus, and keyboard Enter reopened the application tab.
+- The CPU chart was observed for 63.2 seconds with 30 UI Automation samples. CPU text produced 17 distinct observed values from 1.8% to 11.3%, chart peak text produced 6 distinct summaries from 11.3% to 40.1%, and the process was responsive in every sample.
+- Native Maximize and Restore succeeded. Native Minimize entered the minimized state and Windows restored the window to normal.
+- Double-click changed the window from normal to maximized and back. Dragging the title bar moved the normal bounds from `(52, 52, 1180, 760)` to `(102, 82, 1180, 760)`.
+- Native Close ended `MonitoringXS.App` with no remaining application process. The first long-running `dotnet run` wrapper exceeded the validation tool's five-minute timeout, so its numeric exit code is not claimed. A second short persistence run completed in 00:00:50.3 with exit code 0.
+- After both final exits, `logman` reported `Data Collector Set was not found` for `MonitoringXS.KernelMetrics.v1` and the retired `MonitoringXS.PhysicalDisk.v1` name.
+
+No runtime product defect was reproduced during this pass. Actual System-on-Windows-Dark switching, a real High Contrast session, 150-200% display scaling, Windows 11 Snap Layout, and a broader screen-reader pass remain unexecuted. Milestone 4 remains in progress.
