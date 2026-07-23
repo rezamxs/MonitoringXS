@@ -9,20 +9,24 @@
             </ResourceDictionary.MergedDictionaries>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Dark">
-                    <Color x:Key="PageColor">#0B1017</Color>
-                    <Color x:Key="SurfaceColor">#141C27</Color>
-                    <Color x:Key="SurfaceRaisedColor">#1B2634</Color>
-                    <Color x:Key="PrimaryTextColor">#F2F7FA</Color>
-                    <Color x:Key="SecondaryTextColor">#A9BAC6</Color>
-                    <Color x:Key="BorderColor">#304153</Color>
+                    <Color x:Key="PageColor">#0A0A0B</Color>
+                    <Color x:Key="ShellColor">#101012</Color>
+                    <Color x:Key="SurfaceColor">#171719</Color>
+                    <Color x:Key="SurfaceRaisedColor">#212124</Color>
+                    <Color x:Key="ToolbarColor">#E619191C</Color>
+                    <Color x:Key="PrimaryTextColor">#F4F4F5</Color>
+                    <Color x:Key="SecondaryTextColor">#B3B3BA</Color>
+                    <Color x:Key="BorderColor">#35353A</Color>
                     <Color x:Key="DataAccentColor">#28C7FA</Color>
                     <Color x:Key="PriorityAccentColor">#8B7CFF</Color>
                     <Color x:Key="WarningColor">#F5B942</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
                     <Color x:Key="PageColor">#F3F6F8</Color>
+                    <Color x:Key="ShellColor">#F7F9FA</Color>
                     <Color x:Key="SurfaceColor">#F9FBFC</Color>
                     <Color x:Key="SurfaceRaisedColor">#EDF2F5</Color>
+                    <Color x:Key="ToolbarColor">#E6FFFFFF</Color>
                     <Color x:Key="PrimaryTextColor">#111B24</Color>
                     <Color x:Key="SecondaryTextColor">#526575</Color>
                     <Color x:Key="BorderColor">#CFD9E1</Color>
@@ -32,8 +36,10 @@
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
                     <StaticResource x:Key="PageColor" ResourceKey="SystemColorWindowColor" />
+                    <StaticResource x:Key="ShellColor" ResourceKey="SystemColorWindowColor" />
                     <StaticResource x:Key="SurfaceColor" ResourceKey="SystemColorWindowColor" />
                     <StaticResource x:Key="SurfaceRaisedColor" ResourceKey="SystemColorButtonFaceColor" />
+                    <StaticResource x:Key="ToolbarColor" ResourceKey="SystemColorButtonFaceColor" />
                     <StaticResource x:Key="PrimaryTextColor" ResourceKey="SystemColorWindowTextColor" />
                     <StaticResource x:Key="SecondaryTextColor" ResourceKey="SystemColorWindowTextColor" />
                     <StaticResource x:Key="BorderColor" ResourceKey="SystemColorWindowTextColor" />
@@ -44,8 +50,10 @@
             </ResourceDictionary.ThemeDictionaries>
 
             <SolidColorBrush x:Key="PageBrush" Color="{ThemeResource PageColor}" />
+            <SolidColorBrush x:Key="ShellBrush" Color="{ThemeResource ShellColor}" />
             <SolidColorBrush x:Key="SurfaceBrush" Color="{ThemeResource SurfaceColor}" />
             <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="{ThemeResource SurfaceRaisedColor}" />
+            <SolidColorBrush x:Key="ToolbarBrush" Color="{ThemeResource ToolbarColor}" />
             <SolidColorBrush x:Key="PrimaryTextBrush" Color="{ThemeResource PrimaryTextColor}" />
             <SolidColorBrush x:Key="SecondaryTextBrush" Color="{ThemeResource SecondaryTextColor}" />
             <SolidColorBrush x:Key="SubtleBorderBrush" Color="{ThemeResource BorderColor}" />

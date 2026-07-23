@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Windowing;
 using MonitoringXS.App.Appearance;
 using MonitoringXS.App.ViewModels;
@@ -12,11 +13,17 @@ namespace MonitoringXS.App;
 
 public sealed partial class MainWindow : Window, IDisposable
 {
+    private const double WideToolbarMinimumWidth = 1240;
+    private static readonly Uri LightTitleBarLogoUri =
+        new("ms-appx:///Assets/Branding/MonitoringXS.Logo.24.png");
+    private static readonly Uri DarkTitleBarLogoUri =
+        new("ms-appx:///Assets/Branding/MonitoringXS.Logo.Dark.24.png");
     private readonly CancellationTokenSource _shutdown = new();
     private readonly Dictionary<string, TabViewItem> _applicationTabs = new(StringComparer.Ordinal);
     private readonly IAppearancePreferenceStore _appearancePreferenceStore;
     private bool _disposed;
     private bool _appearanceSelectionReady;
+    private bool? _toolbarUsesSingleRow;
 
     public MainWindow(
         MainWindowViewModel viewModel,
@@ -47,8 +54,39 @@ public sealed partial class MainWindow : Window, IDisposable
 
     public AppearanceOption SelectedAppearanceOption { get; }
 
+    internal void EnableResponsiveToolbar()
+    {
+        AppWindow.Changed += AppWindow_Changed;
+        UpdateToolbarLayout(AppWindow.Size.Width);
+    }
+
+    private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
+    {
+        if (args.DidSizeChange)
+        {
+            UpdateToolbarLayout(sender.Size.Width);
+        }
+    }
+
+    private void UpdateToolbarLayout(double physicalWindowWidth)
+    {
+        double rasterizationScale = Root.XamlRoot?.RasterizationScale ?? 1;
+        bool useSingleRow =
+            physicalWindowWidth / rasterizationScale >= WideToolbarMinimumWidth;
+        if (_toolbarUsesSingleRow == useSingleRow)
+        {
+            return;
+        }
+
+        _toolbarUsesSingleRow = useSingleRow;
+        Grid.SetRow(ToolbarAppearanceGroup, useSingleRow ? 0 : 1);
+        Grid.SetColumn(ToolbarAppearanceGroup, useSingleRow ? 2 : 0);
+        Grid.SetRow(ToolbarAdvancedGroup, useSingleRow ? 0 : 1);
+    }
+
     private void ConfigureTitleBar()
     {
+        ConfigureWindowIcon();
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
 
@@ -56,6 +94,19 @@ public sealed partial class MainWindow : Window, IDisposable
         {
             AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
             UpdateCaptionButtonColors();
+        }
+    }
+
+    private void ConfigureWindowIcon()
+    {
+        string iconPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "Assets",
+            "Branding",
+            "MonitoringXS.ico");
+        if (File.Exists(iconPath))
+        {
+            AppWindow.SetIcon(iconPath);
         }
     }
 
@@ -84,13 +135,34 @@ public sealed partial class MainWindow : Window, IDisposable
             _ => ElementTheme.Default
         };
         UpdateCaptionButtonColors();
+        UpdateTitleBarLogo();
         UpdateResolvedAppearanceState();
     }
 
     private void Root_ActualThemeChanged(FrameworkElement sender, object args)
     {
         UpdateCaptionButtonColors();
+        UpdateTitleBarLogo();
         UpdateResolvedAppearanceState();
+    }
+
+    private void UpdateTitleBarLogo()
+    {
+        bool highContrast = WindowsHighContrastReader.IsEnabled();
+        BitmapIconSource iconSource = new()
+        {
+            ShowAsMonochrome = highContrast,
+            UriSource = !highContrast && Root.ActualTheme == ElementTheme.Dark
+                ? DarkTitleBarLogoUri
+                : LightTitleBarLogoUri
+        };
+        if (highContrast &&
+            Microsoft.UI.Xaml.Application.Current.Resources["PrimaryTextBrush"] is Brush foreground)
+        {
+            iconSource.Foreground = foreground;
+        }
+
+        AppTitleBar.IconSource = iconSource;
     }
 
     private void UpdateResolvedAppearanceState()
@@ -130,10 +202,10 @@ public sealed partial class MainWindow : Window, IDisposable
 
         bool dark = Root.ActualTheme == ElementTheme.Dark;
         Windows.UI.Color foreground = dark
-            ? Microsoft.UI.ColorHelper.FromArgb(255, 242, 247, 250)
+            ? Microsoft.UI.ColorHelper.FromArgb(255, 244, 244, 245)
             : Microsoft.UI.ColorHelper.FromArgb(255, 17, 27, 36);
         Windows.UI.Color inactiveForeground = dark
-            ? Microsoft.UI.ColorHelper.FromArgb(255, 169, 186, 198)
+            ? Microsoft.UI.ColorHelper.FromArgb(255, 179, 179, 186)
             : Microsoft.UI.ColorHelper.FromArgb(255, 82, 101, 117);
         titleBar.ButtonForegroundColor = foreground;
         titleBar.ButtonHoverForegroundColor = foreground;
@@ -276,6 +348,7 @@ public sealed partial class MainWindow : Window, IDisposable
         }
 
         _disposed = true;
+        AppWindow.Changed -= AppWindow_Changed;
         Root.ActualThemeChanged -= Root_ActualThemeChanged;
         _shutdown.Cancel();
     }

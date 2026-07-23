@@ -6,7 +6,9 @@
     xmlns:local="using:MonitoringXS.App"
     xmlns:vm="using:MonitoringXS.App.ViewModels"
     Title="Monitoring XS">
-    <Grid x:Name="Root" Background="{StaticResource PageBrush}">
+    <Grid
+        x:Name="Root"
+        Background="{StaticResource PageBrush}">
         <Grid.Resources>
         <local:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <DataTemplate x:Key="ApplicationDetailTemplate">
@@ -374,25 +376,17 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <Grid Background="{StaticResource PageBrush}">
+        <Grid Background="{StaticResource ShellBrush}">
             <TitleBar
                 x:Name="AppTitleBar"
                 AutoRefreshDragRegions="True"
-                Background="{StaticResource PageBrush}"
+                Background="{StaticResource ShellBrush}"
                 Title="Monitoring XS">
                 <TitleBar.Resources>
                     <x:Double x:Key="TitleBarIconMaxWidth">24</x:Double>
                     <x:Double x:Key="TitleBarIconMaxHeight">24</x:Double>
                     <Thickness x:Key="TitleBarIconMargin">0,0,10,0</Thickness>
                 </TitleBar.Resources>
-                <TitleBar.IconSource>
-                    <FontIconSource
-                        FontFamily="Cascadia Mono, Segoe UI Variable"
-                        FontSize="14"
-                        FontWeight="Bold"
-                        Foreground="{StaticResource DataAccentBrush}"
-                        Glyph="XS" />
-                </TitleBar.IconSource>
             </TitleBar>
             <Border
                 VerticalAlignment="Bottom"
@@ -402,7 +396,7 @@
         <Grid Grid.Row="1">
             <NavigationView
                 x:Name="PrimaryNavigation"
-                Background="{StaticResource PageBrush}"
+                Background="{StaticResource ShellBrush}"
                 IsBackButtonVisible="Collapsed"
                 IsSettingsVisible="False"
                 PaneDisplayMode="LeftCompact"
@@ -441,7 +435,7 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid
-                            MaxWidth="1120"
+                            MaxWidth="1320"
                             Margin="24,16,24,12"
                             HorizontalAlignment="Stretch"
                             RowSpacing="12">
@@ -449,86 +443,79 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            <Grid ColumnSpacing="16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Spacing="4">
-                                    <TextBlock
-                                        FontSize="28"
-                                        FontWeight="SemiBold"
-                                        Foreground="{StaticResource PrimaryTextBrush}"
-                                        Text="Running applications" />
-                                    <TextBlock
-                                        AutomationProperties.LiveSetting="Polite"
-                                        Foreground="{StaticResource SecondaryTextBrush}"
-                                        Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
-                                </StackPanel>
-                                <StackPanel
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Spacing="4">
-                                    <TextBlock
-                                        FontFamily="Segoe UI Variable"
-                                        Foreground="{StaticResource SecondaryTextBrush}"
-                                        Text="Appearance" />
-                                    <ComboBox
-                                        x:Name="AppearanceSelector"
-                                        Width="196"
-                                        AutomationProperties.Name="Application appearance"
-                                        DisplayMemberPath="Label"
-                                        ItemsSource="{x:Bind AppearanceOptions, Mode=OneTime}"
-                                        SelectedItem="{x:Bind SelectedAppearanceOption, Mode=OneTime}"
-                                        SelectionChanged="AppearanceSelector_SelectionChanged"
-                                        ToolTipService.ToolTip="System follows Windows. Light and Dark stay fixed." />
-                                    <TextBlock
-                                        x:Name="ResolvedAppearanceText"
-                                        AutomationProperties.LiveSetting="Polite"
-                                        FontFamily="Segoe UI Variable"
-                                        Foreground="{StaticResource SecondaryTextBrush}" />
-                                </StackPanel>
-                            </Grid>
+                            <StackPanel Spacing="4">
+                                <TextBlock
+                                    FontSize="28"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource PrimaryTextBrush}"
+                                    Text="Running applications" />
+                                <TextBlock
+                                    AutomationProperties.LiveSetting="Polite"
+                                    Foreground="{StaticResource SecondaryTextBrush}"
+                                    Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
+                            </StackPanel>
                             <Border
                                 Grid.Row="1"
-                                Padding="10"
-                                Background="{StaticResource SurfaceRaisedBrush}"
+                                Padding="12"
+                                Background="{StaticResource ToolbarBrush}"
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1"
-                                CornerRadius="8">
-                                <Grid ColumnSpacing="8">
+                                CornerRadius="10">
+                                <Grid
+                                    x:Name="ToolbarLayout"
+                                    ColumnSpacing="12"
+                                    RowSpacing="10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
+
+                                    <Grid
+                                        x:Name="ToolbarSortGroup"
+                                        Grid.Row="0"
+                                        Grid.Column="0"
+                                        ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontFamily="Segoe UI Variable"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource SecondaryTextBrush}"
+                                            Text="Sort by" />
+                                        <ComboBox
+                                            Grid.Column="1"
+                                            Width="180"
+                                            Height="36"
+                                            AutomationProperties.Name="Sort applications by"
+                                            CornerRadius="6"
+                                            DisplayMemberPath="Label"
+                                            ItemsSource="{x:Bind ViewModel.SortOptions, Mode=OneTime}"
+                                            SelectedItem="{x:Bind ViewModel.SelectedSortOption, Mode=TwoWay}" />
+                                        <Button
+                                            Grid.Column="2"
+                                            Height="36"
+                                            MinWidth="132"
+                                            Padding="12,0"
+                                            AutomationProperties.Name="{x:Bind ViewModel.SortDirectionAutomationName, Mode=OneWay}"
+                                            Click="SortDirection_Click"
+                                            Content="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}"
+                                            CornerRadius="6"
+                                            ToolTipService.ToolTip="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}" />
+                                    </Grid>
                                     <TextBlock
-                                        VerticalAlignment="Center"
-                                        FontFamily="Segoe UI Variable"
-                                        FontWeight="SemiBold"
-                                        Foreground="{StaticResource SecondaryTextBrush}"
-                                        Text="Sort by" />
-                                    <ComboBox
+                                        x:Name="NoComparableDataText"
+                                        Grid.Row="0"
                                         Grid.Column="1"
-                                        Width="180"
-                                        AutomationProperties.Name="Sort applications by"
-                                        DisplayMemberPath="Label"
-                                        ItemsSource="{x:Bind ViewModel.SortOptions, Mode=OneTime}"
-                                        SelectedItem="{x:Bind ViewModel.SelectedSortOption, Mode=TwoWay}" />
-                                    <Button
-                                        Grid.Column="2"
-                                        MinWidth="132"
-                                        Padding="12,6"
-                                        AutomationProperties.Name="{x:Bind ViewModel.SortDirectionAutomationName, Mode=OneWay}"
-                                        Click="SortDirection_Click"
-                                        Content="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}"
-                                        ToolTipService.ToolTip="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}" />
-                                    <TextBlock
-                                        Grid.Column="3"
-                                        Margin="8,0"
                                         VerticalAlignment="Center"
                                         AutomationProperties.LiveSetting="Polite"
                                         DataContext="{x:Bind ViewModel, Mode=OneTime}"
@@ -538,15 +525,47 @@
                                         TextTrimming="CharacterEllipsis"
                                         ToolTipService.ToolTip="All values are unavailable. Applications are ordered by name."
                                         Visibility="{Binding HasNoComparableData, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                    <Border
-                                        Grid.Column="4"
-                                        Width="1"
-                                        Height="24"
-                                        Margin="8,0"
-                                        VerticalAlignment="Center"
-                                        Background="{StaticResource SubtleBorderBrush}" />
+
+                                    <Grid
+                                        x:Name="ToolbarAppearanceGroup"
+                                        Grid.Row="1"
+                                        Grid.Column="0"
+                                        ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontFamily="Segoe UI Variable"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource SecondaryTextBrush}"
+                                            Text="Appearance" />
+                                        <ComboBox
+                                            x:Name="AppearanceSelector"
+                                            Grid.Column="1"
+                                            Width="196"
+                                            Height="36"
+                                            AutomationProperties.Name="Application appearance"
+                                            CornerRadius="6"
+                                            DisplayMemberPath="Label"
+                                            ItemsSource="{x:Bind AppearanceOptions, Mode=OneTime}"
+                                            SelectedItem="{x:Bind SelectedAppearanceOption, Mode=OneTime}"
+                                            SelectionChanged="AppearanceSelector_SelectionChanged"
+                                            ToolTipService.ToolTip="System follows Windows. Light and Dark stay fixed." />
+                                        <TextBlock
+                                            x:Name="ResolvedAppearanceText"
+                                            Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            AutomationProperties.LiveSetting="Polite"
+                                            FontFamily="Segoe UI Variable"
+                                            Foreground="{StaticResource SecondaryTextBrush}" />
+                                    </Grid>
                                     <StackPanel
-                                        Grid.Column="5"
+                                        x:Name="ToolbarAdvancedGroup"
+                                        Grid.Row="1"
+                                        Grid.Column="3"
                                         VerticalAlignment="Center"
                                         Orientation="Horizontal"
                                         Spacing="8">
@@ -557,6 +576,7 @@
                                             Foreground="{StaticResource PrimaryTextBrush}"
                                             Text="Advanced" />
                                         <ToggleSwitch
+                                            Height="36"
                                             AutomationProperties.Name="Show advanced application information"
                                             IsOn="{x:Bind ViewModel.IsAdvancedMode, Mode=TwoWay}"
                                             OffContent=""
@@ -568,7 +588,7 @@
                         </Grid>
                         <ListView
                             Grid.Row="1"
-                            MaxWidth="1120"
+                            MaxWidth="1320"
                             Margin="24,0,24,24"
                             HorizontalAlignment="Stretch"
                             AutomationProperties.Name="Running applications"

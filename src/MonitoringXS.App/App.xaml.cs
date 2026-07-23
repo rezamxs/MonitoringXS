@@ -35,12 +35,14 @@ public partial class App : Microsoft.UI.Xaml.Application
     {
         IAppearancePreferenceStore appearanceStore = _services.GetRequiredService<IAppearancePreferenceStore>();
         AppearanceMode appearance = appearanceStore.Load();
-        _window = new MainWindow(
+        MainWindow mainWindow = new(
             _services.GetRequiredService<MainWindowViewModel>(),
             appearanceStore,
             appearance);
+        _window = mainWindow;
         _window.Closed += Window_Closed;
         _window.Activate();
+        mainWindow.EnableResponsiveToolbar();
     }
 
     private void Window_Closed(object sender, WindowEventArgs args)
@@ -92,4 +94,5 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<MainWindowViewModel>();
         return services.BuildServiceProvider(validateScopes: true);
     }
+
 }
