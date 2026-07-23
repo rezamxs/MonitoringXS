@@ -379,7 +379,21 @@
                 x:Name="AppTitleBar"
                 AutoRefreshDragRegions="True"
                 Background="{StaticResource PageBrush}"
-                Title="Monitoring XS" />
+                Title="Monitoring XS">
+                <TitleBar.Resources>
+                    <x:Double x:Key="TitleBarIconMaxWidth">24</x:Double>
+                    <x:Double x:Key="TitleBarIconMaxHeight">24</x:Double>
+                    <Thickness x:Key="TitleBarIconMargin">0,0,10,0</Thickness>
+                </TitleBar.Resources>
+                <TitleBar.IconSource>
+                    <FontIconSource
+                        FontFamily="Cascadia Mono, Segoe UI Variable"
+                        FontSize="14"
+                        FontWeight="Bold"
+                        Foreground="{StaticResource DataAccentBrush}"
+                        Glyph="XS" />
+                </TitleBar.IconSource>
+            </TitleBar>
             <Border
                 VerticalAlignment="Bottom"
                 BorderBrush="{StaticResource SubtleBorderBrush}"
