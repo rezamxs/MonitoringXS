@@ -8,6 +8,7 @@
     Title="Monitoring XS">
     <Grid x:Name="Root" Background="{StaticResource PageBrush}">
         <Grid.Resources>
+        <local:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <DataTemplate x:Key="ApplicationDetailTemplate">
             <ScrollViewer>
                 <StackPanel Padding="24" Spacing="20">
@@ -500,12 +501,24 @@
                                         SelectedItem="{x:Bind ViewModel.SelectedSortOption, Mode=TwoWay}" />
                                     <Button
                                         Grid.Column="2"
-                                        Width="40"
-                                        MinWidth="40"
+                                        MinWidth="132"
+                                        Padding="12,6"
                                         AutomationProperties.Name="{x:Bind ViewModel.SortDirectionAutomationName, Mode=OneWay}"
                                         Click="SortDirection_Click"
-                                        Content="{x:Bind ViewModel.SortDirectionGlyph, Mode=OneWay}"
+                                        Content="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}"
                                         ToolTipService.ToolTip="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}" />
+                                    <TextBlock
+                                        Grid.Column="3"
+                                        Margin="8,0"
+                                        VerticalAlignment="Center"
+                                        AutomationProperties.LiveSetting="Polite"
+                                        DataContext="{x:Bind ViewModel, Mode=OneTime}"
+                                        FontFamily="Segoe UI Variable"
+                                        Foreground="{StaticResource SecondaryTextBrush}"
+                                        Text="No comparable data"
+                                        TextTrimming="CharacterEllipsis"
+                                        ToolTipService.ToolTip="All values are unavailable. Applications are ordered by name."
+                                        Visibility="{Binding HasNoComparableData, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     <Border
                                         Grid.Column="4"
                                         Width="1"

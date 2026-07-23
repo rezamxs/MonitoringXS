@@ -15,6 +15,16 @@ public static class ApplicationCardSorter
         return result;
     }
 
+    public static bool HasComparableData(
+        IEnumerable<ApplicationCardViewModel> cards,
+        ApplicationSortField field)
+    {
+        ArgumentNullException.ThrowIfNull(cards);
+        return cards.Any(card =>
+            field == ApplicationSortField.ApplicationName
+            || GetMetricValue(card, field).HasValue);
+    }
+
     private sealed class CardComparer(ApplicationSortField field, bool descending)
         : IComparer<ApplicationCardViewModel>
     {

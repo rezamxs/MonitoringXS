@@ -47,6 +47,53 @@ public sealed class ApplicationCardSorterTests
         Assert.Equal(["High", "Low", "Unavailable"], descending.Select(card => card.DisplayName));
     }
 
+    [Theory]
+    [InlineData(ApplicationSortField.CpuUsage)]
+    [InlineData(ApplicationSortField.MemoryUsage)]
+    [InlineData(ApplicationSortField.ProcessIoRate)]
+    [InlineData(ApplicationSortField.PhysicalDiskRate)]
+    [InlineData(ApplicationSortField.NetworkRate)]
+    [InlineData(ApplicationSortField.ProcessCount)]
+    public void SortsEveryNumericFieldInBothDirections(ApplicationSortField field)
+    {
+        ApplicationCardViewModel low = Card(
+            "low",
+            "Low",
+            cpu: MetricValue<double>.Available(1),
+            memoryBytes: MetricValue<long>.Available(1),
+            ioRead: MetricValue<double>.Available(1),
+            ioWrite: MetricValue<double>.Available(1),
+            physicalRead: MetricValue<double>.Available(1),
+            physicalWrite: MetricValue<double>.Available(1),
+            networkDownload: MetricValue<double>.Available(1),
+            networkUpload: MetricValue<double>.Available(1),
+            processCount: 1);
+        ApplicationCardViewModel high = Card(
+            "high",
+            "High",
+            cpu: MetricValue<double>.Available(2),
+            memoryBytes: MetricValue<long>.Available(2),
+            ioRead: MetricValue<double>.Available(2),
+            ioWrite: MetricValue<double>.Available(2),
+            physicalRead: MetricValue<double>.Available(2),
+            physicalWrite: MetricValue<double>.Available(2),
+            networkDownload: MetricValue<double>.Available(2),
+            networkUpload: MetricValue<double>.Available(2),
+            processCount: 2);
+
+        IReadOnlyList<ApplicationCardViewModel> ascending = ApplicationCardSorter.Sort(
+            [high, low],
+            field,
+            descending: false);
+        IReadOnlyList<ApplicationCardViewModel> descending = ApplicationCardSorter.Sort(
+            [low, high],
+            field,
+            descending: true);
+
+        Assert.Equal(["Low", "High"], ascending.Select(card => card.DisplayName));
+        Assert.Equal(["High", "Low"], descending.Select(card => card.DisplayName));
+    }
+
     [Fact]
     public void MetricTiesUseApplicationNameAsStableSecondaryOrder()
     {
@@ -131,6 +178,80 @@ public sealed class ApplicationCardSorterTests
         Assert.Same(four, result[0]);
         Assert.Same(one, result[1]);
     }
+
+    [Theory]
+    [InlineData(ApplicationSortField.CpuUsage)]
+    [InlineData(ApplicationSortField.MemoryUsage)]
+    [InlineData(ApplicationSortField.ProcessIoRate)]
+    [InlineData(ApplicationSortField.PhysicalDiskRate)]
+    [InlineData(ApplicationSortField.NetworkRate)]
+    public void ReportsNoComparableDataWhenEveryMetricIsUnavailable(ApplicationSortField field)
+    {
+        ApplicationCardViewModel warmingUp = CardWithAvailability(
+            "warming",
+            "Warming",
+            MetricAvailability.WarmingUp);
+        ApplicationCardViewModel denied = CardWithAvailability(
+            "denied",
+            "Denied",
+            MetricAvailability.AccessDenied);
+
+        Assert.False(ApplicationCardSorter.HasComparableData([warmingUp, denied], field));
+    }
+
+    [Theory]
+    [InlineData(ApplicationSortField.CpuUsage)]
+    [InlineData(ApplicationSortField.MemoryUsage)]
+    [InlineData(ApplicationSortField.ProcessIoRate)]
+    [InlineData(ApplicationSortField.PhysicalDiskRate)]
+    [InlineData(ApplicationSortField.NetworkRate)]
+    [InlineData(ApplicationSortField.ProcessCount)]
+    public void ReportsComparableDataWhenARealValueExists(ApplicationSortField field)
+    {
+        ApplicationCardViewModel denied = CardWithAvailability(
+            "denied",
+            "Denied",
+            MetricAvailability.AccessDenied);
+        ApplicationCardViewModel available = Card("available", "Available");
+
+        Assert.True(ApplicationCardSorter.HasComparableData([denied, available], field));
+    }
+
+    [Fact]
+    public void AllUnavailableMetricValuesUseDeterministicNameOrder()
+    {
+        ApplicationCardViewModel zulu = CardWithAvailability(
+            "zulu",
+            "Zulu",
+            MetricAvailability.Unavailable);
+        ApplicationCardViewModel alpha = CardWithAvailability(
+            "alpha",
+            "Alpha",
+            MetricAvailability.AccessDenied);
+
+        IReadOnlyList<ApplicationCardViewModel> result = ApplicationCardSorter.Sort(
+            [zulu, alpha],
+            ApplicationSortField.NetworkRate,
+            descending: true);
+
+        Assert.Equal(["Alpha", "Zulu"], result.Select(card => card.DisplayName));
+    }
+
+    private static ApplicationCardViewModel CardWithAvailability(
+        string id,
+        string name,
+        MetricAvailability availability) =>
+        Card(
+            id,
+            name,
+            cpu: MetricValue<double>.Unavailable(availability),
+            memoryBytes: MetricValue<long>.Unavailable(availability),
+            ioRead: MetricValue<double>.Unavailable(availability),
+            ioWrite: MetricValue<double>.Unavailable(availability),
+            physicalRead: MetricValue<double>.Unavailable(availability),
+            physicalWrite: MetricValue<double>.Unavailable(availability),
+            networkDownload: MetricValue<double>.Unavailable(availability),
+            networkUpload: MetricValue<double>.Unavailable(availability));
 
     private static ApplicationCardViewModel Card(
         string id,

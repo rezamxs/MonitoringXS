@@ -67,13 +67,29 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public IReadOnlyList<ApplicationSortOption> SortOptions { get; } = AvailableSortOptions;
 
-    public string SortDirectionLabel => IsSortDescending ? "Descending ↓" : "Ascending ↑";
+    public string SortDirectionLabel => ApplicationSortPresentation.DirectionLabel(
+        SelectedSortOption.Field,
+        IsSortDescending);
 
-    public string SortDirectionGlyph => IsSortDescending ? "↓" : "↑";
+    public string SortDirectionAutomationName => ApplicationSortPresentation.DirectionAutomationName(
+        SelectedSortOption.Field,
+        IsSortDescending);
 
-    public string SortDirectionAutomationName => IsSortDescending
-        ? "Sort direction descending. Activate to change to ascending."
-        : "Sort direction ascending. Activate to change to descending.";
+    public bool HasNoComparableData
+    {
+        get
+        {
+            ApplicationSortField sortField = SelectedSortOption.Field;
+            if (sortField is ApplicationSortField.ApplicationName or ApplicationSortField.ProcessCount)
+            {
+                return false;
+            }
+
+            IEnumerable<ApplicationCardViewModel> cards = InstalledApplications.Concat(PortableApplications);
+            return (InstalledApplications.Count > 0 || PortableApplications.Count > 0)
+                && !ApplicationCardSorter.HasComparableData(cards, sortField);
+        }
+    }
 
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
@@ -92,6 +108,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 snapshot.PortableApplications,
                 snapshot.OneMinuteHistory);
             ApplyCurrentSort(snapshot.CapturedAt, force: membershipChanged);
+            OnPropertyChanged(nameof(HasNoComparableData));
             UpdateOpenTabs(snapshot);
             LastUpdated = snapshot.CapturedAt.ToLocalTime();
             StatusMessage = string.Create(
@@ -237,15 +254,32 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    partial void OnSelectedSortOptionChanged(ApplicationSortOption value) =>
-        ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
+    partial void OnSelectedSortOptionChanged(ApplicationSortOption value)
+    {
+        bool defaultDescending = ApplicationSortPresentation.DefaultDescending(value.Field);
+        if (IsSortDescending != defaultDescending)
+        {
+            IsSortDescending = defaultDescending;
+        }
+        else
+        {
+            ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
+        }
+
+        NotifySortPresentationChanged();
+    }
 
     partial void OnIsSortDescendingChanged(bool value)
     {
-        OnPropertyChanged(nameof(SortDirectionLabel));
-        OnPropertyChanged(nameof(SortDirectionGlyph));
-        OnPropertyChanged(nameof(SortDirectionAutomationName));
+        NotifySortPresentationChanged();
         ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
+    }
+
+    private void NotifySortPresentationChanged()
+    {
+        OnPropertyChanged(nameof(SortDirectionLabel));
+        OnPropertyChanged(nameof(SortDirectionAutomationName));
+        OnPropertyChanged(nameof(HasNoComparableData));
     }
 
     private void UpdateOpenTabs(MonitoringDashboardSnapshot dashboard)
