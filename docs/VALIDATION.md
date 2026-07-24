@@ -690,3 +690,74 @@ not revalidated. Actual PID reuse, 150-200% display scaling, High Contrast,
 Windows 11 Snap Layout, and a broad screen-reader pass were not executed.
 Milestone 4 therefore remains in progress, and no change to
 `docs/MILESTONES.md` was justified.
+
+## 2026-07-24 physical-disk monotonic-rate and diagnostics stabilization
+
+The incoming repository already contained the real ETW physical-disk implementation from `69ea628`. This pass did not add another collector, change the shared session name, change a package, or start Network/GPU work. It closed focused correctness and observability gaps in the existing Physical Disk path.
+
+Design review confirmed:
+
+- kernel `DiskIO`, `DiskIOInit`, and `Thread` events remain the source of completion transfer size and process correlation;
+- `Microsoft.Diagnostics.Tracing.TraceEvent` remains centrally pinned at 3.2.5, targets .NET Standard 2.0, is compatible with the current .NET 10 Windows project, and uses the MIT license;
+- raw QPC timestamps do not cross the Windows layer. Event and process-start identity remain normalized to UTC for PID-reuse checks;
+- session ownership remains fixed at `MonitoringXS.KernelMetrics.v1` with `NoRestartOnCreate`; an existing same-name session is never replaced or stopped.
+
+Implemented:
+
+- Physical Disk rates now use injected monotonic `TimeProvider` timestamps rather than UTC wall-clock deltas.
+- Intervals below 10 ms remain `WarmingUp`; their bytes are retained for the next valid interval instead of generating an extreme rate.
+- Confirmed ETW loss or local queue overflow keeps retained session totals `Partial` lower bounds until collector state resets. Later healthy interval rates may be complete without misrepresenting the incomplete totals.
+- Unavailable collector state clears process rate history so a recovered/restarted collector begins at `WarmingUp`.
+- Advanced diagnostics now expose read/write event and byte counts, metadata lookup failures, session-start/access-denied failures, processing latency, last successful event timestamp, collector status, and retained-total completeness in addition to the existing ETW loss, queue, unattributed, PID-reuse, rate, and buffer data.
+- An unavailable collector now reports diagnostic completeness as `unavailable`, not `complete`.
+- Elevated probing found that one IRP can produce multiple split completions and that later PID 4 split-init events were overwriting the original user initiator. IRP correlation now survives multiple completions, preserves a known user initiator across PID 4 split-init events, accepts a later user init as pointer reuse, and remains capacity-bounded.
+- Thread lifecycle mapping now uses the thread and process identity carried by the thread event itself rather than the creator/parent identity.
+- Events with a valid PID outside the current application process set now increment the unattributed diagnostic instead of disappearing from observability.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+git diff --check
+```
+
+Actual command results:
+
+- The sandboxed restore failed with NuGet TLS/credential `NU1301` and vulnerability-feed `NU1900` warnings. The same restore with normal network access succeeded for all projects without warnings or package changes. The global NuGet cache was not cleared.
+- The final Release build succeeded in 00:00:32.95 with 0 warnings and 0 errors. No compiler, analyzer, XAML, or NuGet warning remained in the successful build.
+- All 166 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 45, Integration 41, Storage 4, and App 67.
+- Sixteen tests were added relative to the 150-test baseline. New deterministic coverage includes monotonic rate timing despite a backward UTC jump, sub-10-ms byte carry-forward, unknown PID handling and counting, process exit/reentry, queue-loss and persistent session-lower-bound semantics, unavailable recovery, collector restart, expanded diagnostics, Chrome/VS Code aggregation and launcher/game boundaries, pre-start disposal idempotence, read-after-dispose safety, unavailable diagnostic wording, split completion reuse of one IRP correlation, bounded IRP pointer replacement, and preservation of a user initiator across PID 4 split-init.
+
+Actual unelevated runtime observations:
+
+- A visible responsive `Monitoring XS` window opened. Four cards exposed live CPU, memory, and Process I/O values.
+- Physical Disk and Network remained separately labelled and each reported `Access denied`; neither was replaced with Process I/O or a numeric zero.
+- Keyboard Enter opened the Google Chrome tab. The Advanced expander opened successfully.
+- Physical Disk diagnostics reported `Status AccessDenied`, 0 ETW events, 0 queue depth/drop, 0 ETW loss, one session-start failure, one access-denied failure, 0.037 ms collector processing time, no last event, and `completeness unavailable`.
+- The final process remained responsive. Normal `WM_CLOSE` exited both `MonitoringXS.App` and its `dotnet run` parent. No Monitoring XS ETW session or related crash event remained.
+
+Performance smoke:
+
+- duration: 30 seconds after warm-up;
+- average CPU: 0.574% of total eight-logical-processor capacity;
+- peak CPU: 1.827%;
+- average working set: 182,593,399 bytes (174.1 MiB);
+- peak working set: 184,037,376 bytes (175.5 MiB);
+- responsiveness: 30 of 30 samples.
+
+Elevated correlation investigation and final validation:
+
+- A raw DiskIO probe confirmed repeated completion events for the same IRP. A focused correlation probe observed 18 distinct workload IRPs produce 121 completions, including 40 additional completions beyond the first one per IRP.
+- Before the final correlation fix, the direct Monitoring XS source assigned only 413,696 workload write bytes while assigning 65,380,352 bytes to PID 4. After preserving the known user initiator across PID 4 split-init events, the same direct source probe assigned 30,678,528 write bytes to the workload PID. PID 4 remained separate rather than being merged into the user application.
+- The final elevated UI run used the existing `MonitoringXS.Benchmarks disk-smoke` workload for 20 seconds. It performed 38 iterations and reported 159,383,552 Process I/O bytes read and written. The controlled read path was mostly cached and therefore did not become equivalent physical-disk read traffic.
+- The workload appeared as its own low-memory Monitoring XS product card. Its Physical Disk write rate reached 5.7 MB/s while Process I/O separately showed approximately 8.0 MB/s read and write. The workload Physical Disk session total reached 37.1 MB write and 4.0 KB read.
+- The shared kernel source observed 7,492 events, including 6,706 reads and 786 writes, with 475.1 MB read and 156.2 MB write across the whole machine. Events assigned to PID 4 or other processes outside the current application set remained visible as 7,169 unattributed events and were not guessed into the workload.
+- Maximum observed event rate was 1,488 events/s. Maximum queue depth was 1,492 of 16,384, local queue drops were 0, ETW-lost events were 0, metadata lookup failures were 0, session-start/access-denied failures were 0, PID-reuse rejections were 0, and maximum collector processing latency was 1.066 ms.
+- Physical Disk was `Available` and `completeness complete`, meaning the retained attributed stream had no reported ETW or local queue loss. It does not mean every system disk completion had a user-process owner; PID 4 and out-of-set events remain explicitly unattributed.
+- The window remained responsive in all 48 checks. After workload completion and cooldown, a 30-second steady sample averaged 0.508% CPU, peaked at 2.325%, averaged 188,336,674 bytes (179.6 MiB) working set, and peaked at 193,048,576 bytes (184.1 MiB).
+- A normal close produced exit code 0 for both `MonitoringXS.App` and `dotnet run`. No application or project `dotnet run` process remained, and neither `MonitoringXS.KernelMetrics.v1` nor the retired `MonitoringXS.PhysicalDisk.v1` session remained active.
+
+The product never requested elevation itself; Administrator PowerShell was approved and launched manually for this validation. An actual OS PID reuse did not occur, so Milestone 2 remains in progress for its existing real-runtime PID-reuse acceptance item. The deterministic UTC-domain rejection test remains green.

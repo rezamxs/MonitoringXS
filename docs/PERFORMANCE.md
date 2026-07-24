@@ -66,3 +66,29 @@ The x64 Release application was measured after adding the network collector. Ker
 - The process was responsive for every sample.
 
 The automation service could not complete the requested close interaction after the measurement, so clean shutdown is not claimed for this run. `logman` confirmed that no `MonitoringXS.PhysicalDisk.v1` ETW session was active.
+
+## 2026-07-24 physical-disk stabilization smoke
+
+This was an unelevated 30-second steady sample after the Debug application had completed startup and warm-up. Windows 10 build 19045, 8 logical processors, four visible logical applications, and no history database were observed.
+
+- CPU averaged 0.574% of total machine capacity and peaked at 1.827%.
+- Working set averaged 182,593,399 bytes (174.1 MiB) and peaked at 184,037,376 bytes (175.5 MiB).
+- The process responded in all 30 samples.
+- Kernel ETW returned `AccessDenied`, so event rate, queue depth, queue drops, and ETW loss were all observed as zero for this run; this is not an elevated disk-workload measurement.
+- Normal close removed the application and `dotnet run` processes, and no Monitoring XS kernel session remained.
+
+Compared with the latest 0.385% CPU / 173.2 MiB baseline, CPU was 0.189 percentage points higher and average working set was 0.9 MiB higher. The CPU result still meets the below-1% idle target; active Chrome and Visual Studio Code workloads differed between the two short samples, so this single smoke does not establish a regression.
+
+## 2026-07-24 elevated split-IRP attribution validation
+
+This Debug validation ran from a manually approved Administrator PowerShell on Windows 10 build 19045. A controlled 20-second workload wrote and read 159,383,552 process-I/O bytes in each direction. Its read path was mostly cached; Physical Disk therefore did not mirror the Process I/O read counter.
+
+- The workload card reached 5.7 MB/s Physical Disk write while Process I/O remained separately displayed at approximately 8.0 MB/s read and write.
+- The attributed workload session reached 37.1 MB write and 4.0 KB read. The kernel source observed 156.2 MB write and 475.1 MB read across the whole machine; events owned by PID 4 or processes outside the current application set were not guessed into the workload.
+- Maximum ETW event rate was 1,488 events/s. Maximum queue depth was 1,492 of 16,384, with 0 local drops and 0 ETW-lost events.
+- Maximum collector processing latency observed in Advanced diagnostics was 1.066 ms.
+- After workload completion and cooldown, the 30-second steady sample averaged 0.508% CPU and peaked at 2.325%.
+- Working set averaged 188,336,674 bytes (179.6 MiB) and peaked at 193,048,576 bytes (184.1 MiB).
+- The app responded in all 48 workload and steady-state checks. Normal close returned app and `dotnet run` exit code 0, and no Monitoring XS process or ETW session remained.
+
+The average remains below the 1% CPU target and working set remains below the approximate 200 MB target. Peak CPU is an instantaneous one-second sample, not the idle average.

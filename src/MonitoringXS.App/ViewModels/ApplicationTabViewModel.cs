@@ -94,7 +94,13 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
         PhysicalDiskTotalsText = $"Read {FormatBytes(snapshot.PhysicalDisk.SessionReadBytes)} / Write {FormatBytes(snapshot.PhysicalDisk.SessionWriteBytes)}";
         PhysicalDiskOperationsText = $"Read {FormatCount(snapshot.PhysicalDisk.SessionReadOperationCount)} / Write {FormatCount(snapshot.PhysicalDisk.SessionWriteOperationCount)}";
         PhysicalDiskCollectorDiagnostics diagnostics = snapshot.PhysicalDisk.Diagnostics;
-        PhysicalDiskDiagnosticsText = $"Events {diagnostics.EventsObserved}; rate {diagnostics.EventRatePerSecond.ToString("0", CultureInfo.InvariantCulture)}/s; queue {diagnostics.CurrentQueueDepth}/{diagnostics.MaximumQueueDepth} max; dropped {diagnostics.QueueEventsDropped}; ETW lost {diagnostics.EtwEventsLost}; buffer {diagnostics.EtwBufferSizeMegabytes} MB; unattributed {diagnostics.UnattributedEvents}; PID-reuse rejected {diagnostics.PidReuseEventsRejected}.";
+        string lastPhysicalDiskEvent = diagnostics.LastSuccessfulEventTimestampUtc?.ToString(
+            "O",
+            CultureInfo.InvariantCulture) ?? "none";
+        string physicalDiskCompleteness = diagnostics.CollectorStatus is MetricAvailability.Available or MetricAvailability.Partial
+            ? diagnostics.SessionTotalsAreLowerBounds ? "lower bound" : "complete"
+            : "unavailable";
+        PhysicalDiskDiagnosticsText = $"Status {diagnostics.CollectorStatus?.ToString() ?? "Unavailable"}; events {diagnostics.EventsObserved} ({diagnostics.ReadEventsObserved} read / {diagnostics.WriteEventsObserved} write); observed bytes {FormatBytes(MetricValue<ulong>.Available(diagnostics.ReadBytesObserved))} read / {FormatBytes(MetricValue<ulong>.Available(diagnostics.WriteBytesObserved))} write; rate {diagnostics.EventRatePerSecond.ToString("0", CultureInfo.InvariantCulture)}/s; queue {diagnostics.CurrentQueueDepth}/{diagnostics.MaximumQueueDepth} max; dropped {diagnostics.QueueEventsDropped}; ETW lost {diagnostics.EtwEventsLost}; buffer {diagnostics.EtwBufferSizeMegabytes} MB; unattributed {diagnostics.UnattributedEvents}; PID-reuse rejected {diagnostics.PidReuseEventsRejected}; metadata lookup failures {diagnostics.MetadataLookupFailures}; session start failures {diagnostics.SessionStartFailures}; access denied {diagnostics.AccessDeniedFailures}; processing {diagnostics.ProcessingLatencyMilliseconds.ToString("0.###", CultureInfo.InvariantCulture)} ms; last event {lastPhysicalDiskEvent}; completeness {physicalDiskCompleteness}.";
         NetworkDownloadText = FormatRate(snapshot.Network.DownloadBytesPerSecond);
         NetworkUploadText = FormatRate(snapshot.Network.UploadBytesPerSecond);
         NetworkStatusText = $"{FormatAvailability(snapshot.Network.DownloadBytesPerSecond)}; reason {snapshot.Network.Reason}.";

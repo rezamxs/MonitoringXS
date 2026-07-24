@@ -38,6 +38,8 @@ Status: in progress.
 - [x] One-second live loop and bounded one-minute CPU history.
 - [x] Add bounded physical-disk ETW attribution with read/write rates, operation counts, session totals, and explicit separation from Process I/O.
 - [x] Normalize ETW and process-start timestamps to UTC before PID-reuse checks; discard ambiguous batches after ETW loss.
+- [x] Calculate physical-disk rates from monotonic elapsed time, retain sub-minimum-interval bytes, and keep incomplete session totals marked as lower bounds.
+- [x] Preserve the original user initiator across split completions for one IRP, prevent PID 4 split-init overwrite, and expose events outside the current application set as unattributed.
 - [x] Add collector diagnostics and deterministic warming-up, zero, partial, access-denied, cancellation, and PID-reuse coverage.
 - [x] Complete a one-time elevated runtime smoke with real `Available` physical-disk rates, logical-workload attribution, visible lower-bound semantics, and verified ETW-session release after normal shutdown.
 - [x] Reproduce and fix the advanced-detail WinUI layout-cycle fail-fast; retain keyboard/accessibility behavior and cover the equivalent scenario with a real UI Automation stress harness.

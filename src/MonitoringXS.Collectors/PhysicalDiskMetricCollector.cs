@@ -5,19 +5,24 @@ namespace MonitoringXS.Collectors;
 
 public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
 {
+    private static readonly TimeSpan MinimumRateInterval = TimeSpan.FromMilliseconds(10);
     private readonly IPhysicalDiskEventSource _eventSource;
+    private readonly TimeProvider _timeProvider;
     // State is bounded by the currently attributed process set and evicted on every capture.
     private readonly Dictionary<ProcessInstanceId, ProcessState> _states = [];
     private long _lastEtwEventsLost;
     private long _lastQueueEventsDropped;
-    private long _lastUnattributedEvents;
     private long _lastEventsObserved;
     private long _pidReuseEventsRejected;
-    private DateTimeOffset _lastCaptureAtUtc;
+    private long _unmatchedProcessEvents;
+    private long _lastEventRateTimestamp;
+    private bool _hasEventRateBaseline;
+    private bool _sessionTotalsAreLowerBounds;
 
-    public PhysicalDiskMetricCollector(IPhysicalDiskEventSource eventSource)
+    public PhysicalDiskMetricCollector(IPhysicalDiskEventSource eventSource, TimeProvider? timeProvider = null)
     {
         _eventSource = eventSource;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async ValueTask<IReadOnlyList<PhysicalDiskProcessSample>> CollectAsync(
@@ -26,8 +31,10 @@ public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
         CancellationToken cancellationToken)
     {
         DateTimeOffset capturedAtUtc = capturedAt.ToUniversalTime();
+        long processingStarted = _timeProvider.GetTimestamp();
         PhysicalDiskEventBatch batch = await _eventSource.ReadBatchAsync(cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
+        long captureTimestamp = _timeProvider.GetTimestamp();
 
         HashSet<ProcessInstanceId> live = processes.Select(item => item.InstanceId).ToHashSet();
         foreach (ProcessInstanceId stale in _states.Keys.Where(item => !live.Contains(item)).ToArray())
@@ -35,7 +42,7 @@ public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
             _states.Remove(stale);
         }
 
-        double eventRate = CalculateEventRate(batch.EventsObserved, capturedAtUtc);
+        double eventRate = CalculateEventRate(batch.EventsObserved, captureTimestamp);
         PhysicalDiskCollectorDiagnostics diagnostics = new(
             batch.EtwEventsLost,
             batch.QueueEventsDropped,
@@ -45,9 +52,24 @@ public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
             eventRate,
             batch.CurrentQueueDepth,
             batch.MaximumQueueDepth,
-            batch.EtwBufferSizeMegabytes);
+            batch.EtwBufferSizeMegabytes,
+            batch.ReadEventsObserved,
+            batch.WriteEventsObserved,
+            batch.ReadBytesObserved,
+            batch.WriteBytesObserved,
+            batch.MetadataLookupFailures,
+            batch.SessionStartFailures,
+            batch.AccessDeniedFailures,
+            ProcessingLatencyMilliseconds(processingStarted),
+            batch.LastSuccessfulEventTimestampUtc,
+            batch.Availability);
         if (batch.Availability is not (MetricAvailability.Available or MetricAvailability.Partial))
         {
+            _states.Clear();
+            _sessionTotalsAreLowerBounds = false;
+            _hasEventRateBaseline = false;
+            _lastEtwEventsLost = Math.Max(0, batch.EtwEventsLost);
+            _lastQueueEventsDropped = Math.Max(0, batch.QueueEventsDropped);
             return processes
                 .Select(process => Unavailable(process.InstanceId, capturedAtUtc, batch.Availability, batch.Detail, diagnostics))
                 .ToArray();
@@ -64,6 +86,7 @@ public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
             cancellationToken.ThrowIfCancellationRequested();
             if (!candidatesByPid.TryGetValue(diskEvent.ProcessId, out ProcessDescriptor[]? candidates))
             {
+                _unmatchedProcessEvents = SaturatingIncrement(_unmatchedProcessEvents);
                 continue;
             }
 
@@ -80,68 +103,100 @@ public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
             intervalCounts[matching.InstanceId] = counts.Add(diskEvent);
         }
 
-        diagnostics = diagnostics with { PidReuseEventsRejected = _pidReuseEventsRejected };
-        bool degraded = batch.Availability == MetricAvailability.Partial
+        diagnostics = diagnostics with
+        {
+            PidReuseEventsRejected = _pidReuseEventsRejected,
+            UnattributedEvents = SaturatingAdd(batch.UnattributedEvents, _unmatchedProcessEvents),
+            ProcessingLatencyMilliseconds = ProcessingLatencyMilliseconds(processingStarted)
+        };
+        bool intervalIncomplete = batch.Availability == MetricAvailability.Partial
             || batch.EtwEventsLost > _lastEtwEventsLost
             || batch.QueueEventsDropped > _lastQueueEventsDropped;
+        _sessionTotalsAreLowerBounds |= intervalIncomplete;
         _lastEtwEventsLost = Math.Max(_lastEtwEventsLost, batch.EtwEventsLost);
         _lastQueueEventsDropped = Math.Max(_lastQueueEventsDropped, batch.QueueEventsDropped);
-        _lastUnattributedEvents = Math.Max(_lastUnattributedEvents, batch.UnattributedEvents);
+        diagnostics = diagnostics with
+        {
+            CollectorStatus = intervalIncomplete || _sessionTotalsAreLowerBounds
+                ? MetricAvailability.Partial
+                : batch.Availability,
+            SessionTotalsAreLowerBounds = _sessionTotalsAreLowerBounds
+        };
         string partialDetail = BuildPartialDetail(batch, diagnostics);
 
         List<PhysicalDiskProcessSample> samples = new(processes.Count);
         foreach (ProcessDescriptor process in processes)
         {
             intervalCounts.TryGetValue(process.InstanceId, out IntervalCounts interval);
-            samples.Add(CreateSample(process.InstanceId, capturedAtUtc, interval, degraded, partialDetail, diagnostics));
+            samples.Add(CreateSample(
+                process.InstanceId,
+                capturedAtUtc,
+                captureTimestamp,
+                interval,
+                intervalIncomplete,
+                partialDetail,
+                diagnostics));
         }
 
         return samples;
     }
 
-    private double CalculateEventRate(long eventsObserved, DateTimeOffset capturedAtUtc)
+    private double CalculateEventRate(long eventsObserved, long captureTimestamp)
     {
-        if (_lastCaptureAtUtc == default)
+        long observed = Math.Max(0, eventsObserved);
+        if (!_hasEventRateBaseline)
         {
-            _lastEventsObserved = Math.Max(0, eventsObserved);
-            _lastCaptureAtUtc = capturedAtUtc;
+            _lastEventsObserved = observed;
+            _lastEventRateTimestamp = captureTimestamp;
+            _hasEventRateBaseline = true;
             return 0;
         }
 
-        double elapsedSeconds = (capturedAtUtc - _lastCaptureAtUtc).TotalSeconds;
-        long eventDelta = Math.Max(0, eventsObserved - _lastEventsObserved);
-        _lastEventsObserved = Math.Max(_lastEventsObserved, eventsObserved);
-        _lastCaptureAtUtc = capturedAtUtc;
-        return elapsedSeconds > 0 ? eventDelta / elapsedSeconds : 0;
+        TimeSpan elapsed = _timeProvider.GetElapsedTime(_lastEventRateTimestamp, captureTimestamp);
+        if (elapsed < MinimumRateInterval)
+        {
+            return 0;
+        }
+
+        long eventDelta = Math.Max(0, observed - _lastEventsObserved);
+        _lastEventsObserved = Math.Max(_lastEventsObserved, observed);
+        _lastEventRateTimestamp = captureTimestamp;
+        return eventDelta / elapsed.TotalSeconds;
     }
 
     private PhysicalDiskProcessSample CreateSample(
         ProcessInstanceId process,
         DateTimeOffset capturedAtUtc,
+        long captureTimestamp,
         IntervalCounts interval,
-        bool degraded,
+        bool intervalIncomplete,
         string partialDetail,
         PhysicalDiskCollectorDiagnostics diagnostics)
     {
         _states.TryGetValue(process, out ProcessState previous);
-        ProcessState current = new(
-            capturedAtUtc,
-            SaturatingAdd(previous.SessionReadBytes, interval.ReadBytes),
-            SaturatingAdd(previous.SessionWriteBytes, interval.WriteBytes),
-            SaturatingAdd(previous.SessionReadOperations, interval.ReadOperations),
-            SaturatingAdd(previous.SessionWriteOperations, interval.WriteOperations));
-        _states[process] = current;
+        ulong sessionReadBytes = SaturatingAdd(previous.SessionReadBytes, interval.ReadBytes);
+        ulong sessionWriteBytes = SaturatingAdd(previous.SessionWriteBytes, interval.WriteBytes);
+        ulong sessionReadOperations = SaturatingAdd(previous.SessionReadOperations, interval.ReadOperations);
+        ulong sessionWriteOperations = SaturatingAdd(previous.SessionWriteOperations, interval.WriteOperations);
+        MetricValue<ulong> readBytes = CompleteOrPartial(sessionReadBytes, _sessionTotalsAreLowerBounds, partialDetail);
+        MetricValue<ulong> writeBytes = CompleteOrPartial(sessionWriteBytes, _sessionTotalsAreLowerBounds, partialDetail);
+        MetricValue<ulong> readOperations = CompleteOrPartial(sessionReadOperations, _sessionTotalsAreLowerBounds, partialDetail);
+        MetricValue<ulong> writeOperations = CompleteOrPartial(sessionWriteOperations, _sessionTotalsAreLowerBounds, partialDetail);
 
-        MetricValue<ulong> readBytes = CompleteOrPartial(current.SessionReadBytes, degraded, partialDetail);
-        MetricValue<ulong> writeBytes = CompleteOrPartial(current.SessionWriteBytes, degraded, partialDetail);
-        MetricValue<ulong> readOperations = CompleteOrPartial(current.SessionReadOperations, degraded, partialDetail);
-        MetricValue<ulong> writeOperations = CompleteOrPartial(current.SessionWriteOperations, degraded, partialDetail);
-
-        if (previous.CapturedAtUtc == default)
+        if (!previous.HasRateBaseline)
         {
+            _states[process] = new ProcessState(
+                true,
+                captureTimestamp,
+                0,
+                0,
+                sessionReadBytes,
+                sessionWriteBytes,
+                sessionReadOperations,
+                sessionWriteOperations);
             MetricValue<double> warming = MetricValue<double>.Unavailable(
                 MetricAvailability.WarmingUp,
-                "A second UTC capture is required for a physical-disk rate.");
+                "A second monotonic capture is required for a physical-disk rate.");
             return new PhysicalDiskProcessSample(
                 process,
                 capturedAtUtc,
@@ -154,12 +209,23 @@ public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
                 diagnostics);
         }
 
-        double elapsedSeconds = (capturedAtUtc - previous.CapturedAtUtc).TotalSeconds;
-        if (elapsedSeconds <= 0)
+        ulong pendingReadBytes = SaturatingAdd(previous.PendingReadBytes, interval.ReadBytes);
+        ulong pendingWriteBytes = SaturatingAdd(previous.PendingWriteBytes, interval.WriteBytes);
+        TimeSpan elapsed = _timeProvider.GetElapsedTime(previous.RateTimestamp, captureTimestamp);
+        if (elapsed <= TimeSpan.Zero)
         {
+            _states[process] = previous with
+            {
+                PendingReadBytes = pendingReadBytes,
+                PendingWriteBytes = pendingWriteBytes,
+                SessionReadBytes = sessionReadBytes,
+                SessionWriteBytes = sessionWriteBytes,
+                SessionReadOperations = sessionReadOperations,
+                SessionWriteOperations = sessionWriteOperations
+            };
             MetricValue<double> invalid = MetricValue<double>.Unavailable(
                 MetricAvailability.Error,
-                "The physical-disk sampling interval was not positive after UTC normalization.");
+                "The physical-disk monotonic sampling interval was not positive.");
             return new PhysicalDiskProcessSample(
                 process,
                 capturedAtUtc,
@@ -172,18 +238,59 @@ public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
                 diagnostics);
         }
 
-        double readRate = interval.ReadBytes / elapsedSeconds;
-        double writeRate = interval.WriteBytes / elapsedSeconds;
+        if (elapsed < MinimumRateInterval)
+        {
+            _states[process] = previous with
+            {
+                PendingReadBytes = pendingReadBytes,
+                PendingWriteBytes = pendingWriteBytes,
+                SessionReadBytes = sessionReadBytes,
+                SessionWriteBytes = sessionWriteBytes,
+                SessionReadOperations = sessionReadOperations,
+                SessionWriteOperations = sessionWriteOperations
+            };
+            MetricValue<double> warming = MetricValue<double>.Unavailable(
+                MetricAvailability.WarmingUp,
+                $"At least {MinimumRateInterval.TotalMilliseconds:0} ms of monotonic time is required for a physical-disk rate.");
+            return new PhysicalDiskProcessSample(
+                process,
+                capturedAtUtc,
+                warming,
+                warming,
+                readBytes,
+                writeBytes,
+                readOperations,
+                writeOperations,
+                diagnostics);
+        }
+
+        _states[process] = new ProcessState(
+            true,
+            captureTimestamp,
+            0,
+            0,
+            sessionReadBytes,
+            sessionWriteBytes,
+            sessionReadOperations,
+            sessionWriteOperations);
+        double readRate = pendingReadBytes / elapsed.TotalSeconds;
+        double writeRate = pendingWriteBytes / elapsed.TotalSeconds;
         return new PhysicalDiskProcessSample(
             process,
             capturedAtUtc,
-            CompleteOrPartial(readRate, degraded, partialDetail),
-            CompleteOrPartial(writeRate, degraded, partialDetail),
+            CompleteOrPartial(readRate, intervalIncomplete, partialDetail),
+            CompleteOrPartial(writeRate, intervalIncomplete, partialDetail),
             readBytes,
             writeBytes,
             readOperations,
             writeOperations,
             diagnostics);
+    }
+
+    private double ProcessingLatencyMilliseconds(long processingStarted)
+    {
+        TimeSpan elapsed = _timeProvider.GetElapsedTime(processingStarted, _timeProvider.GetTimestamp());
+        return elapsed <= TimeSpan.Zero ? 0 : elapsed.TotalMilliseconds;
     }
 
     private static MetricValue<T> CompleteOrPartial<T>(T value, bool partial, string detail)
@@ -210,15 +317,21 @@ public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
     private static string BuildPartialDetail(
         PhysicalDiskEventBatch batch,
         PhysicalDiskCollectorDiagnostics diagnostics) =>
-        $"Physical-disk values are lower bounds (ETW lost: {batch.EtwEventsLost}; queue dropped: {batch.QueueEventsDropped}; unattributed: {batch.UnattributedEvents}; PID-reuse rejected: {diagnostics.PidReuseEventsRejected}).";
+        $"Physical-disk values are lower bounds (ETW lost: {batch.EtwEventsLost}; queue dropped: {batch.QueueEventsDropped}; unattributed: {diagnostics.UnattributedEvents}; PID-reuse rejected: {diagnostics.PidReuseEventsRejected}).";
 
     private static ulong SaturatingAdd(ulong left, ulong right) =>
         ulong.MaxValue - left < right ? ulong.MaxValue : left + right;
 
     private static long SaturatingIncrement(long value) => value == long.MaxValue ? value : value + 1;
 
+    private static long SaturatingAdd(long left, long right) =>
+        long.MaxValue - left < right ? long.MaxValue : left + right;
+
     private readonly record struct ProcessState(
-        DateTimeOffset CapturedAtUtc,
+        bool HasRateBaseline,
+        long RateTimestamp,
+        ulong PendingReadBytes,
+        ulong PendingWriteBytes,
         ulong SessionReadBytes,
         ulong SessionWriteBytes,
         ulong SessionReadOperations,

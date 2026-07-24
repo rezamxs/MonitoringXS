@@ -21,6 +21,7 @@ Process metadata, command lines, executable paths, signatures, network destinati
 - TCP and UDP endpoint counts come from owner-PID IP Helper tables with a 16 MiB input cap. Addresses and ports in those tables are skipped rather than copied into application models.
 - The ETW session uses `NoRestartOnCreate`: an existing same-name session is reported as unavailable and is never stopped or replaced. The app never requests elevation automatically.
 - ETW loss discards the current batch and thread map before attribution; PID reuse is rejected by comparing UTC-normalized event and process-start timestamps.
+- Physical-disk diagnostics retain only aggregate counters, status, latency, and the last event timestamp. They do not add file paths, file names, command lines, stack traces, or event payload logging.
 - The one-time elevated validation was launched manually from Administrator PowerShell. It did not change the application manifest, add startup elevation, or install a service, driver, or persistent helper; normal execution still degrades honestly without elevation.
 - The Milestone 3A unelevated smoke returned `AccessDenied` for the shared physical-disk/network kernel session. No automatic elevation was attempted, and `logman` found no active Monitoring XS session.
 
