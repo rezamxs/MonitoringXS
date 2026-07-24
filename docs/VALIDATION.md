@@ -611,3 +611,82 @@ Regression observations:
 - After both final exits, `logman` reported `Data Collector Set was not found` for `MonitoringXS.KernelMetrics.v1` and the retired `MonitoringXS.PhysicalDisk.v1` name.
 
 No runtime product defect was reproduced during this pass. Actual System-on-Windows-Dark switching, a real High Contrast session, 150-200% display scaling, Windows 11 Snap Layout, and a broader screen-reader pass remain unexecuted. Milestone 4 remains in progress.
+
+## 2026-07-24 latest baseline validation
+
+This Phase 1 pass validated the committed baseline on
+`feature/ui-polish-and-sorting`. It did not change source code, project files,
+package versions, metric behavior, or milestone status.
+
+Environment:
+
+- Windows 10.0.19045, `win-x64`
+- .NET SDK 10.0.302 and .NET runtime 10.0.10
+- No installed .NET workloads
+- No repository `NuGet.config` or package lock file was present; neither was
+  created
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release
+dotnet test MonitoringXS.sln -c Release
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+```
+
+Build and test results:
+
+- The sandboxed restore failed with NuGet repository-signature TLS/credential
+  `NU1301` and vulnerability-feed `NU1900` warnings. Repeating the same restore
+  with normal network access succeeded and reported all projects up to date.
+  The global NuGet cache was not cleared.
+- The Release build succeeded in 00:01:34.05 with 0 warnings and 0 errors.
+- All 150 tests passed with 0 failures and 0 skipped: Core 4, Application 5,
+  Collectors 35, Integration 36, Storage 4, and App 66.
+
+Actual runtime observations:
+
+- A visible and responsive `Monitoring XS` window opened at 1180 x 760.
+- UI Automation exposed two installed applications and three portable or
+  unregistered applications. Telegram Desktop and Visual Studio Code remained
+  in the installed section. .NET, Google Chrome, and Monitoring XS remained in
+  the portable or unregistered section.
+- Multiprocess grouping was visible for Visual Studio Code (15 processes) and
+  Google Chrome (13 processes). This confirms the grouped UI result observed in
+  this run; it is not a synthetic PID-reuse validation.
+- CPU, memory, and Process I/O were live. Across three samples five seconds
+  apart, Visual Studio Code CPU changed from 12.2% to 0.2%, Chrome CPU changed
+  from 11.8% to 9.0%, and the cards' accessible names changed with the sampled
+  values.
+- Process I/O remained a separately labelled secondary metric. Physical Disk
+  and Network each displayed `Unavailable` with `Access denied`; neither was
+  converted to zero or mixed with Process I/O.
+- The Telegram Desktop application tab opened with keyboard Enter, closed
+  through its tab close control, and reopened with Enter.
+- Keyboard focus moved from the Telegram Desktop card to the Visual Studio Code
+  card with the Down key.
+- Advanced mode changed from Off to On and returned to Off through its
+  Automation toggle. The accessible tree exposed the Advanced-mode notice while
+  it was enabled.
+- A 30-second smoke sample reported 0.385% average process CPU, 0.579% maximum
+  process CPU, and 173.2 MB average working set. Working set ranged from
+  172.9 MB to 173.3 MB, and the process responded in all 30 samples. This is a
+  short runtime smoke measurement, not a formal performance benchmark.
+- A standard `WM_CLOSE` request exercised the normal window-close path. Both
+  `MonitoringXS.App` and its `dotnet run` parent exited, no application process
+  remained, and neither `MonitoringXS.KernelMetrics.v1` nor
+  `MonitoringXS.PhysicalDisk.v1` remained active.
+- The detached launcher did not retain a numeric exit code, so exit code zero is
+  not claimed. No Monitoring XS Application Error, .NET Runtime failure, or
+  Windows Error Reporting entry was found for this run.
+
+The actual baseline screenshot is
+`.artifacts/Phase1Baseline/monitoringxs-baseline-2026-07-24.png`; it is ignored
+by Git.
+
+This run was unelevated, so elevated Physical Disk or Network availability was
+not revalidated. Actual PID reuse, 150-200% display scaling, High Contrast,
+Windows 11 Snap Layout, and a broad screen-reader pass were not executed.
+Milestone 4 therefore remains in progress, and no change to
+`docs/MILESTONES.md` was justified.
