@@ -1,3 +1,4 @@
+using MonitoringXS.Core.Models;
 using MonitoringXS.Platform.Windows.Metrics;
 
 namespace MonitoringXS.IntegrationTests;
@@ -10,6 +11,90 @@ public sealed class EtwKernelMetricEventSourceTests
         Assert.Equal("MonitoringXS.KernelMetrics.v1", EtwPhysicalDiskEventSource.SessionName);
         Assert.DoesNotContain("PhysicalDisk", EtwPhysicalDiskEventSource.SessionName, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Network", EtwPhysicalDiskEventSource.SessionName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void NetworkStatisticsKeepProtocolAndAddressFamilyCountersSeparate()
+    {
+        NetworkEventStatistics statistics = new();
+
+        Assert.True(statistics.TryRecord(
+            NetworkDirection.Upload,
+            NetworkTransport.Tcp,
+            NetworkAddressFamily.IPv4,
+            100));
+        Assert.True(statistics.TryRecord(
+            NetworkDirection.Download,
+            NetworkTransport.Udp,
+            NetworkAddressFamily.IPv6,
+            200));
+
+        NetworkEventStatistics.Snapshot snapshot = statistics.Read();
+        Assert.Equal(2, snapshot.EventsObserved);
+        Assert.Equal(1, snapshot.TcpSendEvents);
+        Assert.Equal(1, snapshot.UdpReceiveEvents);
+        Assert.Equal(1, snapshot.IPv4Events);
+        Assert.Equal(1, snapshot.IPv6Events);
+        Assert.Equal(100UL, snapshot.SourceSendBytes);
+        Assert.Equal(200UL, snapshot.SourceReceiveBytes);
+    }
+
+    [Fact]
+    public void NetworkStatisticsAcceptZeroBytesAndRejectNegativeSizes()
+    {
+        NetworkEventStatistics statistics = new();
+
+        Assert.True(statistics.TryRecord(
+            NetworkDirection.Download,
+            NetworkTransport.Tcp,
+            NetworkAddressFamily.IPv4,
+            0));
+        Assert.False(statistics.TryRecord(
+            NetworkDirection.Upload,
+            NetworkTransport.Tcp,
+            NetworkAddressFamily.IPv4,
+            -1));
+
+        NetworkEventStatistics.Snapshot snapshot = statistics.Read();
+        Assert.Equal(2, snapshot.EventsObserved);
+        Assert.Equal(1, snapshot.ReceiveEvents);
+        Assert.Equal(0UL, snapshot.SourceReceiveBytes);
+        Assert.Equal(1, snapshot.EventProcessingFailures);
+        Assert.Equal(1, snapshot.UnattributedEvents);
+    }
+
+    [Fact]
+    public void NetworkStatisticsDoNotMixSystemAndUnknownProcesses()
+    {
+        NetworkEventStatistics statistics = new();
+
+        statistics.RecordSystemProcess();
+        statistics.RecordUnknownProcess();
+        statistics.RecordUnsupportedEventVersion();
+
+        NetworkEventStatistics.Snapshot snapshot = statistics.Read();
+        Assert.Equal(1, snapshot.SystemProcessEvents);
+        Assert.Equal(1, snapshot.UnknownProcessEvents);
+        Assert.Equal(1, snapshot.UnsupportedEventVersions);
+        Assert.Equal(3, snapshot.UnattributedEvents);
+    }
+
+    [Fact]
+    public void MalformedTransferSizeAccessorIsContainedAndCounted()
+    {
+        Assert.False(EtwPhysicalDiskEventSource.TryReadNetworkTransferSize(
+            new object(),
+            static _ => throw new InvalidOperationException("Malformed typed payload."),
+            out int transferSize));
+        Assert.Equal(0, transferSize);
+
+        NetworkEventStatistics statistics = new();
+        statistics.RecordMalformedEvent();
+        NetworkEventStatistics.Snapshot snapshot = statistics.Read();
+
+        Assert.Equal(1, snapshot.EventsObserved);
+        Assert.Equal(1, snapshot.EventProcessingFailures);
+        Assert.Equal(1, snapshot.UnattributedEvents);
     }
 
     [Fact]

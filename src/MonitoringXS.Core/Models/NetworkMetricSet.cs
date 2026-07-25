@@ -23,5 +23,10 @@ public sealed record NetworkMetricSet(
         MetricValue<ulong>.Unavailable(availability, detail),
         MetricValue<int>.Unavailable(availability, detail),
         MetricValue<int>.Unavailable(availability, detail),
-        new NetworkCollectorDiagnostics(reason, 0, 0, 0, 0, 0, 0, 0, 0, 0, false));
+        new NetworkCollectorDiagnostics
+        {
+            Reason = reason,
+            CollectorStatus = availability,
+            CollectorStatusReason = detail
+        });
 }

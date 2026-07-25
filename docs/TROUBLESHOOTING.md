@@ -32,7 +32,11 @@ Check a suspected stale session from an Administrator shell with `logman query M
 
 Network and physical-disk events share the fixed, neutral, versioned `MonitoringXS.KernelMetrics.v1` kernel session so the app does not start competing kernel sessions. The same access-denied and session-conflict checks apply. Normal execution remains unelevated and the app must keep CPU, memory, and Process I/O available when kernel ETW is unavailable.
 
-`Partial` means observed rates are lower bounds because ETW or the local bounded queue lost events. Retained-session totals stay partial after confirmed loss. TCP or UDP counts can be unavailable independently when Windows cannot return a complete IPv4 and IPv6 owner-PID table snapshot.
+`Partial` means observed rates are lower bounds because ETW lost events, the local bounded queue dropped records, parsing failed, an unsupported event version was detected, or the collector restarted. Retained-session totals stay partial after confirmed incompleteness. TCP or UDP counts can be unavailable independently when Windows cannot return a complete IPv4 and IPv6 owner-PID table snapshot.
+
+In Advanced Mode, check the separate event rate, queue depth/capacity, local drops, ETW loss, processing failures, unsupported versions, attributed/unattributed categories, and last-event time. A large `outside app set` count is not automatically a failure: the shared kernel source sees system-wide traffic, while cards intentionally include only confidently attributed user applications. PID 0/4 and unknown events are never guessed into a card.
+
+Download/Receive and Upload/Send are packet bytes observed at the kernel ETW event point. They can differ from browser tools, Task Manager, a router, or ISP accounting because those tools may count payload, wire traffic, retransmissions, loopback, or offloaded traffic differently.
 
 ## Attribution overrides are unavailable
 

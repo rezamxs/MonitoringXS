@@ -37,6 +37,38 @@ public sealed class ApplicationTabViewModelTests
         Assert.DoesNotContain("completeness complete", tab.PhysicalDiskDiagnosticsText, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void NetworkDiagnosticsExposeUnavailableReasonWithoutCallingItComplete()
+    {
+        ApplicationMetricSnapshot snapshot = Snapshot() with
+        {
+            Network = new NetworkMetricSet(
+                MetricValue<double>.Unavailable(MetricAvailability.AccessDenied),
+                MetricValue<double>.Unavailable(MetricAvailability.AccessDenied),
+                MetricValue<ulong>.Unavailable(MetricAvailability.AccessDenied),
+                MetricValue<ulong>.Unavailable(MetricAvailability.AccessDenied),
+                MetricValue<int>.Unavailable(MetricAvailability.AccessDenied),
+                MetricValue<int>.Unavailable(MetricAvailability.AccessDenied),
+                new NetworkCollectorDiagnostics
+                {
+                    Reason = NetworkAvailabilityReason.AccessDenied,
+                    CollectorStatus = MetricAvailability.AccessDenied,
+                    CollectorStatusReason = "Administrator access is required.",
+                    SessionStartFailures = 1,
+                    AccessDeniedFailures = 1
+                })
+        };
+        ApplicationTabViewModel tab = new("sample-app", "Sample App");
+
+        tab.Update(snapshot, []);
+
+        Assert.Contains("Status AccessDenied", tab.NetworkDiagnosticsText, StringComparison.Ordinal);
+        Assert.Contains("reason AccessDenied", tab.NetworkDiagnosticsText, StringComparison.Ordinal);
+        Assert.Contains("detail Administrator access is required.", tab.NetworkDiagnosticsText, StringComparison.Ordinal);
+        Assert.Contains("completeness unavailable", tab.NetworkDiagnosticsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("completeness complete", tab.NetworkDiagnosticsText, StringComparison.Ordinal);
+    }
+
     private static ApplicationMetricSnapshot Snapshot() => new(
         new ApplicationIdentity(
             "sample-app",

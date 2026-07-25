@@ -88,9 +88,9 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         PhysicalDiskStatusText = physicalDisk.StatusText;
         MetricPairPresentation network = FormatRatePair(
             snapshot.Network.DownloadBytesPerSecond,
-            "down",
+            "receive",
             snapshot.Network.UploadBytesPerSecond,
-            "up");
+            "send");
         NetworkText = network.ValueText;
         NetworkStatusText = network.StatusText;
         ProcessCountText = snapshot.ProcessCount == 1 ? "1 process" : $"{snapshot.ProcessCount} processes";
@@ -135,7 +135,10 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
 
     private static ScalarPresentation FormatAvailableScalar<T>(string value, MetricValue<T> metric)
         where T : struct => metric.Availability == MetricAvailability.Partial
-        ? new(value, "Partial · lower bound", $"{value}, partial lower bound")
+        ? new(
+            value,
+            "Partial · lower bound",
+            $"at least {value.TrimStart('\u2265', ' ')}, partial lower bound")
         : new(value, string.Empty, value);
 
     private static ScalarPresentation FormatUnavailableScalar<T>(MetricValue<T> metric)
@@ -161,6 +164,8 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         }
 
         string values = $"{FormatDirectionalRate(first, firstDirection)} · {FormatDirectionalRate(second, secondDirection)}";
+        string accessibleValues =
+            $"{FormatAccessibleDirectionalRate(first, firstDirection)}, {FormatAccessibleDirectionalRate(second, secondDirection)}";
         string[] statuses =
         [
             FormatMetricStatus(first),
@@ -178,13 +183,28 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         return new(
             values,
             status,
-            string.IsNullOrEmpty(accessibleStatus) ? values : $"{values}, {accessibleStatus}");
+            string.IsNullOrEmpty(accessibleStatus)
+                ? accessibleValues
+                : $"{accessibleValues}, {accessibleStatus}");
     }
 
     private static string FormatDirectionalRate(MetricValue<double> metric, string direction) =>
         metric.IsAvailable
             ? $"{FormatRate(metric)} {direction}"
             : $"{FormatCompactUnavailable(metric.Availability)} {direction}";
+
+    private static string FormatAccessibleDirectionalRate(MetricValue<double> metric, string direction)
+    {
+        if (!metric.IsAvailable)
+        {
+            return $"{FormatCompactUnavailable(metric.Availability)} {direction}";
+        }
+
+        string rate = FormatRate(metric);
+        return metric.IsComplete
+            ? $"{rate} {direction}"
+            : $"at least {rate.TrimStart('\u2265', ' ')} {direction}";
+    }
 
     private static string FormatMetricStatus<T>(MetricValue<T> metric)
         where T : struct => metric.Availability == MetricAvailability.Partial

@@ -49,13 +49,13 @@ Status: in progress.
 
 ### Milestone 3A - Network
 
-Status: complete and validated on the development machine; see `VALIDATION.md`.
+Status: complete and accepted; see the final elevated validation in `VALIDATION.md`.
 
 - [x] Add real per-process TCP/UDP ETW byte attribution with UTC PID-reuse protection.
-- [x] Add bounded queues, retained-session totals, endpoint counts, diagnostics, and honest availability/lower-bound states.
+- [x] Add monotonic rates, bounded queues, retained logical-application totals, endpoint counts, detailed diagnostics, and honest availability/lower-bound states.
 - [x] Aggregate network values into existing logical applications without mixing them with Process I/O or physical disk.
 - [x] Add focused Beginner/Advanced UI fields and deterministic tests.
-- [x] Complete and record a controlled real-browser runtime attribution and performance smoke.
+- [x] Repeat the controlled elevated browser runtime after the retained-total regression fix. The accepted run verified real TCP/UDP attribution, retained helper totals, new-delta-only accumulation, lifetime reset, diagnostics, responsiveness, exit code 0, and shared-session cleanup.
 
 ### Milestone 3B - GPU
 

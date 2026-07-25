@@ -10,11 +10,14 @@ public sealed class NetworkMetricCollectorTests
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         ProcessDescriptor process = Process(100, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
         NetworkMetricCollector collector = Collector(
+            time,
             Available(),
             Available(Event(process, now.AddMilliseconds(10), NetworkDirection.Download, 2048)));
 
         await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
         NetworkProcessSample sample = Assert.Single(await collector.CollectAsync([process], now.AddSeconds(1), CancellationToken.None));
 
         Assert.Equal(2048d, sample.DownloadBytesPerSecond.Value);
@@ -26,11 +29,14 @@ public sealed class NetworkMetricCollectorTests
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         ProcessDescriptor process = Process(101, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
         NetworkMetricCollector collector = Collector(
+            time,
             Available(),
             Available(Event(process, now.AddMilliseconds(10), NetworkDirection.Upload, 4096)));
 
         await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
         NetworkProcessSample sample = Assert.Single(await collector.CollectAsync([process], now.AddSeconds(1), CancellationToken.None));
 
         Assert.Equal(4096d, sample.UploadBytesPerSecond.Value);
@@ -38,18 +44,50 @@ public sealed class NetworkMetricCollectorTests
     }
 
     [Fact]
-    public async Task RateUsesTheActualUtcCaptureInterval()
+    public async Task RateUsesTheActualMonotonicCaptureInterval()
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         ProcessDescriptor process = Process(102, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
         NetworkMetricCollector collector = Collector(
+            time,
             Available(),
             Available(Event(process, now.AddSeconds(1), NetworkDirection.Download, 4096)));
 
         await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(2));
         NetworkProcessSample sample = Assert.Single(await collector.CollectAsync([process], now.AddSeconds(2), CancellationToken.None));
 
         Assert.Equal(2048d, sample.DownloadBytesPerSecond.Value);
+    }
+
+    [Fact]
+    public async Task NearZeroIntervalsAccumulateBytesUntilRateWindowIsSafe()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        ProcessDescriptor process = Process(123, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
+        NetworkMetricCollector collector = Collector(
+            time,
+            Available(),
+            Available(Event(process, now, NetworkDirection.Download, 100)),
+            Available(Event(process, now, NetworkDirection.Download, 200)));
+
+        await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromMilliseconds(5));
+        NetworkProcessSample shortInterval = Assert.Single(await collector.CollectAsync(
+            [process],
+            now.AddMilliseconds(5),
+            CancellationToken.None));
+        time.Advance(TimeSpan.FromMilliseconds(5));
+        NetworkProcessSample completed = Assert.Single(await collector.CollectAsync(
+            [process],
+            now.AddMilliseconds(10),
+            CancellationToken.None));
+
+        Assert.Equal(MetricAvailability.WarmingUp, shortInterval.DownloadBytesPerSecond.Availability);
+        Assert.Equal(30_000d, completed.DownloadBytesPerSecond.Value);
+        Assert.Equal(300UL, completed.SessionDownloadedBytes.Value);
     }
 
     [Fact]
@@ -139,6 +177,40 @@ public sealed class NetworkMetricCollectorTests
     }
 
     [Fact]
+    public async Task SystemAndOutsideApplicationEventsRemainUnattributed()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        ProcessDescriptor process = Process(124, now.AddMinutes(-1));
+        NetworkMetricCollector collector = Collector(Available(
+            new NetworkTrafficEvent(
+                4,
+                now,
+                NetworkDirection.Download,
+                NetworkTransport.Tcp,
+                NetworkAddressFamily.IPv4,
+                100),
+            new NetworkTrafficEvent(
+                9999,
+                now,
+                NetworkDirection.Upload,
+                NetworkTransport.Udp,
+                NetworkAddressFamily.IPv6,
+                200)));
+
+        NetworkProcessSample sample = Assert.Single(await collector.CollectAsync(
+            [process],
+            now,
+            CancellationToken.None));
+
+        Assert.Equal(0UL, sample.SessionDownloadedBytes.Value);
+        Assert.Equal(0UL, sample.SessionUploadedBytes.Value);
+        Assert.Equal(1, sample.Diagnostics.SystemProcessEvents);
+        Assert.Equal(1, sample.Diagnostics.OutsideApplicationSetEvents);
+        Assert.Equal(2, sample.Diagnostics.UnattributedEvents);
+        Assert.Equal(0, sample.Diagnostics.AttributedEvents);
+    }
+
+    [Fact]
     public async Task ProcessExitEvictsCollectorState()
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -172,9 +244,11 @@ public sealed class NetworkMetricCollectorTests
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         ProcessDescriptor process = Process(112, now.AddMinutes(-1));
-        NetworkMetricCollector collector = Collector(Available(), Available());
+        ManualTimeProvider time = new();
+        NetworkMetricCollector collector = Collector(time, Available(), Available());
 
         await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
         NetworkProcessSample sample = Assert.Single(await collector.CollectAsync([process], now.AddSeconds(1), CancellationToken.None));
 
         Assert.Equal(MetricAvailability.Available, sample.DownloadBytesPerSecond.Availability);
@@ -200,7 +274,9 @@ public sealed class NetworkMetricCollectorTests
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         ProcessDescriptor process = Process(114, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
         NetworkMetricCollector collector = Collector(
+            time,
             Available(),
             Available(Event(process, now, NetworkDirection.Download, 512)) with
             {
@@ -209,6 +285,7 @@ public sealed class NetworkMetricCollectorTests
             });
 
         await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
         NetworkProcessSample sample = Assert.Single(await collector.CollectAsync([process], now.AddSeconds(1), CancellationToken.None));
 
         Assert.Equal(MetricAvailability.Partial, sample.DownloadBytesPerSecond.Availability);
@@ -220,7 +297,9 @@ public sealed class NetworkMetricCollectorTests
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         ProcessDescriptor process = Process(115, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
         NetworkMetricCollector collector = Collector(
+            time,
             Available(),
             Available(Event(process, now, NetworkDirection.Download, 100)) with
             {
@@ -230,7 +309,9 @@ public sealed class NetworkMetricCollectorTests
             Available());
 
         await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
         await collector.CollectAsync([process], now.AddSeconds(1), CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
         NetworkProcessSample recovered = Assert.Single(await collector.CollectAsync([process], now.AddSeconds(2), CancellationToken.None));
 
         Assert.Equal(MetricAvailability.Available, recovered.DownloadBytesPerSecond.Availability);
@@ -243,7 +324,9 @@ public sealed class NetworkMetricCollectorTests
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         ProcessDescriptor process = Process(116, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
         NetworkMetricCollector collector = Collector(
+            time,
             Available(),
             Available() with
             {
@@ -252,11 +335,104 @@ public sealed class NetworkMetricCollectorTests
             });
 
         await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
         NetworkProcessSample sample = Assert.Single(await collector.CollectAsync([process], now.AddSeconds(1), CancellationToken.None));
 
         Assert.Equal(MetricAvailability.Partial, sample.DownloadBytesPerSecond.Availability);
         Assert.Equal(MetricAvailability.Partial, sample.SessionDownloadedBytes.Availability);
         Assert.Equal(3, sample.Diagnostics.QueueEventsDropped);
+    }
+
+    [Fact]
+    public async Task UnsupportedEventVersionKeepsValuesAsLowerBounds()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        ProcessDescriptor process = Process(125, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
+        NetworkMetricCollector collector = Collector(
+            time,
+            Available(),
+            Available() with { UnsupportedEventVersions = 1 });
+
+        await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
+        NetworkProcessSample sample = Assert.Single(await collector.CollectAsync(
+            [process],
+            now.AddSeconds(1),
+            CancellationToken.None));
+
+        Assert.Equal(MetricAvailability.Partial, sample.DownloadBytesPerSecond.Availability);
+        Assert.Equal(NetworkAvailabilityReason.CollectorError, sample.Diagnostics.Reason);
+        Assert.Equal(1, sample.Diagnostics.UnsupportedEventVersions);
+    }
+
+    [Fact]
+    public async Task RecoveryAfterUnavailableRestartsWarmupAndKeepsTotalsLowerBound()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        ProcessDescriptor process = Process(126, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
+        NetworkMetricCollector collector = Collector(
+            time,
+            Available(),
+            Unavailable(MetricAvailability.Unavailable, NetworkAvailabilityReason.CollectorError),
+            Available(Event(process, now.AddSeconds(2), NetworkDirection.Download, 10)));
+
+        await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
+        await collector.CollectAsync([process], now.AddSeconds(1), CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
+        NetworkProcessSample recovered = Assert.Single(await collector.CollectAsync(
+            [process],
+            now.AddSeconds(2),
+            CancellationToken.None));
+
+        Assert.Equal(MetricAvailability.WarmingUp, recovered.DownloadBytesPerSecond.Availability);
+        Assert.Equal(MetricAvailability.Partial, recovered.SessionDownloadedBytes.Availability);
+        Assert.True(recovered.Diagnostics.SessionTotalsAreLowerBounds);
+        Assert.Equal(NetworkAvailabilityReason.CollectorError, recovered.Diagnostics.Reason);
+    }
+
+    [Fact]
+    public async Task ProtocolAddressFamilyAndSourceCountersRemainObservable()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        ProcessDescriptor process = Process(127, now.AddMinutes(-1));
+        NetworkEventBatch batch = Available(
+            Event(
+                process,
+                now,
+                NetworkDirection.Upload,
+                100,
+                NetworkTransport.Tcp,
+                NetworkAddressFamily.IPv4)) with
+        {
+            EventsObserved = 4,
+            SendEvents = 2,
+            ReceiveEvents = 2,
+            TcpSendEvents = 1,
+            TcpReceiveEvents = 1,
+            UdpSendEvents = 1,
+            UdpReceiveEvents = 1,
+            IPv4Events = 2,
+            IPv6Events = 2,
+            TotalSourceSendBytes = 300,
+            TotalSourceReceiveBytes = 400,
+            QueueCapacity = 16_384
+        };
+
+        NetworkProcessSample sample = Assert.Single(await Collector(batch).CollectAsync(
+            [process],
+            now,
+            CancellationToken.None));
+
+        Assert.Equal(1, sample.Diagnostics.TcpSendEvents);
+        Assert.Equal(1, sample.Diagnostics.UdpReceiveEvents);
+        Assert.Equal(2, sample.Diagnostics.IPv4Events);
+        Assert.Equal(2, sample.Diagnostics.IPv6Events);
+        Assert.Equal(300UL, sample.Diagnostics.TotalSourceSendBytes);
+        Assert.Equal(400UL, sample.Diagnostics.TotalSourceReceiveBytes);
+        Assert.Equal(16_384, sample.Diagnostics.QueueCapacity);
     }
 
     [Fact]
@@ -312,15 +488,56 @@ public sealed class NetworkMetricCollectorTests
     }
 
     [Fact]
+    public async Task CancellationAfterBatchDrainKeepsFutureValuesAsLowerBounds()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        ProcessDescriptor process = Process(128, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
+        using CancellationTokenSource cancellation = new();
+        NetworkEventBatch interrupted = Available() with
+        {
+            Events = new CancellingEventList(
+                [
+                    Event(process, now.AddSeconds(1), NetworkDirection.Download, 100),
+                    Event(process, now.AddSeconds(1), NetworkDirection.Download, 200)
+                ],
+                cancellation)
+        };
+        NetworkMetricCollector collector = Collector(
+            time,
+            Available(),
+            interrupted,
+            Available(Event(process, now.AddSeconds(2), NetworkDirection.Download, 50)));
+
+        await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(1));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await collector.CollectAsync([process], now.AddSeconds(1), cancellation.Token));
+        time.Advance(TimeSpan.FromSeconds(1));
+        NetworkProcessSample recovered = Assert.Single(await collector.CollectAsync(
+            [process],
+            now.AddSeconds(2),
+            CancellationToken.None));
+
+        Assert.Equal(MetricAvailability.Partial, recovered.DownloadBytesPerSecond.Availability);
+        Assert.Equal(MetricAvailability.Partial, recovered.SessionDownloadedBytes.Availability);
+        Assert.True(recovered.Diagnostics.SessionTotalsAreLowerBounds);
+        Assert.Contains("interrupted batch: True", recovered.DownloadBytesPerSecond.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task DiagnosticsPreserveBoundedQueueMeasurements()
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         ProcessDescriptor process = Process(121, now.AddMinutes(-1));
+        ManualTimeProvider time = new();
         NetworkMetricCollector collector = Collector(
+            time,
             Available() with { EventsObserved = 10, MaximumQueueDepth = 8, EtwBufferSizeMegabytes = 32 },
             Available() with { EventsObserved = 30, CurrentQueueDepth = 4, MaximumQueueDepth = 16, EtwBufferSizeMegabytes = 32 });
 
         await collector.CollectAsync([process], now, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(2));
         NetworkProcessSample sample = Assert.Single(await collector.CollectAsync([process], now.AddSeconds(2), CancellationToken.None));
 
         Assert.Equal(10d, sample.Diagnostics.EventRatePerSecond);
@@ -350,6 +567,11 @@ public sealed class NetworkMetricCollectorTests
     private static NetworkMetricCollector Collector(params NetworkEventBatch[] batches) =>
         new(new SequenceSource(batches));
 
+    private static NetworkMetricCollector Collector(
+        TimeProvider timeProvider,
+        params NetworkEventBatch[] batches) =>
+        new(new SequenceSource(batches), timeProvider);
+
     private static NetworkEventBatch Available(params NetworkTrafficEvent[] events) =>
         new(events, MetricAvailability.Available, NetworkAvailabilityReason.None, 0, 0, 0);
 
@@ -361,7 +583,15 @@ public sealed class NetworkMetricCollectorTests
         ProcessDescriptor process,
         DateTimeOffset timestamp,
         NetworkDirection direction,
-        int bytes) => new(process.InstanceId.ProcessId, timestamp, direction, NetworkTransport.Tcp, bytes);
+        int bytes,
+        NetworkTransport transport = NetworkTransport.Tcp,
+        NetworkAddressFamily addressFamily = NetworkAddressFamily.IPv4) => new(
+            process.InstanceId.ProcessId,
+            timestamp,
+            direction,
+            transport,
+            addressFamily,
+            bytes);
 
     private static NetworkProcessSample Sample(
         ProcessDescriptor process,
@@ -401,5 +631,40 @@ public sealed class NetworkMetricCollectorTests
     {
         public ValueTask<NetworkEventBatch> ReadNetworkBatchAsync(CancellationToken cancellationToken) =>
             ValueTask.FromCanceled<NetworkEventBatch>(cancellationToken);
+    }
+
+    private sealed class CancellingEventList(
+        IReadOnlyList<NetworkTrafficEvent> events,
+        CancellationTokenSource cancellation) : IReadOnlyList<NetworkTrafficEvent>
+    {
+        public int Count => events.Count;
+
+        public NetworkTrafficEvent this[int index] => events[index];
+
+        public IEnumerator<NetworkTrafficEvent> GetEnumerator()
+        {
+            for (int index = 0; index < events.Count; index++)
+            {
+                if (index == 1)
+                {
+                    cancellation.Cancel();
+                }
+
+                yield return events[index];
+            }
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    private sealed class ManualTimeProvider : TimeProvider
+    {
+        private long _timestamp = TimeSpan.TicksPerSecond;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => _timestamp;
+
+        public void Advance(TimeSpan elapsed) => _timestamp += elapsed.Ticks;
     }
 }

@@ -439,7 +439,7 @@ While the application was running, `logman` reported `MonitoringXS.KernelMetrics
 
 No actual OS PID reuse occurred during this pass (`PID-reuse rejected 0`). PID/start-time protection remains covered by deterministic UTC-domain tests. This runtime result is from one development machine and does not replace validation on other Windows versions, hardware, network conditions, or security policies.
 
-Milestone 3A acceptance criteria are satisfied on the recorded development machine. GPU work was not started.
+At that point, the recorded run appeared to satisfy Milestone 3A acceptance criteria on the development machine. The later retained-total defect and its post-fix validation requirement supersede that conclusion; the current status is recorded in the newer sections below. GPU work was not started.
 
 ## 2026-07-22 Milestone 4 sorting, title bar, and card hierarchy validation
 
@@ -761,3 +761,150 @@ Elevated correlation investigation and final validation:
 - A normal close produced exit code 0 for both `MonitoringXS.App` and `dotnet run`. No application or project `dotnet run` process remained, and neither `MonitoringXS.KernelMetrics.v1` nor the retired `MonitoringXS.PhysicalDisk.v1` session remained active.
 
 The product never requested elevation itself; Administrator PowerShell was approved and launched manually for this validation. An actual OS PID reuse did not occur, so Milestone 2 remains in progress for its existing real-runtime PID-reuse acceptance item. The deterministic UTC-domain rejection test remains green.
+
+## 2026-07-24 Phase 3 network attribution hardening
+
+Starting state:
+
+- branch `feature/network-attribution`;
+- clean tracked and untracked status;
+- HEAD `8e11044 feat(metrics): add ETW physical disk attribution`;
+- no package or project changes were present.
+
+Official-source review retained the existing Windows kernel Network ETW mechanism and shared `MonitoringXS.KernelMetrics.v1` session. Microsoft documents that TCP/IP network operations can run on separate threads, so the event payload PID is used instead of guessing from header thread context. Typed TCP and UDP send/receive callbacks cover IPv4 and IPv6, and the event `size` field is documented as packet size. No second kernel session, package, service, driver, packet capture, payload inspection, destination retention, or automatic elevation was added.
+
+Implementation results:
+
+- Network rate windows now use monotonic `TimeProvider` timestamps. UTC remains the event/process-lifetime domain, and raw QPC is never compared with `StartTimeUtc`.
+- Intervals below 10 ms remain `WarmingUp` and carry bytes into the next safe interval.
+- PID 0/4, malformed payload PID, outside-application-set, and pre-start PID-reuse events remain unattributed.
+- Advanced diagnostics now expose TCP/UDP and IPv4/IPv6 event counts, source send/receive bytes, attributed/unattributed categories, session/access/processing failures, unsupported versions, queue capacity, average/maximum latency, last event, status, reason, and lower-bound state.
+- Recoverable network callback failures no longer end physical-disk collection. Network status is separate above the common session-start boundary.
+- Logical-application aggregation retains observed totals from an exited helper while another process in that application remains active. State is removed when the whole logical application exits, so a later restart begins a new total.
+- Cards and tabs use explicit receive/send wording. Process I/O, Physical Disk, and Network remain separate.
+
+Commands executed:
+
+```powershell
+git branch --show-current
+git status -sb
+git status --short
+git log -5 --oneline
+git diff --check
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Debug --no-restore
+dotnet test MonitoringXS.sln -c Debug --no-build
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug --no-build
+logman query MonitoringXS.KernelMetrics.v1 -ets
+logman query MonitoringXS.PhysicalDisk.v1 -ets
+```
+
+Build and automated-test results:
+
+- The sandboxed restore failed with NuGet TLS/credential `NU1301` and vulnerability-feed `NU1900`. Repeating the same restore with normal network access succeeded with every project up to date. No package version changed and the global NuGet cache was not cleared.
+- The final sequential Release and Debug builds succeeded with 0 warnings and 0 errors in 00:00:32.36 and 00:00:30.00 respectively. An immediately preceding Release attempt exposed and then resolved a local-variable naming collision in the retained-total limit branch; the final builds and full test run use the corrected source.
+- All 179 tests passed with 0 failures and 0 skipped: Core 5, Application 5, Collectors 54, Storage 4, Integration 44, and App 67.
+- Thirteen tests were added relative to the 166-test baseline. New coverage includes address-family normalization, invalid/zero sizes, TCP/UDP and IPv4/IPv6 counters, monotonic delayed and sub-10-ms intervals, collector restart, unsupported-version lower bounds, system/outside/PID-reuse rejection, expanded diagnostics, browser/editor/launcher/game boundaries, exited-helper total retention, whole-application total reset, and accessible receive/send wording.
+
+Actual unelevated runtime:
+
+- The `Monitoring XS` main window was observed. CPU, memory, and Process I/O updated while Physical Disk and Network displayed `Access denied`; unavailable data was not converted to zero.
+- The controlled Chrome workload changed Chrome Process I/O from roughly 10.9 KB/s per direction to 3.0 MB/s read and 3.6 MB/s write while Network remained `Access denied`, confirming that Network was not copied from Process I/O.
+- Process I/O, Physical Disk, and Network labels were independently present. The app responded in every sampled check.
+- Normal close removed the app and parent runner. Neither current nor retired Monitoring XS ETW session remained. The first harness attempt stopped before workload because of a validation-script argument error; the corrected pass completed successfully.
+
+Actual elevated runtime before the retained-total fix:
+
+- `MonitoringXS.KernelMetrics.v1` was active and both Physical Disk and Network were available. Chrome reached 2.8 MB/s receive and 2.0 MB/s send during the 10,000,000-byte receive and 2,097,152-byte send requests.
+- After the workload, Chrome showed 1.3 MB/s receive while Visual Studio Code, `.NET`, and Monitoring XS remained at 0 B/s Network. Telegram retained its own small background traffic. Chrome traffic was not assigned to those unrelated applications.
+- Process I/O and Physical Disk showed different values from Network throughout the same samples.
+- The final network diagnostic snapshot reported 35,132 events: 14,492 send, 20,640 receive, 14,472 TCP send, 20,606 TCP receive, 20 UDP send, 34 UDP receive, 35,116 IPv4, and 16 IPv6. Source totals were 45.1 MB send and 89.2 MB receive.
+- It reported 3,684 attributed and 31,448 unattributed events: 12 system, 31,436 outside the active application set, 0 unknown, and 0 PID-reuse rejection. Queue depth was 138, maximum queue depth 1,183 of 16,384, local drops 0, ETW loss 0, processing failures 0, unsupported versions 0, event rate 136/s, average processing latency 1.330 ms, and maximum latency 18.202 ms.
+- TCP connection count was 15 and UDP endpoint count was 20 for the selected Chrome application.
+- The UI responded in every sample. Normal close returned application and runner exit code 0. No Monitoring XS process, `MonitoringXS.KernelMetrics.v1`, or retired `MonitoringXS.PhysicalDisk.v1` session remained.
+
+That elevated run exposed one real defect: after short-lived Chrome helpers exited, the logical-application rate remained correct but the displayed retained total could fall to 436.7 KB. The aggregation fix and two deterministic regression tests now preserve exited-helper totals while the logical application remains active and reset them when the entire application exits.
+
+At the time of this review, the requested post-fix elevated repeat had not been executed, so the review left Milestone 3A runtime-validation-pending. The final accepted elevated run is recorded in the 2026-07-25 section below. Actual OS PID reuse was not forced, unknown future ETW event versions beyond typed callback delivery remain a diagnostic limitation, and exact loopback/offload behavior is not generalized by this run. GPU was not started, so Milestone 3B remains pending.
+
+## 2026-07-25 Phase 3A focused engineering review
+
+This review covered the uncommitted Network implementation on `feature/network-attribution` without changing packages, project files, Git history, or unrelated milestones. The previously recorded elevated measurements were not repeated and are not presented as validation of this reviewed binary.
+
+Confirmed fixes:
+
+- Typed TCP/UDP transfer-size access now occurs inside the recoverable callback guard. A malformed typed payload is counted as a processing failure and unattributed event instead of being able to terminate the shared disk/network ETW consumer.
+- Cancellation after a Network batch has been drained marks future rates and retained totals as lower bounds. The recovered diagnostic reason names the interrupted batch instead of silently presenting an incomplete session as complete.
+- Per-process cumulative baselines are independent of the current logical-application key. Reattribution transfers only future deltas, not historical bytes.
+- Retained logical-application state remains capped at 512 active applications. An application beyond the cap receives an explicit unavailable total; after a slot opens, accumulation resumes from its process baseline as a partial lower bound.
+- Advanced Network diagnostics now describe unavailable status as unavailable, include the structured reason/detail, and do not call it complete.
+- Accessible partial Network rates and totals use explicit “at least” lower-bound wording.
+
+Deterministic regression coverage added in this review:
+
+- malformed typed transfer-size containment and accounting;
+- cancellation after batch drain with lower-bound recovery;
+- logical-application reattribution without historical-total transfer;
+- 512-application retention-cap behavior and lower-bound recovery;
+- exited-helper totals without duplicate contribution;
+- unavailable diagnostics and accessible lower-bound wording.
+
+Commands and actual results:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet build MonitoringXS.sln -c Debug --no-restore
+git diff --check
+```
+
+- The sandboxed restore failed with NuGet signature-metadata TLS/credential `NU1301`. Repeating the same command with normal network access succeeded with all projects up to date. No package version changed and the global NuGet cache was not cleared.
+- The final Release build after the review cleanup succeeded with 0 warnings and 0 errors in 00:00:24.60.
+- All 184 tests passed with 0 failures and 0 skipped: Core 5, Application 5, Collectors 57, Storage 4, Integration 45, and App 68.
+- The final Debug build succeeded with 0 warnings and 0 errors in 00:00:23.14.
+- `git diff --check` passed. Git emitted only working-tree LF-to-CRLF conversion notices.
+
+TraceEvent exposes the aggregate real-time session `EventsLost` value used by the collector, but its public session surface does not provide separate log-buffer-lost and real-time-buffer-lost counters. Aggregate ETW loss still forces lower-bound semantics. Unknown future event versions that never reach a typed callback also remain a documented diagnostic limitation.
+
+At the time of this review, no elevated runtime validation had been executed on the reviewed post-fix binary. The controlled Administrator browser scenario was completed afterward; the accepted results are recorded in the 2026-07-25 section below.
+
+## 2026-07-25 final elevated Phase 3A Network acceptance
+
+This was the post-fix acceptance run on Windows 10 build 19045. The runner used an Administrator PowerShell launched through the one-time UAC path, an isolated Microsoft Edge profile (Chrome already had user processes), the controlled receive/send page, and the existing 20-second `disk-smoke` benchmark. The product did not request elevation or change its normal unelevated behavior.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet build MonitoringXS.sln -c Debug --no-restore
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug --no-build
+```
+
+The sandboxed restore first failed with `NU1301`/`NU1900` network-feed errors. Repeating the same restore with approved network access succeeded for every project. No package version, project file, or global NuGet cache was changed.
+
+The final acceptance runner reported `Accepted: True`. It observed a visible UI Automation root with bounds `1180 x 760`, a responsive application during all 180 one-second samples, and a normal application and runner exit with code 0. No `MonitoringXS.App` process remained. The shared `MonitoringXS.KernelMetrics.v1` session was present during collection and absent afterward; the retired `MonitoringXS.PhysicalDisk.v1` session was absent during and after the run.
+
+Network observations:
+
+- Network and Physical Disk were both `Available`; Process I/O, Physical Disk, and Network remained separately labelled and their values were not copied between metrics.
+- The isolated Edge card reached `Downloaded 21.8 MB / Uploaded 4.1 MB` after the second controlled traffic page. Its workload card showed Network `1.8 KB/s receive, 719 B/s send`, while Process I/O and Physical Disk showed different values.
+- The selected Edge NetworkService helper exited safely at PID `7148` while the logical Edge application remained active. The totals stayed exactly at `12,268,339.2` downloaded bytes and `2,097,152` uploaded bytes across the helper exit; subsequent traffic increased them only by new deltas.
+- After the complete Edge lifetime was closed, the new lifetime started at `3,460,300.8` downloaded bytes and `12,697.6` uploaded bytes, below half of the previous lifetime, so retained totals were not inherited.
+- The final workload diagnostics observed 62,177 events: 21,165 send and 41,012 receive, including TCP and UDP events over both IPv4 and IPv6. Five TCP connections and four UDP endpoints were reported.
+- The final snapshot reported 4,790 attributed and 57,387 unattributed events (12 system and 57,375 outside the active application set), 0 unknown events, and 0 PID-reuse rejections. This system-wide outside-set traffic was kept out of the Edge application total.
+- Event rate was 211/s, current queue depth 210, maximum queue depth 1,284 of 16,384, local queue drops 0, ETW lost 0, processing failures 0, unsupported versions 0, average processing latency 1.191 ms, and maximum latency 19.432 ms.
+
+Performance and lifecycle:
+
+- Warm-up 30 samples: average CPU 2.425%, peak 12.183%, average working set 179,316,190 bytes, peak 184,696,832 bytes.
+- Idle 60 samples: average CPU 0.600%, peak 2.503%, average working set 177,796,642 bytes, peak 182,439,936 bytes.
+- Workload 60 samples: average CPU 0.749%, peak 4.190%, average working set 193,305,122 bytes, peak 200,978,432 bytes.
+- Cooldown 30 samples: average CPU 0.398%, peak 1.977%, average working set 203,075,174 bytes, peak 208,470,016 bytes.
+- All samples reported the application as responsive. The controlled disk workload completed, the window closed normally, and no ETW session remained active.
+
+The run accepted the Phase 3A Network criteria. Actual OS PID reuse was not forced; the UTC-domain rejection and attribution-safety paths remain covered by deterministic tests.

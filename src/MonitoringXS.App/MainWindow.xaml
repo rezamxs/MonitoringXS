@@ -124,26 +124,26 @@
                             </Grid.ColumnDefinitions>
                             <Border
                                 Padding="16"
-                                AutomationProperties.Name="Network download rate"
+                                AutomationProperties.Name="Network download and receive rate"
                                 Background="{StaticResource SurfaceBrush}"
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="12">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Download" />
+                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Download / Receive" />
                                     <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding NetworkDownloadText}" />
                                 </StackPanel>
                             </Border>
                             <Border
                                 Grid.Column="1"
                                 Padding="16"
-                                AutomationProperties.Name="Network upload rate"
+                                AutomationProperties.Name="Network upload and send rate"
                                 Background="{StaticResource SurfaceBrush}"
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="12">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Upload" />
+                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Upload / Send" />
                                     <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding NetworkUploadText}" />
                                 </StackPanel>
                             </Border>
@@ -325,7 +325,10 @@
                                 <StackPanel
                                     Spacing="4"
                                     ToolTipService.ToolTip="{x:Bind NetworkStatusText, Mode=OneWay}">
-                                    <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Network" />
+                                    <TextBlock
+                                        Style="{StaticResource CardMetricLabelStyle}"
+                                        Text="Network"
+                                        ToolTipService.ToolTip="Send and receive packet bytes observed through kernel Network ETW. No payloads or destinations are collected." />
                                     <TextBlock
                                         Style="{StaticResource CardMetricValueStyle}"
                                         Text="{x:Bind NetworkText, Mode=OneWay}"

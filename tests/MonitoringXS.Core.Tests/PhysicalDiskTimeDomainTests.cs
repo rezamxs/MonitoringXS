@@ -37,10 +37,24 @@ public sealed class PhysicalDiskTimeDomainTests
             localDomain,
             NetworkDirection.Download,
             NetworkTransport.Tcp,
+            NetworkAddressFamily.IPv4,
             4096);
 
         Assert.Equal(TimeSpan.Zero, process.StartTimeUtc.Offset);
         Assert.Equal(TimeSpan.Zero, networkEvent.TimestampUtc.Offset);
         Assert.True(networkEvent.TimestampUtc >= process.StartTimeUtc);
+        Assert.Equal(NetworkAddressFamily.IPv4, networkEvent.AddressFamily);
+    }
+
+    [Fact]
+    public void NetworkEventRejectsInvalidTransferSize()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new NetworkTrafficEvent(
+            42,
+            DateTimeOffset.UtcNow,
+            NetworkDirection.Upload,
+            NetworkTransport.Udp,
+            NetworkAddressFamily.IPv6,
+            -1));
     }
 }

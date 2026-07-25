@@ -92,3 +92,28 @@ This Debug validation ran from a manually approved Administrator PowerShell on W
 - The app responded in all 48 workload and steady-state checks. Normal close returned app and `dotnet run` exit code 0, and no Monitoring XS process or ETW session remained.
 
 The average remains below the 1% CPU target and working set remains below the approximate 200 MB target. Peak CPU is an instantaneous one-second sample, not the idle average.
+
+## 2026-07-24 network diagnostics and browser workload pass
+
+This Debug pass used Windows 10 build 19045 with 8 logical processors, one-second application sampling, no history database, and a controlled Chrome page that requested 10,000,000 receive bytes and sent 2,097,152 bytes. UI Automation queried all application cards every second, so its CPU figures include instrumentation pressure and are not an idle benchmark.
+
+- Unelevated, the shared kernel session returned `AccessDenied`. Across the measured idle/workload/cooldown interval, average working set was 176,455,407 bytes (168.28 MiB), peak working set was 180,609,024 bytes (172.24 MiB), and the app responded in every sample.
+- Elevated before the retained-total fix, instrumented CPU averaged 1.811% during the 30-second idle phase, 2.204% during the 30-second workload phase, and 3.480% during the 15-second cooldown. Overall post-warm-up working set averaged 179,842,307 bytes (171.51 MiB) and peaked at 185,708,544 bytes (177.11 MiB).
+- Chrome reached 2.8 MB/s receive and 2.0 MB/s send. The final Advanced diagnostic snapshot observed 35,132 network events, a current rate of 136 events/s, queue depth 138 with a session maximum of 1,183 out of 16,384, 0 queue drops, 0 ETW-lost events, 0 processing failures, and 0 unsupported versions.
+- Collector processing latency was 1.330 ms average and 18.202 ms maximum in that snapshot. The shared source observed 45.1 MB send and 89.2 MB receive across the machine; 3,684 events were attributed and 31,448 remained unattributed, including 12 system events and 31,436 events outside the active application set.
+- Normal close returned exit code 0 for both the application and `dotnet run`; no Monitoring XS process or ETW session remained.
+
+The instrumented average is above the below-1% idle target and cannot replace the earlier low-intrusion 0.508%/179.6 MiB Phase 2 measurement. The new aggregation state is bounded to 512 active logical applications and removes per-process entries when helpers exit. The accepted post-fix elevated measurement below records the required 30/60/60/30 lifecycle pass; it is still an instrumented acceptance run rather than a standalone idle benchmark.
+
+## 2026-07-25 final elevated Network acceptance measurement
+
+This was the accepted post-fix Phase 3A run on Windows 10 build 19045. The runner sampled `Process.TotalProcessorTime` and `WorkingSet64` once per second and used UI Automation only at lifecycle checkpoints. It included 30 seconds of warm-up, 60 seconds idle, 60 seconds of controlled Edge and disk workload, and 30 seconds cooldown.
+
+- Warm-up: 2.425% average CPU, 12.183% peak CPU, 179,316,190-byte average working set, 184,696,832-byte peak working set.
+- Idle: 0.600% average CPU, 2.503% peak CPU, 177,796,642-byte average working set, 182,439,936-byte peak working set.
+- Workload: 0.749% average CPU, 4.190% peak CPU, 193,305,122-byte average working set, 200,978,432-byte peak working set.
+- Cooldown: 0.398% average CPU, 1.977% peak CPU, 203,075,174-byte average working set, 208,470,016-byte peak working set.
+- Overall post-warm-up average working set was 189,055,741 bytes and the maximum was 208,470,016 bytes.
+- The UI remained responsive at every sample, the controlled workload exited, and the application shut down with exit code 0.
+
+These are instrumented acceptance measurements rather than a low-intrusion idle benchmark. The earlier low-intrusion measurements remain the appropriate comparison for the idle target.

@@ -58,7 +58,7 @@ public sealed class ApplicationCardViewModelTests
         Assert.Equal("Unavailable", card.NetworkText);
         Assert.Equal("Access denied", card.NetworkStatusText);
         Assert.DoesNotContain("Unavailable read", card.PhysicalDiskText, StringComparison.Ordinal);
-        Assert.DoesNotContain("Unavailable down", card.NetworkText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Unavailable receive", card.NetworkText, StringComparison.Ordinal);
         Assert.Contains("Process I/O Access denied", card.AutomationName, StringComparison.Ordinal);
         Assert.Contains("Physical disk Access denied", card.AutomationName, StringComparison.Ordinal);
         Assert.Contains("Network Access denied", card.AutomationName, StringComparison.Ordinal);
@@ -134,6 +134,12 @@ public sealed class ApplicationCardViewModelTests
         Assert.Equal("Partial · lower bound", card.IoStatusText);
         Assert.Equal("Partial · lower bound", card.PhysicalDiskStatusText);
         Assert.Equal("Partial · lower bound", card.NetworkStatusText);
+        Assert.Contains("receive", card.NetworkText, StringComparison.Ordinal);
+        Assert.Contains("send", card.NetworkText, StringComparison.Ordinal);
+        Assert.Contains("Network", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("receive", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("send", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("at least", card.AutomationName, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("partial lower bound", card.AutomationName, StringComparison.OrdinalIgnoreCase);
     }
 
