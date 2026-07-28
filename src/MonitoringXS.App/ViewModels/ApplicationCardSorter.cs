@@ -101,6 +101,7 @@ public static class ApplicationCardSorter
             ApplicationSortField.NetworkRate => CombineRates(
                 snapshot.Network.DownloadBytesPerSecond,
                 snapshot.Network.UploadBytesPerSecond),
+            ApplicationSortField.GpuUsage => FromMetric(snapshot.Gpu.UtilizationPercent),
             ApplicationSortField.ProcessCount => new MetricSortValue(true, snapshot.ProcessCount),
             _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unsupported application sort field.")
         };

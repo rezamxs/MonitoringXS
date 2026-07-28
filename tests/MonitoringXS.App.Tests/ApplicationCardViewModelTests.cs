@@ -38,6 +38,7 @@ public sealed class ApplicationCardViewModelTests
         Assert.Contains("Process I/O 2.0 KB/s read", card.AutomationName, StringComparison.Ordinal);
         Assert.Contains("Physical disk Access denied", card.AutomationName, StringComparison.Ordinal);
         Assert.Contains("Network Access denied", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("GPU Access denied", card.AutomationName, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -62,6 +63,7 @@ public sealed class ApplicationCardViewModelTests
         Assert.Contains("Process I/O Access denied", card.AutomationName, StringComparison.Ordinal);
         Assert.Contains("Physical disk Access denied", card.AutomationName, StringComparison.Ordinal);
         Assert.Contains("Network Access denied", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("GPU Access denied", card.AutomationName, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -143,6 +145,113 @@ public sealed class ApplicationCardViewModelTests
         Assert.Contains("partial lower bound", card.AutomationName, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void ExposesGpuUtilizationAndMemoryInAccessibleCardText()
+    {
+        ApplicationCardViewModel card = Card();
+        ApplicationMetricSnapshot snapshot = Snapshot(
+            MetricValue<double>.Available(1),
+            MetricValue<long>.Available(128 * 1024 * 1024),
+            MetricValue<double>.Available(0),
+            MetricValue<double>.Available(0)) with
+        {
+            Gpu = new GpuMetricSet(
+                MetricValue<double>.Available(42.5),
+                MetricValue<ulong>.Available(64 * 1024 * 1024),
+                MetricValue<ulong>.Available(8 * 1024 * 1024),
+                new GpuEngineId(1, 0, 0, "3D"),
+                new GpuCollectorDiagnostics
+                {
+                    ProviderName = GpuCollectorDiagnostics.WindowsPdhProvider,
+                    CollectorStatus = MetricAvailability.Available,
+                    Reason = GpuAvailabilityReason.None
+                })
+        };
+
+        card.Update(snapshot, []);
+
+        Assert.Equal("42.5%", card.GpuText);
+        Assert.Equal("64.0 MB dedicated · 8.0 MB shared", card.GpuStatusText);
+        Assert.Contains("GPU 42.5%", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("64.0 MB dedicated", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("8.0 MB shared", card.AutomationName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExposesAvailableGpuUtilizationWithUnavailableMemoryHonestly()
+    {
+        ApplicationCardViewModel card = Card();
+        ApplicationMetricSnapshot snapshot = Snapshot(
+            MetricValue<double>.Available(1),
+            MetricValue<long>.Available(128 * 1024 * 1024),
+            MetricValue<double>.Available(0),
+            MetricValue<double>.Available(0)) with
+        {
+            Gpu = new GpuMetricSet(
+                MetricValue<double>.Available(12.5),
+                MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                new GpuEngineId(1, 0, 0, "3D"),
+                new GpuCollectorDiagnostics
+                {
+                    ProviderName = GpuCollectorDiagnostics.WindowsPdhProvider,
+                    CollectorStatus = MetricAvailability.Partial,
+                    Reason = GpuAvailabilityReason.CounterUnavailable,
+                    UtilizationCounterStatus = MetricAvailability.Available,
+                    DedicatedMemoryCounterStatus = MetricAvailability.Unavailable,
+                    SharedMemoryCounterStatus = MetricAvailability.Unavailable
+                })
+        };
+
+        card.Update(snapshot, []);
+
+        Assert.Equal("12.5%", card.GpuText);
+        Assert.Equal("Memory Unavailable", card.GpuStatusText);
+        Assert.Contains("GPU 12.5%, Memory Unavailable", card.AutomationName, StringComparison.Ordinal);
+        Assert.DoesNotContain("GPU 0", card.AutomationName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExposesQuarantinedGpuCountersWithoutAnnouncingFakeZero()
+    {
+        const string utilizationDetail =
+            "GPU utilization is quarantined until a complete counter gap and reappearance.";
+        const string memoryDetail =
+            "Dedicated GPU memory is quarantined until a complete counter gap and reappearance.";
+        ApplicationCardViewModel card = Card();
+        ApplicationMetricSnapshot snapshot = Snapshot(
+            MetricValue<double>.Available(1),
+            MetricValue<long>.Available(128 * 1024 * 1024),
+            MetricValue<double>.Available(0),
+            MetricValue<double>.Available(0)) with
+        {
+            Gpu = new GpuMetricSet(
+                MetricValue<double>.Unavailable(
+                    MetricAvailability.Unavailable,
+                    utilizationDetail),
+                MetricValue<ulong>.Unavailable(
+                    MetricAvailability.Unavailable,
+                    memoryDetail),
+                MetricValue<ulong>.Available(1024),
+                null,
+                new GpuCollectorDiagnostics
+                {
+                    ProviderName = GpuCollectorDiagnostics.WindowsPdhProvider,
+                    CollectorStatus = MetricAvailability.Partial,
+                    Reason = GpuAvailabilityReason.AmbiguousCounterLifetime,
+                    QuarantinedUtilizationSamples = 1,
+                    QuarantinedDedicatedMemorySamples = 1
+                })
+        };
+
+        card.Update(snapshot, []);
+
+        Assert.Equal("Unavailable", card.GpuText);
+        Assert.Contains("quarantined", card.AutomationName, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("shared", card.AutomationName, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("GPU 0", card.AutomationName, StringComparison.Ordinal);
+    }
+
     private static ApplicationCardViewModel Card() => new()
     {
         LogicalApplicationId = "sample-app",
@@ -180,6 +289,10 @@ public sealed class ApplicationCardViewModelTests
         Network = NetworkMetricSet.Unavailable(
             MetricAvailability.AccessDenied,
             NetworkAvailabilityReason.AccessDenied,
+            "Access denied."),
+        Gpu = GpuMetricSet.Unavailable(
+            MetricAvailability.AccessDenied,
+            GpuAvailabilityReason.AccessDenied,
             "Access denied.")
     };
 }

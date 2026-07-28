@@ -18,6 +18,8 @@ Implementation rules:
 - one fixed ETW session is started lazily, retried no more than once per minute after failure, and stopped on application shutdown.
 - network ETW callbacks use a separate non-blocking bounded queue of 16,384 events; overflow is counted and reported with lower-bound semantics;
 - TCP/UDP owner-PID table reads reject buffers larger than 16 MiB and run outside ETW callbacks.
+- GPU sampling reuses one native PDH wildcard query; it does not spawn `Get-Counter`, WMI, a vendor tool, or a graphics ETW session each second.
+- the read-only process-parent snapshot used only to detect unassignable GPU descendants is cached for five seconds; it never authorizes attribution without PID/start-time validation.
 
 Measurements must record hardware, OS build, build configuration, duration, sample interval, app count, CPU, working set, and database state.
 
@@ -117,3 +119,29 @@ This was the accepted post-fix Phase 3A run on Windows 10 build 19045. The runne
 - The UI remained responsive at every sample, the controlled workload exited, and the application shut down with exit code 0.
 
 These are instrumented acceptance measurements rather than a low-intrusion idle benchmark. The earlier low-intrusion measurements remain the appropriate comparison for the idle target.
+
+## 2026-07-26 GPU feasibility and WinUI runtime measurement
+
+This Debug validation ran on Windows 10 build 19045 with 8 logical processors, an Intel HD Graphics 3000 adapter, an NVIDIA GeForce GT 525M adapter, one-second application sampling, and no history database. The UI Automation harness queried cards at five-second checkpoints. VLC was already producing a real hardware GPU workload; the validation did not alter or close that user process.
+
+- The persistent native query exposed 95 engine instances, 2 matching process-memory instances, and 2 adapter LUIDs in the final Advanced snapshot.
+- VLC used the NVIDIA adapter's 3D engine. UI samples observed 4.2-5.0% busiest-engine utilization, 65.9 MB dedicated memory, and 892.0 KB shared memory.
+- Final diagnostics reported 34 target and 34 sampled processes, 0 PID-reuse rejections, 0 inaccessible process samples, 0 unassigned descendant counters, 0 invalid counter values, and 5.113 ms collection time.
+- Warm-up (30 samples): 0.770% average CPU, 2.011% peak CPU, 179,612,331-byte average working set, and 182,599,680-byte peak working set.
+- Steady state (60 samples): 0.760% average CPU, 1.997% peak CPU, 181,532,535-byte average working set, and 182,751,232-byte peak working set.
+- The process responded in all 90 samples. The application and `dotnet run` parent both exited after a normal close, and neither Monitoring XS ETW session remained.
+
+This is one old integrated/discrete driver combination, not a cross-vendor release benchmark. AMD, newer Intel/NVIDIA drivers, Windows 11, remote sessions, virtual GPUs, and an unsupported WDDM path still need separate runtime coverage.
+
+### 2026-07-26 GPU stabilization rerun
+
+The focused stabilization rerun used the same Windows 10 build 19045 machine after the independent dedicated/shared-memory fix. The Release build had 0 warnings and 0 errors, and the full Release suite passed 253 tests. The WinUI Debug harness ran a 30-second warm-up followed by two 30-second steady intervals.
+
+- Warm-up: average CPU `0.8005%`, peak `2.7648%`, average working set `186,729,540` bytes, peak `187,961,344` bytes.
+- Steady interval 1: average CPU `0.6748%`, peak `1.8521%`, average working set `184,987,921` bytes, peak `187,224,064` bytes.
+- Steady interval 2: average CPU `0.6444%`, peak `1.8299%`, average working set `184,683,315` bytes, peak `187,478,016` bytes.
+- UI Automation reported the app responsive in all 90 samples.
+- VLC remained a real 3D workload: utilization ranged from `3.9%` to `5.0%`, dedicated memory was `45.1 MB`, and shared memory was `892 KB`.
+- The final diagnostics snapshot reported 95 engine instances, 2 process-memory instances, 2 adapters, 0 PID-reuse rejections, 0 inaccessible samples, 0 unassigned descendants, 0 malformed/duplicate/invalid instances, and `2.606 ms` collection time.
+
+A controlled Edge WebGL profile was also run while the app was open. Edge was attributed as its own logical application and showed real CPU/memory activity, but its GPU card remained `0.0%, 0 B dedicated · 0 B shared`; the provider probe collected 0 engine and 0 process-memory rows for that controlled Edge tree. Video-decode and OS PID-reuse scenarios were not observed on this machine. These are workload/driver and coverage limitations, not synthetic GPU values.

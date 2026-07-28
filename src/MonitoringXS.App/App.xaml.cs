@@ -90,6 +90,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<IPhysicalDiskAggregationService, PhysicalDiskAggregationService>();
         services.AddSingleton<INetworkMetricCollector, NetworkMetricCollector>();
         services.AddSingleton<INetworkMetricAggregationService, NetworkMetricAggregationService>();
+        services.AddSingleton<IGpuCounterSource, WindowsGpuPerformanceCounterSource>();
+        services.AddSingleton<IGpuMetricCollector, GpuMetricCollector>();
+        services.AddSingleton<IGpuMetricAggregationService, GpuMetricAggregationService>();
         services.AddSingleton<MonitoringCoordinator>();
         services.AddSingleton<MainWindowViewModel>();
         return services.BuildServiceProvider(validateScopes: true);

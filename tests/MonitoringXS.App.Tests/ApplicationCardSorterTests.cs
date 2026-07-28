@@ -53,6 +53,7 @@ public sealed class ApplicationCardSorterTests
     [InlineData(ApplicationSortField.ProcessIoRate)]
     [InlineData(ApplicationSortField.PhysicalDiskRate)]
     [InlineData(ApplicationSortField.NetworkRate)]
+    [InlineData(ApplicationSortField.GpuUsage)]
     [InlineData(ApplicationSortField.ProcessCount)]
     public void SortsEveryNumericFieldInBothDirections(ApplicationSortField field)
     {
@@ -67,6 +68,7 @@ public sealed class ApplicationCardSorterTests
             physicalWrite: MetricValue<double>.Available(1),
             networkDownload: MetricValue<double>.Available(1),
             networkUpload: MetricValue<double>.Available(1),
+            gpuUsage: MetricValue<double>.Available(1),
             processCount: 1);
         ApplicationCardViewModel high = Card(
             "high",
@@ -79,6 +81,7 @@ public sealed class ApplicationCardSorterTests
             physicalWrite: MetricValue<double>.Available(2),
             networkDownload: MetricValue<double>.Available(2),
             networkUpload: MetricValue<double>.Available(2),
+            gpuUsage: MetricValue<double>.Available(2),
             processCount: 2);
 
         IReadOnlyList<ApplicationCardViewModel> ascending = ApplicationCardSorter.Sort(
@@ -185,6 +188,7 @@ public sealed class ApplicationCardSorterTests
     [InlineData(ApplicationSortField.ProcessIoRate)]
     [InlineData(ApplicationSortField.PhysicalDiskRate)]
     [InlineData(ApplicationSortField.NetworkRate)]
+    [InlineData(ApplicationSortField.GpuUsage)]
     public void ReportsNoComparableDataWhenEveryMetricIsUnavailable(ApplicationSortField field)
     {
         ApplicationCardViewModel warmingUp = CardWithAvailability(
@@ -205,6 +209,7 @@ public sealed class ApplicationCardSorterTests
     [InlineData(ApplicationSortField.ProcessIoRate)]
     [InlineData(ApplicationSortField.PhysicalDiskRate)]
     [InlineData(ApplicationSortField.NetworkRate)]
+    [InlineData(ApplicationSortField.GpuUsage)]
     [InlineData(ApplicationSortField.ProcessCount)]
     public void ReportsComparableDataWhenARealValueExists(ApplicationSortField field)
     {
@@ -251,7 +256,8 @@ public sealed class ApplicationCardSorterTests
             physicalRead: MetricValue<double>.Unavailable(availability),
             physicalWrite: MetricValue<double>.Unavailable(availability),
             networkDownload: MetricValue<double>.Unavailable(availability),
-            networkUpload: MetricValue<double>.Unavailable(availability));
+            networkUpload: MetricValue<double>.Unavailable(availability),
+            gpuUsage: MetricValue<double>.Unavailable(availability));
 
     private static ApplicationCardViewModel Card(
         string id,
@@ -264,6 +270,7 @@ public sealed class ApplicationCardSorterTests
         MetricValue<double>? physicalWrite = null,
         MetricValue<double>? networkDownload = null,
         MetricValue<double>? networkUpload = null,
+        MetricValue<double>? gpuUsage = null,
         int processCount = 1)
     {
         ApplicationCardViewModel card = new()
@@ -307,7 +314,18 @@ public sealed class ApplicationCardSorterTests
                 MetricValue<ulong>.Available(0),
                 MetricValue<int>.Available(0),
                 MetricValue<int>.Available(0),
-                default)
+                default),
+            Gpu = new GpuMetricSet(
+                gpuUsage ?? MetricValue<double>.Available(0),
+                MetricValue<ulong>.Available(0),
+                MetricValue<ulong>.Available(0),
+                null,
+                new GpuCollectorDiagnostics
+                {
+                    ProviderName = GpuCollectorDiagnostics.WindowsPdhProvider,
+                    CollectorStatus = MetricAvailability.Available,
+                    Reason = GpuAvailabilityReason.None
+                })
         }, []);
         return card;
     }

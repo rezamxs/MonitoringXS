@@ -22,4 +22,9 @@ public sealed record ApplicationMetricSnapshot(
         MetricAvailability.Unsupported,
         NetworkAvailabilityReason.Unsupported,
         "Network attribution is not configured.");
+
+    public GpuMetricSet Gpu { get; init; } = GpuMetricSet.Unavailable(
+        MetricAvailability.Unsupported,
+        GpuAvailabilityReason.CounterSetUnavailable,
+        "GPU attribution is not configured.");
 }

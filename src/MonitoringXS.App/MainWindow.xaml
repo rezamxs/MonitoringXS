@@ -154,6 +154,58 @@
                             Text="{Binding NetworkStatusText}" />
                     </StackPanel>
                     <StackPanel Spacing="10">
+                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="GPU (Windows performance counters)" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border
+                                Padding="16"
+                                AutomationProperties.Name="GPU utilization"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource SubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Busiest engine" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding GpuUsageText}" />
+                                </StackPanel>
+                            </Border>
+                            <Border
+                                Grid.Column="1"
+                                Padding="16"
+                                AutomationProperties.Name="Dedicated GPU memory reported for application processes"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource SubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Dedicated memory" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding DedicatedGpuMemoryText}" />
+                                </StackPanel>
+                            </Border>
+                            <Border
+                                Grid.Column="2"
+                                Padding="16"
+                                AutomationProperties.Name="Shared GPU memory reported for application processes"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource SubtleBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Shared memory" />
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding SharedGpuMemoryText}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                        <TextBlock
+                            AutomationProperties.LiveSetting="Polite"
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="{Binding GpuStatusText}" />
+                    </StackPanel>
+                    <StackPanel Spacing="10">
                         <TextBlock Style="{StaticResource SectionTitleStyle}" Text="CPU · last minute" />
                         <controls:MetricSparkline
                             AutomationProperties.Name="CPU history for the selected application"
@@ -195,9 +247,14 @@
                                 Foreground="{StaticResource SecondaryTextBrush}"
                                 Text="{Binding NetworkDiagnosticsText}"
                                 TextWrapping="Wrap" />
+                            <TextBlock FontWeight="SemiBold" Text="GPU counter details" />
                             <TextBlock
                                 Foreground="{StaticResource SecondaryTextBrush}"
-                                Text="Process-level tables, command lines, GPU, and security fields are not implemented in this vertical slice."
+                                Text="{Binding GpuDiagnosticsText}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="Process-level tables, command lines, and security fields are not implemented in this vertical slice."
                                 TextWrapping="Wrap" />
                         </StackPanel>
                     </Expander>
@@ -289,6 +346,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <StackPanel
                                 Margin="0,0,16,0"
@@ -319,7 +377,7 @@
                             </Border>
                             <Border
                                 Grid.Column="2"
-                                Padding="16,0,0,0"
+                                Padding="16,0"
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1,0,0,0">
                                 <StackPanel
@@ -334,6 +392,28 @@
                                         Text="{x:Bind NetworkText, Mode=OneWay}"
                                         TextWrapping="Wrap" />
                                     <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind NetworkStatusText, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+                            <Border
+                                Grid.Column="3"
+                                Padding="16,0,0,0"
+                                BorderBrush="{StaticResource SubtleBorderBrush}"
+                                BorderThickness="1,0,0,0">
+                                <StackPanel
+                                    Spacing="4"
+                                    ToolTipService.ToolTip="{x:Bind GpuStatusText, Mode=OneWay}">
+                                    <TextBlock
+                                        Style="{StaticResource CardMetricLabelStyle}"
+                                        Text="GPU"
+                                        ToolTipService.ToolTip="Busiest GPU engine across the application. Dedicated and shared memory are sums of Windows per-process GPU counters." />
+                                    <TextBlock
+                                        Style="{StaticResource CardMetricValueStyle}"
+                                        Text="{x:Bind GpuText, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Style="{StaticResource CardSupportingTextStyle}"
+                                        Text="{x:Bind GpuStatusText, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                         </Grid>

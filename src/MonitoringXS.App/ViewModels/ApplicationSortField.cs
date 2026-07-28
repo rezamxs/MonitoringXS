@@ -8,6 +8,7 @@ public enum ApplicationSortField
     ProcessIoRate,
     PhysicalDiskRate,
     NetworkRate,
+    GpuUsage,
     ProcessCount
 }
 

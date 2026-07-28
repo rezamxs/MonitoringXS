@@ -48,6 +48,24 @@ Current TCP connection and UDP endpoint counts use bounded owner-PID IP Helper t
 
 Primary references: [Microsoft TCP/IP ETW events](https://learn.microsoft.com/windows/win32/etw/tcpip), [TCP IPv4 send payload](https://learn.microsoft.com/windows/win32/etw/tcpip-sendipv4), [TCP IPv6 send payload](https://learn.microsoft.com/windows/win32/etw/tcpip-sendipv6), [Microsoft UDP/IP ETW events](https://learn.microsoft.com/windows/win32/etw/udpip), and [ETW session loss counters](https://learn.microsoft.com/windows/win32/api/evntrace/ns-evntrace-event_trace_properties).
 
+## GPU and GPU memory
+
+GPU values come from one persistent native PDH query over the Windows `GPU Engine` and `GPU Process Memory` performance counter sets. No vendor API, graphics ETW session, service, driver, or generated value is used. The first query collection is `WarmingUp`. A missing counter object or driver support is `Unsupported`; access denial, invalid counter data, process exit, and PID reuse remain explicit.
+
+Windows counter instance names contain PID, adapter LUID, physical-adapter index, engine index, and engine type. Monitoring XS enumerates those instances rather than constructing guessed paths. After reading the counters, it reopens each target process with limited query access and compares the absolute UTC `FILETIME` creation time with `ProcessInstanceId.StartTimeUtc`. A matching PID with a different start time is rejected. Counter timestamps are never treated as process creation times, and no QPC-relative value is compared with UTC.
+
+A logical application can have several processes using the same engine. Their values are summed per identical adapter/physical-adapter/engine identity, and an interval whose combined value exceeds 100% is rejected as invalid rather than silently clamped. The busiest valid engine across all adapters is displayed. Parallel engines and adapters are not added into one percentage because that can misrepresent capacity. Advanced diagnostics retain the winning engine type, adapter LUID, and physical index.
+
+Dedicated and shared memory are sums of the per-process Windows counter values across adapter instances. Zero dedicated memory can be valid on an integrated GPU that relies on shared system memory. A discrete GPU can use both. These values describe the sum reported against the application's processes; they are not a unique adapter-allocation total. Windows includes cross-process shared allocations in each process that maps them, so summing processes can count the same shared allocation more than once.
+
+Utilization, dedicated memory, and shared memory have independent availability states. A missing or `PDH_NO_DATA` memory counter does not erase a valid utilization sample, and a missing utilization counter is not converted to zero. Duplicate instances are de-duplicated only within their exact adapter/engine or adapter-memory identity; invalid values make the result partial or unavailable with lower-bound semantics. Native counter buffers and item counts are bounded. A PID whose observed `ProcessInstanceId` changes remains quarantined until a complete enumeration observes the old counter instance absent; an incomplete enumeration cannot clear the quarantine.
+
+The Windows Task Manager team documents that this data requires a WDDM 2.x-capable driver. Microsoft also documents an affected Windows 10 scenario where per-process dedicated GPU memory can falsely keep increasing. Monitoring XS exposes the Windows value and provider status but does not call it proof of a memory leak. On unsupported, old-driver, remote, virtualized, software-rendering, protected, or higher-integrity paths, the UI must remain unavailable or partial instead of converting missing data to zero.
+
+Advanced diagnostics expose provider/status/reason, independent counter statuses, target and sampled process counts, engine and memory instance counts, active adapter count, PID-reuse rejection, inaccessible/exited/unknown/malformed/duplicate counter instances, unassigned descendant counters, invalid counters, query recreation count, and collection duration. The implementation decision and development-machine probe evidence are in [ADR 0003](adr/0003-windows-gpu-performance-counters.md).
+
+Primary references: [Microsoft DirectX team: GPUs in the Task Manager](https://devblogs.microsoft.com/directx/gpus-in-the-task-manager/), [PDH enumeration](https://learn.microsoft.com/windows/win32/api/pdh/nf-pdh-pdhenumobjectitemsw), [GPU nodes and engines](https://learn.microsoft.com/windows-hardware/drivers/display/enumerating-gpu-nodes), and [the known GPU process-memory counter issue](https://learn.microsoft.com/troubleshoot/windows-client/performance/gpu-process-memory-counters-report-wrong-value).
+
 ## Services
 
 Services and related background components are excluded by default. Advanced opt-in totals must be visibly labelled and must never silently replace the default calculation model.

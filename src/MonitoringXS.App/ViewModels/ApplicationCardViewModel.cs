@@ -44,6 +44,12 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
     public partial string NetworkStatusText { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string GpuText { get; set; } = "Warming up";
+
+    [ObservableProperty]
+    public partial string GpuStatusText { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string ProcessCountText { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -93,6 +99,27 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             "send");
         NetworkText = network.ValueText;
         NetworkStatusText = network.StatusText;
+        ScalarPresentation gpu = FormatGpu(snapshot.Gpu.UtilizationPercent);
+        GpuText = gpu.ValueText;
+        string gpuMemory = FormatGpuMemory(
+            snapshot.Gpu.DedicatedMemoryBytes,
+            snapshot.Gpu.SharedMemoryBytes);
+        bool wholeGpuUnavailable = !snapshot.Gpu.UtilizationPercent.IsAvailable
+            && !snapshot.Gpu.DedicatedMemoryBytes.IsAvailable
+            && !snapshot.Gpu.SharedMemoryBytes.IsAvailable
+            && snapshot.Gpu.UtilizationPercent.Availability
+                == snapshot.Gpu.DedicatedMemoryBytes.Availability
+            && snapshot.Gpu.UtilizationPercent.Availability
+                == snapshot.Gpu.SharedMemoryBytes.Availability;
+        GpuStatusText = wholeGpuUnavailable
+            ? gpu.StatusText
+            : string.Equals(gpu.StatusText, gpuMemory, StringComparison.Ordinal)
+            ? gpu.StatusText
+            : string.IsNullOrEmpty(gpu.StatusText)
+            ? gpuMemory
+            : string.IsNullOrEmpty(gpuMemory)
+                ? gpu.StatusText
+                : $"{gpu.StatusText} · {gpuMemory}";
         ProcessCountText = snapshot.ProcessCount == 1 ? "1 process" : $"{snapshot.ProcessCount} processes";
         bool hasPartialMetric = snapshot.CpuPercent.Availability == MetricAvailability.Partial
             || snapshot.WorkingSetBytes.Availability == MetricAvailability.Partial
@@ -101,11 +128,33 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             || snapshot.PhysicalDisk.ReadBytesPerSecond.Availability == MetricAvailability.Partial
             || snapshot.PhysicalDisk.WriteBytesPerSecond.Availability == MetricAvailability.Partial
             || snapshot.Network.DownloadBytesPerSecond.Availability == MetricAvailability.Partial
-            || snapshot.Network.UploadBytesPerSecond.Availability == MetricAvailability.Partial;
+            || snapshot.Network.UploadBytesPerSecond.Availability == MetricAvailability.Partial
+            || snapshot.Gpu.UtilizationPercent.Availability == MetricAvailability.Partial
+            || snapshot.Gpu.DedicatedMemoryBytes.Availability == MetricAvailability.Partial
+            || snapshot.Gpu.SharedMemoryBytes.Availability == MetricAvailability.Partial;
         StatusText = hasPartialMetric
             ? "Running · partial metrics"
             : snapshot.CpuPercent.IsAvailable ? "Running · live" : "Running · metrics warming up";
-        AutomationName = $"{DisplayName}. {StatusText}. CPU {cpu.AccessibleText}. Memory {memory.AccessibleText}. Process I/O {io.AccessibleText}. Physical disk {physicalDisk.AccessibleText}. Network {network.AccessibleText}.";
+        string gpuAccessible = wholeGpuUnavailable || string.IsNullOrEmpty(gpuMemory)
+            ? gpu.AccessibleText
+            : $"{gpu.AccessibleText}, {gpuMemory}";
+        string gpuQuarantineDetail = string.Join(
+            " ",
+            new[]
+            {
+                snapshot.Gpu.UtilizationPercent.Detail,
+                snapshot.Gpu.DedicatedMemoryBytes.Detail,
+                snapshot.Gpu.SharedMemoryBytes.Detail
+            }
+            .Where(detail => !string.IsNullOrWhiteSpace(detail)
+                && detail.Contains("quarantin", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.Ordinal));
+        if (!string.IsNullOrWhiteSpace(gpuQuarantineDetail))
+        {
+            gpuAccessible = $"{gpuAccessible}. {gpuQuarantineDetail}";
+        }
+
+        AutomationName = $"{DisplayName}. {StatusText}. CPU {cpu.AccessibleText}. Memory {memory.AccessibleText}. Process I/O {io.AccessibleText}. Physical disk {physicalDisk.AccessibleText}. Network {network.AccessibleText}. GPU {gpuAccessible}.";
     }
 
     private static ScalarPresentation FormatCpu(MetricValue<double> metric)
@@ -131,6 +180,49 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             ? $"{(bytes / (1024d * 1024d * 1024d)).ToString("0.00", CultureInfo.InvariantCulture)} GB"
             : $"{(bytes / (1024d * 1024d)).ToString("0", CultureInfo.InvariantCulture)} MB");
         return FormatAvailableScalar(value, metric);
+    }
+
+    private static ScalarPresentation FormatGpu(MetricValue<double> metric)
+    {
+        if (!metric.IsAvailable)
+        {
+            return FormatUnavailableScalar(metric);
+        }
+
+        string value = $"{PartialPrefix(metric)}{metric.Value!.Value.ToString("0.0", CultureInfo.InvariantCulture)}%";
+        return FormatAvailableScalar(value, metric);
+    }
+
+    private static string FormatGpuMemory(
+        MetricValue<ulong> dedicated,
+        MetricValue<ulong> shared)
+    {
+        if (!dedicated.IsAvailable && !shared.IsAvailable)
+        {
+            return dedicated.Availability == shared.Availability
+                ? $"Memory {FormatAvailability(dedicated)}"
+                : $"{FormatAvailability(dedicated)} dedicated, {FormatAvailability(shared)} shared";
+        }
+
+        return $"{FormatGpuMemoryValue(dedicated)} dedicated · {FormatGpuMemoryValue(shared)} shared";
+    }
+
+    private static string FormatGpuMemoryValue(MetricValue<ulong> metric)
+    {
+        if (!metric.IsAvailable)
+        {
+            return FormatAvailability(metric);
+        }
+
+        double bytes = metric.Value!.Value;
+        string value = bytes >= 1024d * 1024d * 1024d
+            ? $"{(bytes / (1024d * 1024d * 1024d)).ToString("0.00", CultureInfo.InvariantCulture)} GB"
+            : bytes >= 1024d * 1024d
+                ? $"{(bytes / (1024d * 1024d)).ToString("0.0", CultureInfo.InvariantCulture)} MB"
+                : bytes >= 1024d
+                    ? $"{(bytes / 1024d).ToString("0.0", CultureInfo.InvariantCulture)} KB"
+                    : $"{bytes.ToString("0", CultureInfo.InvariantCulture)} B";
+        return PartialPrefix(metric) + value;
     }
 
     private static ScalarPresentation FormatAvailableScalar<T>(string value, MetricValue<T> metric)

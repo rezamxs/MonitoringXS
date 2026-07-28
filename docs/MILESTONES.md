@@ -59,7 +59,16 @@ Status: complete and accepted; see the final elevated validation in `VALIDATION.
 
 ### Milestone 3B - GPU
 
-- GPU engine counters, VRAM, multiple-adapter handling, and honest availability states.
+Status: approved for checkpoint within the tested PDH/WDDM scope; broader compatibility validation remains open.
+
+- [x] Select a Windows performance-counter provider after official-source review and a real native benchmark.
+- [x] Add GPU Engine and GPU Process Memory contracts, a persistent PDH source, PID plus UTC start-time validation, multi-adapter aggregation, diagnostics, deterministic tests, and UI fields.
+- [x] Validate real VLC engine and memory values on the development machine with two reported adapters.
+- [x] Bound native PDH buffers and instance counts, isolate utilization from independent memory availability, and make query disposal/concurrent capture deterministic.
+- [x] Keep malformed, duplicate, stale, and reused-PID counter instances explicit instead of converting them to zero; preserve lower-bound semantics for partial memory sums.
+- [x] Run the focused WinUI runtime pass with real VLC and a controlled Edge WebGL process tree; Edge remained honestly unavailable when its driver path exposed no GPU counter instances.
+- [ ] Validate unsupported WDDM/driver, remote, virtual, and additional hardware scenarios.
+- [ ] Exercise an actual operating-system PID-reuse occurrence during GPU capture; deterministic exact-identity rejection is covered by tests.
 
 ## Milestone 4 - Product UI
 

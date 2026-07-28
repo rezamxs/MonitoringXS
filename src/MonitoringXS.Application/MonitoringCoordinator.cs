@@ -16,6 +16,8 @@ public sealed class MonitoringCoordinator
     private readonly IPhysicalDiskAggregationService? _physicalDiskAggregation;
     private readonly INetworkMetricCollector? _networkCollector;
     private readonly INetworkMetricAggregationService? _networkAggregation;
+    private readonly IGpuMetricCollector? _gpuCollector;
+    private readonly IGpuMetricAggregationService? _gpuAggregation;
     private readonly Dictionary<string, BoundedTimeSeries<ApplicationHistoryPoint>> _history = new(StringComparer.Ordinal);
 
     public MonitoringCoordinator(
@@ -26,7 +28,9 @@ public sealed class MonitoringCoordinator
         IPhysicalDiskMetricCollector? physicalDiskCollector = null,
         IPhysicalDiskAggregationService? physicalDiskAggregation = null,
         INetworkMetricCollector? networkCollector = null,
-        INetworkMetricAggregationService? networkAggregation = null)
+        INetworkMetricAggregationService? networkAggregation = null,
+        IGpuMetricCollector? gpuCollector = null,
+        IGpuMetricAggregationService? gpuAggregation = null)
     {
         _discovery = discovery;
         _attribution = attribution;
@@ -36,6 +40,8 @@ public sealed class MonitoringCoordinator
         _physicalDiskAggregation = physicalDiskAggregation;
         _networkCollector = networkCollector;
         _networkAggregation = networkAggregation;
+        _gpuCollector = gpuCollector;
+        _gpuAggregation = gpuAggregation;
     }
 
     public async ValueTask<MonitoringDashboardSnapshot> CaptureAsync(CancellationToken cancellationToken)
@@ -86,6 +92,40 @@ public sealed class MonitoringCoordinator
                 .ToArray();
         }
 
+        if (_gpuCollector is not null && _gpuAggregation is not null)
+        {
+            try
+            {
+                IReadOnlyList<GpuProcessSample> gpuSamples = await _gpuCollector.CollectAsync(
+                    attributedProcesses,
+                    capturedAt,
+                    cancellationToken);
+                IReadOnlyDictionary<string, GpuMetricSet> gpuByApplication =
+                    _gpuAggregation.Aggregate(attribution, gpuSamples);
+                applications = applications
+                    .Select(application => gpuByApplication.TryGetValue(
+                        application.Application.LogicalApplicationId,
+                        out GpuMetricSet? gpu)
+                        ? application with { Gpu = gpu }
+                        : application)
+                    .ToArray();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception) when (IsRecoverableGpuException(exception))
+            {
+                GpuMetricSet unavailable = GpuMetricSet.Unavailable(
+                    MetricAvailability.Error,
+                    GpuAvailabilityReason.CounterReadFailure,
+                    "GPU collection failed; CPU, memory, Process I/O, Physical Disk, and Network remain available.");
+                applications = applications
+                    .Select(application => application with { Gpu = unavailable })
+                    .ToArray();
+            }
+        }
+
         HashSet<string> activeIds = applications
             .Select(application => application.Application.LogicalApplicationId)
             .ToHashSet(StringComparer.Ordinal);
@@ -125,4 +165,10 @@ public sealed class MonitoringCoordinator
             applications.Where(item => item.Application.Disposition is ApplicationDisposition.Portable or ApplicationDisposition.Unresolved).ToArray(),
             historySnapshot);
     }
+
+    private static bool IsRecoverableGpuException(Exception exception) =>
+        exception is ArgumentException
+            or ArithmeticException
+            or InvalidOperationException
+            or System.Runtime.InteropServices.ExternalException;
 }

@@ -115,6 +115,56 @@ public sealed class MonitoringCoordinatorTests
         Assert.Equal(789d, snapshot.Network.DownloadBytesPerSecond.Value);
     }
 
+    [Fact]
+    public async Task CaptureAsyncMergesGpuWithoutReplacingExistingMetrics()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        ProcessDescriptor process = new(new ProcessInstanceId(48, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
+        ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
+        MonitoringCoordinator coordinator = new(
+            new Discovery(process),
+            new Attribution(process, identity),
+            new Collector(process),
+            new Aggregator(identity, process),
+            new PhysicalCollector(process),
+            new PhysicalAggregator(identity),
+            new NetworkCollector(process),
+            new NetworkAggregator(identity),
+            new GpuCollector(process),
+            new GpuAggregator(identity));
+
+        MonitoringDashboardSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
+        Assert.Equal(123d, snapshot.PhysicalDisk.ReadBytesPerSecond.Value);
+        Assert.Equal(789d, snapshot.Network.DownloadBytesPerSecond.Value);
+        Assert.Equal(45d, snapshot.Gpu.UtilizationPercent.Value);
+        Assert.Equal(256UL, snapshot.Gpu.DedicatedMemoryBytes.Value);
+    }
+
+    [Fact]
+    public async Task GpuFailureDoesNotBreakOtherApplicationMetrics()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        ProcessDescriptor process = new(new ProcessInstanceId(49, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
+        ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
+        MonitoringCoordinator coordinator = new(
+            new Discovery(process),
+            new Attribution(process, identity),
+            new Collector(process),
+            new Aggregator(identity, process),
+            gpuCollector: new ThrowingGpuCollector(),
+            gpuAggregation: new GpuAggregator(identity));
+
+        MonitoringDashboardSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
+        Assert.Equal(MetricAvailability.Error, snapshot.Gpu.UtilizationPercent.Availability);
+        Assert.Equal(GpuAvailabilityReason.CounterReadFailure, snapshot.Gpu.Reason);
+    }
+
     private sealed class Discovery(ProcessDescriptor process) : IProcessDiscoveryService
     {
         public ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken) => ValueTask.FromResult<IReadOnlyList<ProcessDescriptor>>([process]);
@@ -253,6 +303,55 @@ public sealed class MonitoringCoordinatorTests
                     metrics[0].SessionUploadedBytes,
                     metrics[0].ActiveTcpConnectionCount,
                     metrics[0].UdpEndpointCount,
+                    metrics[0].Diagnostics)
+            };
+    }
+
+    private sealed class GpuCollector(ProcessDescriptor process) : IGpuMetricCollector
+    {
+        public ValueTask<IReadOnlyList<GpuProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAtUtc,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IReadOnlyList<GpuProcessSample>>(
+            [
+                new(
+                    process.InstanceId,
+                    capturedAtUtc,
+                    MetricValue<double>.Available(45),
+                    MetricValue<ulong>.Available(256),
+                    MetricValue<ulong>.Available(128),
+                    [new(new GpuEngineId(1, 0, 0, "3D"), 45)],
+                    new GpuCollectorDiagnostics
+                    {
+                        ProviderName = GpuCollectorDiagnostics.WindowsPdhProvider,
+                        CollectorStatus = MetricAvailability.Available,
+                        Reason = GpuAvailabilityReason.None
+                    })
+            ]);
+    }
+
+    private sealed class ThrowingGpuCollector : IGpuMetricCollector
+    {
+        public ValueTask<IReadOnlyList<GpuProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAtUtc,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Simulated PDH failure.");
+    }
+
+    private sealed class GpuAggregator(ApplicationIdentity identity) : IGpuMetricAggregationService
+    {
+        public IReadOnlyDictionary<string, GpuMetricSet> Aggregate(
+            IReadOnlyList<AttributionResult> attribution,
+            IReadOnlyList<GpuProcessSample> metrics) =>
+            new Dictionary<string, GpuMetricSet>(StringComparer.Ordinal)
+            {
+                [identity.LogicalApplicationId] = new(
+                    metrics[0].UtilizationPercent,
+                    metrics[0].DedicatedMemoryBytes,
+                    metrics[0].SharedMemoryBytes,
+                    metrics[0].Engines[0].Engine,
                     metrics[0].Diagnostics)
             };
     }

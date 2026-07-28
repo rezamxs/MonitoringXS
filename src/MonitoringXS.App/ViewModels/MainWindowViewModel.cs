@@ -18,6 +18,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         new(ApplicationSortField.ProcessIoRate, "Process I/O rate"),
         new(ApplicationSortField.PhysicalDiskRate, "Physical Disk rate"),
         new(ApplicationSortField.NetworkRate, "Network rate"),
+        new(ApplicationSortField.GpuUsage, "GPU usage"),
         new(ApplicationSortField.ProcessCount, "Process count")
     ];
 

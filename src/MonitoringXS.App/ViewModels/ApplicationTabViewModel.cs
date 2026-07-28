@@ -60,6 +60,21 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
     public partial string NetworkDiagnosticsText { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string GpuUsageText { get; set; } = "Warming up";
+
+    [ObservableProperty]
+    public partial string DedicatedGpuMemoryText { get; set; } = "Warming up";
+
+    [ObservableProperty]
+    public partial string SharedGpuMemoryText { get; set; } = "Warming up";
+
+    [ObservableProperty]
+    public partial string GpuStatusText { get; set; } = "Warming up";
+
+    [ObservableProperty]
+    public partial string GpuDiagnosticsText { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string ProcessSummary { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -117,6 +132,18 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
             ? "none"
             : networkDiagnostics.CollectorStatusReason;
         NetworkDiagnosticsText = $"Status {networkDiagnostics.CollectorStatus}; reason {networkDiagnostics.Reason}; detail {networkStatusDetail}; events {networkDiagnostics.EventsObserved} ({networkDiagnostics.SendEvents} send / {networkDiagnostics.ReceiveEvents} receive; TCP {networkDiagnostics.TcpSendEvents} send / {networkDiagnostics.TcpReceiveEvents} receive; UDP {networkDiagnostics.UdpSendEvents} send / {networkDiagnostics.UdpReceiveEvents} receive; IPv4 {networkDiagnostics.IPv4Events} / IPv6 {networkDiagnostics.IPv6Events}); source bytes {FormatBytes(MetricValue<ulong>.Available(networkDiagnostics.TotalSourceSendBytes))} send / {FormatBytes(MetricValue<ulong>.Available(networkDiagnostics.TotalSourceReceiveBytes))} receive; attributed {networkDiagnostics.AttributedEvents}; unattributed {networkDiagnostics.UnattributedEvents} (system {networkDiagnostics.SystemProcessEvents}; outside app set {networkDiagnostics.OutsideApplicationSetEvents}; unknown {networkDiagnostics.UnknownProcessEvents}; PID-reuse rejected {networkDiagnostics.PidReuseEventsRejected}); rate {networkDiagnostics.EventRatePerSecond.ToString("0", CultureInfo.InvariantCulture)}/s; queue {networkDiagnostics.CurrentQueueDepth}/{networkDiagnostics.MaximumQueueDepth} max of {networkDiagnostics.QueueCapacity}; dropped {networkDiagnostics.QueueEventsDropped}; ETW lost {networkDiagnostics.EtwEventsLost}; processing failures {networkDiagnostics.EventProcessingFailures}; unsupported versions {networkDiagnostics.UnsupportedEventVersions}; latency {networkDiagnostics.AverageProcessingLatencyMilliseconds.ToString("0.###", CultureInfo.InvariantCulture)} ms avg / {networkDiagnostics.MaximumProcessingLatencyMilliseconds.ToString("0.###", CultureInfo.InvariantCulture)} ms max; last event {lastNetworkEvent}; completeness {networkCompleteness}.";
+        GpuUsageText = FormatPercent(snapshot.Gpu.UtilizationPercent);
+        DedicatedGpuMemoryText = FormatBytes(snapshot.Gpu.DedicatedMemoryBytes);
+        SharedGpuMemoryText = FormatBytes(snapshot.Gpu.SharedMemoryBytes);
+        GpuStatusText = $"Utilization {FormatAvailability(snapshot.Gpu.UtilizationPercent)}; dedicated memory {FormatAvailability(snapshot.Gpu.DedicatedMemoryBytes)}; shared memory {FormatAvailability(snapshot.Gpu.SharedMemoryBytes)}; reason {snapshot.Gpu.Reason}.";
+        GpuCollectorDiagnostics gpuDiagnostics = snapshot.Gpu.Diagnostics;
+        string gpuDetail = string.IsNullOrWhiteSpace(gpuDiagnostics.CollectorStatusReason)
+            ? "none"
+            : gpuDiagnostics.CollectorStatusReason;
+        string busiestEngine = snapshot.Gpu.BusiestEngine is GpuEngineId engine
+            ? $"{engine.EngineType} engine {engine.EngineIndex}, adapter LUID 0x{engine.AdapterLuid:X16}, physical index {engine.PhysicalAdapterIndex}"
+            : "none";
+        GpuDiagnosticsText = $"Provider {gpuDiagnostics.ProviderName}; status {gpuDiagnostics.CollectorStatus}; reason {gpuDiagnostics.Reason}; detail {gpuDetail}; counter status utilization {gpuDiagnostics.UtilizationCounterStatus}, dedicated memory {gpuDiagnostics.DedicatedMemoryCounterStatus}, shared memory {gpuDiagnostics.SharedMemoryCounterStatus}; target processes {gpuDiagnostics.TargetProcessCount}; sampled {gpuDiagnostics.SampledProcessCount}; engine instances {gpuDiagnostics.EngineCounterInstanceCount}; process-memory instances {gpuDiagnostics.ProcessMemoryCounterInstanceCount}; adapters {gpuDiagnostics.ActiveAdapterCount}; busiest {busiestEngine}; PID-reuse rejected {gpuDiagnostics.PidReuseSamplesRejected}; first-observation counters rejected {gpuDiagnostics.FirstObservationCounterSamplesRejected}; quarantined utilization {gpuDiagnostics.QuarantinedUtilizationSamples}, dedicated memory {gpuDiagnostics.QuarantinedDedicatedMemorySamples}, shared memory {gpuDiagnostics.QuarantinedSharedMemorySamples}; inaccessible target samples {gpuDiagnostics.InaccessibleProcessSamples}; descendant counters not attributed {gpuDiagnostics.UnattributedDescendantCounterInstances}; outside application set {gpuDiagnostics.OutsideApplicationSetCounterInstances}; exited process counters {gpuDiagnostics.ExitedProcessCounterInstances}; unknown PID counters {gpuDiagnostics.UnknownProcessCounterInstances}; malformed instances {gpuDiagnostics.MalformedCounterInstances}; duplicate instances {gpuDiagnostics.DuplicateCounterInstances}; invalid values {gpuDiagnostics.InvalidCounterSamples}; query recreations {gpuDiagnostics.QueryRecreationCount}; collection {gpuDiagnostics.CollectionDurationMilliseconds.ToString("0.###", CultureInfo.InvariantCulture)} ms. Dedicated/shared values are sums of Windows per-process counters; shared values are not unique physical ownership and cross-process allocations can be counted more than once.";
         ProcessSummary = $"{snapshot.ProcessCount} process{(snapshot.ProcessCount == 1 ? string.Empty : "es")} · {snapshot.Application.Disposition}";
         ClassificationReason = snapshot.Application.ClassificationReason;
         ClassificationConfidence = $"{snapshot.Application.Confidence} confidence";
@@ -126,6 +153,10 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
     private static string FormatMemory(MetricValue<long> metric) => metric.IsAvailable
         ? $"{PartialPrefix(metric)}{(metric.Value!.Value / (1024d * 1024d)).ToString("0", CultureInfo.InvariantCulture)} MB"
         : "Unavailable";
+
+    private static string FormatPercent(MetricValue<double> metric) => metric.IsAvailable
+        ? $"{PartialPrefix(metric)}{metric.Value!.Value.ToString("0.0", CultureInfo.InvariantCulture)}%"
+        : FormatAvailability(metric);
 
     private static string FormatRate(MetricValue<double> metric)
     {

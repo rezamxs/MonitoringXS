@@ -35,13 +35,14 @@ Currently working:
 - Process I/O
 - physical disk monitoring through ETW
 - network monitoring through ETW
+- GPU engine and process-attributed GPU memory through Windows performance counters (approved within the tested PDH/WDDM scope)
 - application tabs
 - beginner and advanced views
 - keyboard navigation
 
 Not finished yet:
 
-- GPU and VRAM monitoring
+- broader GPU driver and hardware validation
 - 24-hour history
 - application close, restart and force-stop actions
 - uninstall support
@@ -55,10 +56,12 @@ Physical disk and network monitoring may need Administrator access on some Windo
 The current repository has:
 
 - a successful Release build
-- 184 passing tests
+- 264 passing tests
 - no failed or skipped tests
 - validated ETW physical-disk monitoring on the development machine
 - accepted elevated ETW network attribution with controlled Microsoft Edge traffic on the development machine, including retained-helper totals and shared-session cleanup
+- validated real GPU engine and process-memory values with VLC on one dual-adapter development machine
+- validated that a controlled Edge WebGL workload is attributed to Edge while GPU counters remain unavailable on this machine
 
 These results only describe the current development environment and do not mean the application is ready for a public release.
 

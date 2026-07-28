@@ -38,6 +38,18 @@ In Advanced Mode, check the separate event rate, queue depth/capacity, local dro
 
 Download/Receive and Upload/Send are packet bytes observed at the kernel ETW event point. They can differ from browser tools, Task Manager, a router, or ISP accounting because those tools may count payload, wire traffic, retransmissions, loopback, or offloaded traffic differently.
 
+## GPU is unavailable or stays at zero
+
+Monitoring XS uses the Windows `GPU Engine` and `GPU Process Memory` performance counter sets. They require a WDDM 2.x-capable driver. Update the graphics driver from the device or system vendor and confirm that Task Manager's GPU columns work. Missing counter objects are shown as `Unsupported`; do not repair this by substituting zero.
+
+A healthy zero means Windows exposed the provider but no matching engine instance existed for that application at the sample time. Hardware acceleration can be disabled, a workload can use software rendering, or a browser/video application can place work in a helper process. Monitoring XS attributes a helper only when its PID and UTC start time are available and the normal application attribution includes it. An inaccessible or ambiguous helper remains partial or unavailable.
+
+On an integrated GPU, zero dedicated memory can be valid while shared memory is nonzero. On a multi-adapter system, Advanced diagnostics show the adapter LUID and physical index of the busiest engine. Virtualized activity can be owned by a host process such as `vmmem`, and a remote session can expose different counters.
+
+A controlled browser or WebGL workload can still show `GPU 0.0%, 0 B dedicated · 0 B shared` when the browser uses software rendering, a protected/sandboxed path, or a driver that does not publish a per-process GPU instance. This is an honest unavailable/zero observation for that process, not a fallback estimate. A different workload such as VLC may expose real `3D` engine values on the same machine.
+
+Per-process dedicated/shared values are Windows-reported attribution values, not a unique total of physical VRAM. Cross-process shared allocations can be counted in more than one process. Microsoft also documents an affected Windows 10 case where a per-process GPU memory value can falsely keep increasing; compare the Task Manager Performance tab or a WPR/WPA trace before treating that counter as proof of a leak.
+
 ## Attribution overrides are unavailable
 
 Monitoring XS reports an invalid, inaccessible, or unsupported `%LocalAppData%\MonitoringXS\attribution-overrides.json` file as unavailable and continues without fabricating mappings. Preserve the file for diagnosis or move it aside while the app is closed; the app will create a new versioned document after the next explicit override change.
