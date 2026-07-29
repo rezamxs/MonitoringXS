@@ -620,7 +620,9 @@ public sealed class NetworkMetricCollectorTests
     {
         private readonly Queue<NetworkEventBatch> _batches = new(batches);
 
-        public ValueTask<NetworkEventBatch> ReadNetworkBatchAsync(CancellationToken cancellationToken)
+        public ValueTask<NetworkEventBatch> ReadNetworkBatchAsync(
+            IReadOnlyList<ProcessInstanceId> processes,
+            CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(_batches.Dequeue());
@@ -629,7 +631,9 @@ public sealed class NetworkMetricCollectorTests
 
     private sealed class CancellingSource : INetworkEventSource
     {
-        public ValueTask<NetworkEventBatch> ReadNetworkBatchAsync(CancellationToken cancellationToken) =>
+        public ValueTask<NetworkEventBatch> ReadNetworkBatchAsync(
+            IReadOnlyList<ProcessInstanceId> processes,
+            CancellationToken cancellationToken) =>
             ValueTask.FromCanceled<NetworkEventBatch>(cancellationToken);
     }
 

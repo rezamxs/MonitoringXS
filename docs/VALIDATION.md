@@ -994,3 +994,69 @@ The app was closed through the normal window close path twice. In both runs the 
 Phase 3B was approved within the tested PDH/WDDM scope. The final Release build completed with 0 warnings and 0 errors. The full Release suite passed 264/264 tests: Core 5, Application 7, Collectors 86, Storage 4, Integration 85, and App 77. The focused GPU filter passed 75/75 tests: Application 2, Collectors 29, Integration 40, and App 4.
 
 Broader hardware, driver, remote, virtual, unsupported-counter, and observed operating-system PID-reuse coverage remains open and does not invalidate this scoped checkpoint.
+## 2026-07-28 privileged ETW broker
+
+`.artifacts/validation/privileged-etw-broker/Invoke-Validation.ps1 -Mode Validate` requested UAC only for temporary service installation/removal, launched `MonitoringXS.App.exe` without `RunAs`, and removed the service and ProgramData copy in `finally`. The run reported `BrokerRunning=true`, `AppStarted=true`, `AppWindowObserved=true`, `AppExecutionLevel=asInvoker`, and `CleanedUp=true`; no service or validation directory remained afterward. The harness output is ignored under `.artifacts`.
+
+The follow-up identity probe used the same Release binary. LocalService exposed
+Network/Physical disk as `Unsupported`; expanded diagnostics reported
+`The privileged ETW broker protocol version is incompatible.` LocalSystem
+exposed Physical disk as `Access denied` and Network as `Unavailable`.
+`logman` found no `MonitoringXS.KernelMetrics.v1` session for either identity,
+so this run did not reach or prove a failing `StartTrace` call. Cleanup found no
+Monitoring XS process, service, ProgramData validation directory, or ETW
+session. Release and Debug builds completed with zero warnings/errors and all
+276 Release tests passed.
+
+### 2026-07-28 named-pipe authorization fix
+
+The validation harness now stops/deletes any prior temporary service, deploys one
+fresh Release broker output, passes the exact user SID/session to the service,
+and refuses to run when client/server protocol or platform hashes differ. The
+pipe is per-user/session and uses `NamedPipeServerStreamAcl.Create`. For client
+SID `S-1-5-21-2982241020-2171625489-2028922754-1003`, session `1`, and service
+SID `S-1-5-80-4147618721-3073213316-1887265883-420630433-47577316`, the owner is
+`S-1-5-19` and the complete protected SDDL is:
+
+`O:LSD:P(D;;0x1f019f;;;NU)(A;;0x1f019f;;;LS)(A;;0x12019b;;;S-1-5-21-2982241020-2171625489-2028922754-1003)(A;;0x1f019f;;;S-1-5-80-4147618721-3073213316-1887265883-420630433-47577316)`.
+
+The prior blocker was the missing explicit client SID ACE. After the fix, a
+fresh matching client completed the v1 hello handshake through the LocalService
+pipe; an ordinary PowerShell client connected but received broker error `4`
+(`Unauthorized`), proving post-connect image/SID/session authorization remains
+enforced. The broker then executed `TraceEventSession.EnableKernelProvider` for
+session `MonitoringXS.KernelMetrics.v1` as LocalService and returned native
+Win32 status `5` (`ERROR_ACCESS_DENIED`); `logman query -ets` showed no active
+Monitoring XS session. Consequently no nonzero Network/Physical Disk
+attribution or restart recovery can be claimed from this machine. The app launch
+was asInvoker with no RunAs/UAC; CPU, Memory, Process I/O, and GPU remained
+independent in the broker-failure path. The app and ETW session were absent
+after the run. Final service removal could not be completed in this non-elevated
+automation token (`sc.exe` returned access denied and `Start-Process -Verb RunAs`
+returned `0xc0000142`); the remaining temporary service must be removed from an
+interactive UAC-approved administrator shell.
+
+### 2026-07-29 LocalSystem final validation
+
+The final probe used one fresh matching Release app/broker build and protocol
+v1. LocalService had previously reached
+`TraceEventSession.EnableKernelProvider` for
+`MonitoringXS.KernelMetrics.v1` and returned Win32 status 5
+(`ERROR_ACCESS_DENIED`). The same broker binary, installed temporarily as the
+non-interactive LocalSystem service with its dedicated service SID, completed
+the protocol handshake and enabled the kernel provider successfully. During the
+active run, `logman query -ets` listed `MonitoringXS.KernelMetrics.v1`.
+
+The asInvoker app launched normally without `RunAs` or a launch-time UAC prompt.
+For controlled activity attributed to PID 21276, Physical Disk recorded 2
+events, 16,384 read bytes, and 1,048,576 written bytes. Network recorded 19
+events: 5 sends and 14 receives; the controlled source produced 1,048,901 sent
+bytes and 1,052,757 received bytes. Network and Physical Disk were independently
+available and nonzero. Restarting the service restored the v1 connection and
+kernel session; CPU, Memory, Process I/O, and GPU remained independent.
+
+Normal shutdown and elevated cleanup left zero Monitoring XS processes, zero
+temporary services, no temporary installation directory, and no Monitoring XS
+ETW session. The final Release and Debug builds completed with zero warnings and
+zero errors. The Release suite passed 285/285 tests: Core 5, Application 8,
+Collectors 86, Storage 4, Integration 105, and App 77.

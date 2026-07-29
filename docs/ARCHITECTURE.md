@@ -8,6 +8,7 @@ MonitoringXS.App -> Application -> Core
 Application      -> Collectors -> Platform.Windows -> Core
                  -> Storage    -> Core
 ElevatedHelper   -> Platform.Windows -> Core
+PrivilegedBroker -> Platform.Windows -> Core
 ```
 
 ## Runtime data flow
@@ -29,7 +30,7 @@ Process exit, access denied, missing counters, ETW session conflicts/loss, queue
 
 ## Privilege boundary
 
-The main app runs unelevated and never triggers UAC automatically. Kernel ETW may report `AccessDenied`; the UI preserves the remaining metrics and explains that approved elevation or Performance Log Users membership is required. A future helper accepts a versioned, allow-listed request over a local authenticated channel, performs one operation, reports a structured result, and exits. It will never expose general command execution.
+The main app remains `asInvoker` and never triggers UAC during normal launch. `MonitoringXS.PrivilegedBroker` is an automatically started Windows Service running as `LocalSystem`; elevation is limited to installation/setup. LocalService reached `TraceEventSession.EnableKernelProvider` but failed with Win32 5, while the matching hardened LocalSystem service succeeded. The broker reuses the shared kernel ETW session and exposes only version-1 named-pipe hello, network-read, and physical-disk-read operations. The pipe name is a hash of user SID, optional logon SID, and session; its protected DACL is explicit and denies Network SID. Bounded frames/queues, one connection, request/idle timeouts, and reconnect-safe service-instance identifiers limit resource use. The broker authorizes the exact `MonitoringXS.App.exe` client, session, user SID, and every PID plus `StartTimeUtc` before and after each read. Responses are filtered to that process set, so cross-user and PID-reuse leakage is rejected. Broker failure maps to `Unavailable`/`Partial`; CPU, memory, process I/O, and GPU remain independent.
 
 ## Version choices
 

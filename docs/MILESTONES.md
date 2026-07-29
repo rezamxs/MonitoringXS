@@ -100,3 +100,6 @@ Status: in progress.
 Real process discovery, infrastructure filtering, multi-process grouping, portable separation, real CPU/memory, logical tab opening, real one-minute chart, Beginner/Advanced disclosure, successful Release build, and passing focused tests.
 
 Implementation status: stable. Runtime/visual/keyboard/Automation smoke testing populated real application cards, kept section labels out of the tab order, opened a logical application tab by keyboard, exposed live metrics and classification evidence, stayed responsive, and met the steady CPU/working-set targets on the recorded validation machine. Final restore/build/test/launch results are recorded in `VALIDATION.md`.
+## Phase 3B checkpoint
+
+Phase 3B adds the optional privileged ETW broker for Network and Physical disk metrics. The app remains unelevated; broker installation is the only UAC boundary. Protocol authorization, bounds, reconnect/restart handling, honest unavailable/partial states, collector isolation, and PID reuse are covered by deterministic tests. LocalService reached `TraceEventSession.EnableKernelProvider` but returned Win32 5; the hardened LocalSystem service completed protocol v1, ETW startup, nonzero attribution, restart recovery, and cleanup.

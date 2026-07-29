@@ -72,7 +72,9 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
     private NetworkAvailabilityReason _networkReason;
     private bool _disposed;
 
-    public async ValueTask<PhysicalDiskEventBatch> ReadBatchAsync(CancellationToken cancellationToken)
+    public async ValueTask<PhysicalDiskEventBatch> ReadBatchAsync(
+        IReadOnlyList<ProcessInstanceId> processes,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Task<MetricAvailability> started = EnsureStarted();
@@ -137,7 +139,9 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             ReadLastSuccessfulEventTimestamp());
     }
 
-    public async ValueTask<NetworkEventBatch> ReadNetworkBatchAsync(CancellationToken cancellationToken)
+    public async ValueTask<NetworkEventBatch> ReadNetworkBatchAsync(
+        IReadOnlyList<ProcessInstanceId> processes,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Task<MetricAvailability> started = EnsureStarted();
@@ -333,6 +337,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
     private void RunSession(CancellationToken cancellationToken)
     {
         bool sessionStarted = false;
+        string operation = "TraceEventSession.StartTrace";
         try
         {
             // Session ownership stays explicit: never restart or replace a same-name session owned elsewhere.
@@ -342,6 +347,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
                 StopOnDispose = true,
                 BufferSizeMB = EtwBufferSizeMegabytes
             };
+            operation = "TraceEventSession.EnableKernelProvider";
             session.EnableKernelProvider(
                 KernelTraceEventParser.Keywords.DiskIO |
                 KernelTraceEventParser.Keywords.DiskIOInit |
@@ -391,7 +397,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            (MetricAvailability availability, NetworkAvailabilityReason reason, string detail) = ClassifyFailure(exception);
+            (MetricAvailability availability, NetworkAvailabilityReason reason, string detail) = ClassifyFailure(exception, operation);
             if (!sessionStarted)
             {
                 Interlocked.Increment(ref _sessionStartFailures);
@@ -756,8 +762,9 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         }
     }
 
-    private static (MetricAvailability Availability, NetworkAvailabilityReason Reason, string Detail) ClassifyFailure(
-        Exception exception)
+    internal static (MetricAvailability Availability, NetworkAvailabilityReason Reason, string Detail) ClassifyFailure(
+        Exception exception,
+        string operation)
     {
         Win32Exception? win32 = FindWin32Exception(exception);
         if (exception is UnauthorizedAccessException || win32?.NativeErrorCode == 5)
@@ -765,7 +772,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             return (
                 MetricAvailability.AccessDenied,
                 NetworkAvailabilityReason.AccessDenied,
-                "Kernel metric ETW access was denied. Run with approved elevation or add the user to Performance Log Users.");
+                $"Kernel metric ETW access was denied in {operation}. Win32 error 5 (ERROR_ACCESS_DENIED). Run with approved elevation or add the user to Performance Log Users.");
         }
 
         if (win32?.NativeErrorCode == 183 || exception.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
@@ -773,7 +780,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             return (
                 MetricAvailability.Unavailable,
                 NetworkAvailabilityReason.SessionConflict,
-                $"The ETW session '{SessionName}' already exists; Monitoring XS did not replace it.");
+                $"{operation} reported ERROR_ALREADY_EXISTS (183) for ETW session '{SessionName}'; Monitoring XS did not replace it.");
         }
 
         if (exception is PlatformNotSupportedException)

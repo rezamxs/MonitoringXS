@@ -23,7 +23,7 @@ internal static class NativeProcessDetails
         DateTimeOffset startTime;
         try
         {
-            startTime = DateTimeOffset.FromFileTime(creation.ToInt64());
+            startTime = DateTimeOffset.FromFileTime(creation.ToInt64()).ToUniversalTime();
         }
         catch (ArgumentOutOfRangeException)
         {

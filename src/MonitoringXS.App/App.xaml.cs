@@ -6,6 +6,7 @@ using MonitoringXS.App.ViewModels;
 using MonitoringXS.Application;
 using MonitoringXS.Collectors;
 using MonitoringXS.Core.Abstractions;
+using MonitoringXS.Platform.Windows.Broker;
 using MonitoringXS.Platform.Windows.Attribution;
 using MonitoringXS.Platform.Windows.Catalogs;
 using MonitoringXS.Platform.Windows.Icons;
@@ -81,11 +82,11 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<IProcessResourceCounterReader, WindowsProcessResourceCounterReader>();
         services.AddSingleton<IProcessMetricCollector, ProcessMetricCollector>();
         services.AddSingleton<IMetricAggregationService, MetricAggregationService>();
-        services.AddSingleton<EtwPhysicalDiskEventSource>();
+        services.AddSingleton<PrivilegedEtwBrokerClient>();
         services.AddSingleton<IPhysicalDiskEventSource>(provider =>
-            provider.GetRequiredService<EtwPhysicalDiskEventSource>());
+            provider.GetRequiredService<PrivilegedEtwBrokerClient>());
         services.AddSingleton<INetworkEventSource>(provider =>
-            provider.GetRequiredService<EtwPhysicalDiskEventSource>());
+            provider.GetRequiredService<PrivilegedEtwBrokerClient>());
         services.AddSingleton<IPhysicalDiskMetricCollector, PhysicalDiskMetricCollector>();
         services.AddSingleton<IPhysicalDiskAggregationService, PhysicalDiskAggregationService>();
         services.AddSingleton<INetworkMetricCollector, NetworkMetricCollector>();

@@ -30,6 +30,20 @@ Process metadata, command lines, executable paths, signatures, network destinati
 - The one-time elevated validation was launched manually from Administrator PowerShell. It did not change the application manifest, add startup elevation, or install a service, driver, or persistent helper; normal execution still degrades honestly without elevation.
 - The Milestone 3A unelevated smoke returned `AccessDenied` for the shared physical-disk/network kernel session. No automatic elevation was attempted, and `logman` found no active Monitoring XS session.
 
+## Privileged ETW broker (Phase 3B)
+
+The broker is a restricted, non-interactive service under `LocalSystem`. LocalService is unsupported because the exact `TraceEventSession.EnableKernelProvider` call for `MonitoringXS.KernelMetrics.v1` returned Win32 5 (`ERROR_ACCESS_DENIED`); the same fresh binary succeeded under LocalSystem. Its per-user/session named pipe is created with `NamedPipeServerStreamAcl.Create` and a protected explicit DACL: owner LocalSystem (`S-1-5-18`), Network SID denied, LocalSystem and the dedicated service SID allowed full control, and only the configured interactive user SID (or logon SID when present) allowed `ReadWrite|Synchronize`. Application-level authorization still checks token SID, session, exact executable image, and every PID plus `StartTimeUtc`. Requests are versioned JSON frames with strict fields, 64 KiB request/4 MiB response caps, 2,048-PID cap, one connection, serial request gate, and 2/5/15-second connect/request/idle deadlines. Only hello, network read, and physical-disk read are implemented; no provider/session/path/command/process-launch input is accepted. Responses are filtered to authorized PID lifetimes and contain no global counters. The broker has no outbound-network operation. See [ADR 0004](adr/0004-privileged-etw-broker-service.md).
+
+The original authorization failure was the missing explicit ACE for the current interactive user on the per-user pipe; the client therefore received `UnauthorizedAccessException` during connect. The fixed client connects and completes protocol v1; a later unauthorized executable is rejected after handshake with broker error code 4. No `Everyone` ACE is used.
+
+The final identity probe first completed the version-1 pipe handshake under
+LocalService, then captured Win32 5 from
+`TraceEventSession.EnableKernelProvider`. A matching LocalSystem deployment
+created the session, delivered independently attributed Network and Physical
+disk events, recovered after restart, and removed all service, process, file,
+and ETW artifacts. LocalSystem is therefore limited to this broker and required
+only for the documented kernel ETW operation.
+
 ## Elevated helper design
 
 The helper will accept a versioned request containing only an operation enum and validated identifiers. It will reject unknown fields/operations, verify the caller and target, perform one allow-listed operation, return one structured response, and terminate. General process launch, arbitrary paths, and shell strings are forbidden.

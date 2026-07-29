@@ -6,6 +6,14 @@ Windows Task Manager shows many separate processes, even when several of them be
 
 The project is still under development. Some parts work, but several planned features are not finished yet.
 
+Network and Physical disk ETW can optionally use the restricted
+`MonitoringXS.PrivilegedEtwBroker` automatically started as LocalSystem. Normal app launch
+remains `asInvoker` with no UAC; installation/setup is the only elevated step.
+Broker loss is shown honestly as `Unavailable`/`Partial`, while CPU, Memory,
+Process I/O, and GPU continue independently. See
+[architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), and
+[ADR 0004](docs/adr/0004-privileged-etw-broker-service.md).
+
 ## Author and direction
 
 Monitoring XS is created and maintained by [rezaalizadeh](https://github.com/rezamxs), using the public alias `rezamxs`.

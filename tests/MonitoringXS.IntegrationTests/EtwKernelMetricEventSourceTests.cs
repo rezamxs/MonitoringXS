@@ -114,7 +114,7 @@ public sealed class EtwKernelMetricEventSourceTests
         await source.DisposeAsync();
 
         await Assert.ThrowsAsync<ObjectDisposedException>(async () =>
-            await source.ReadBatchAsync(TestContext.Current.CancellationToken));
+            await source.ReadBatchAsync([], TestContext.Current.CancellationToken));
     }
 
     [Fact]

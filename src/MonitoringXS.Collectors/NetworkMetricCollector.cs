@@ -42,7 +42,10 @@ public sealed class NetworkMetricCollector : INetworkMetricCollector
     {
         DateTimeOffset capturedAtUtc = capturedAt.ToUniversalTime();
         long processingStarted = _timeProvider.GetTimestamp();
-        NetworkEventBatch batch = await _eventSource.ReadNetworkBatchAsync(cancellationToken).ConfigureAwait(false);
+        ProcessInstanceId[] processInstances = processes.Select(item => item.InstanceId).ToArray();
+        NetworkEventBatch batch = await _eventSource
+            .ReadNetworkBatchAsync(processInstances, cancellationToken)
+            .ConfigureAwait(false);
         ThrowIfCancellationRequestedAfterDrain(cancellationToken);
         long captureTimestamp = _timeProvider.GetTimestamp();
 

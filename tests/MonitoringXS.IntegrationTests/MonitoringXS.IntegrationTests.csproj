@@ -14,5 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\MonitoringXS.Core\MonitoringXS.Core.csproj" />
     <ProjectReference Include="..\..\src\MonitoringXS.Platform.Windows\MonitoringXS.Platform.Windows.csproj" />
+    <ProjectReference Include="..\..\src\MonitoringXS.PrivilegedBroker\MonitoringXS.PrivilegedBroker.csproj" />
   </ItemGroup>
 </Project>

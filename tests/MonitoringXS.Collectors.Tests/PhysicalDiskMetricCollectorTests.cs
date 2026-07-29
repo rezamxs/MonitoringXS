@@ -458,7 +458,9 @@ public sealed class PhysicalDiskMetricCollectorTests
     {
         private readonly Queue<PhysicalDiskEventBatch> _batches = new(batches);
 
-        public ValueTask<PhysicalDiskEventBatch> ReadBatchAsync(CancellationToken cancellationToken)
+        public ValueTask<PhysicalDiskEventBatch> ReadBatchAsync(
+            IReadOnlyList<ProcessInstanceId> processes,
+            CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(_batches.Dequeue());
@@ -467,7 +469,9 @@ public sealed class PhysicalDiskMetricCollectorTests
 
     private sealed class CancellingSource : IPhysicalDiskEventSource
     {
-        public ValueTask<PhysicalDiskEventBatch> ReadBatchAsync(CancellationToken cancellationToken) =>
+        public ValueTask<PhysicalDiskEventBatch> ReadBatchAsync(
+            IReadOnlyList<ProcessInstanceId> processes,
+            CancellationToken cancellationToken) =>
             ValueTask.FromCanceled<PhysicalDiskEventBatch>(cancellationToken);
     }
 

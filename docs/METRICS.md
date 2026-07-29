@@ -70,6 +70,10 @@ Primary references: [Microsoft DirectX team: GPUs in the Task Manager](https://d
 
 Services and related background components are excluded by default. Advanced opt-in totals must be visibly labelled and must never silently replace the default calculation model.
 
+## Privileged ETW broker
+
+When the LocalSystem broker is installed and reachable, Network and Physical disk (ETW) use the shared ETW semantics and PID-plus-`StartTimeUtc` attribution described above. LocalSystem is required because LocalService returned Win32 5 from `TraceEventSession.EnableKernelProvider`. The broker never returns another user's events or a reused PID's pre-start events. Missing, denied, stopped, or restarting broker state is `Unavailable` or `Partial` with diagnostics; it is never converted to zero. CPU, Memory, Process I/O, and GPU do not depend on the broker.
+
 ## Retention target
 
 - 0-10 minutes: about 1 second.

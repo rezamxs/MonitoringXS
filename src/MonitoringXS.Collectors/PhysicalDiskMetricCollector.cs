@@ -32,7 +32,10 @@ public sealed class PhysicalDiskMetricCollector : IPhysicalDiskMetricCollector
     {
         DateTimeOffset capturedAtUtc = capturedAt.ToUniversalTime();
         long processingStarted = _timeProvider.GetTimestamp();
-        PhysicalDiskEventBatch batch = await _eventSource.ReadBatchAsync(cancellationToken).ConfigureAwait(false);
+        ProcessInstanceId[] processInstances = processes.Select(item => item.InstanceId).ToArray();
+        PhysicalDiskEventBatch batch = await _eventSource
+            .ReadBatchAsync(processInstances, cancellationToken)
+            .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         long captureTimestamp = _timeProvider.GetTimestamp();
 

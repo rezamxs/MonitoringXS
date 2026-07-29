@@ -61,3 +61,8 @@ Older builds could synchronously redraw the CPU sparkline from `SizeChanged` whi
 ## Corrupt local history
 
 Use the future in-app recovery action to quarantine and recreate the database. Do not manually overwrite a database while Monitoring XS is running.
+# Privileged ETW broker
+
+If Network or Physical disk (ETW) shows `Unavailable` or `Partial`, verify that `MonitoringXS.PrivilegedEtwBroker` is installed as `LocalSystem` and running. LocalService is unsupported because `TraceEventSession.EnableKernelProvider` returned Win32 5 in the validated path. Restarting the service is safe: the client reconnects, reports `Partial` for the first post-restart response, and never fabricates zero. CPU, Memory, Process I/O, and GPU should remain available when the broker is stopped.
+
+If the client reports `Broker Unavailable` while connecting, collect the per-user/session pipe name and identity diagnostics. The expected owner is LocalSystem (`S-1-5-18`); the DACL must contain LocalSystem, the configured user/logon SID, and the dedicated service SID, and must deny Network SID. A connect-time `UnauthorizedAccessException` means the client ACE did not match the installed user/session; it is not an ETW provider authorization result. After a successful v1 handshake, ETW failures are reported separately with the native operation and Win32 status.

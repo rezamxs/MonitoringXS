@@ -165,6 +165,57 @@ public sealed class MonitoringCoordinatorTests
         Assert.Equal(GpuAvailabilityReason.CounterReadFailure, snapshot.Gpu.Reason);
     }
 
+    [Fact]
+    public async Task BrokerUnavailableDoesNotBreakCpuMemoryProcessIoOrGpu()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        ProcessDescriptor process = new(
+            new ProcessInstanceId(50, start),
+            "visible",
+            @"C:\Apps\visible.exe",
+            "Visible",
+            null,
+            null,
+            "Visible",
+            null,
+            false,
+            true);
+        ApplicationIdentity identity = new(
+            "visible",
+            "Visible",
+            null,
+            ApplicationDisposition.Installed,
+            @"C:\Apps",
+            ClassificationConfidence.High,
+            "test");
+        MonitoringCoordinator coordinator = new(
+            new Discovery(process),
+            new Attribution(process, identity),
+            new Collector(process),
+            new Aggregator(identity, process),
+            new UnavailablePhysicalCollector(process),
+            new PhysicalAggregator(identity),
+            new UnavailableNetworkCollector(process),
+            new NetworkAggregator(identity),
+            new GpuCollector(process),
+            new GpuAggregator(identity));
+
+        MonitoringDashboardSnapshot dashboard =
+            await coordinator.CaptureAsync(CancellationToken.None);
+
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        Assert.Equal(1d, snapshot.CpuPercent.Value);
+        Assert.Equal(1024, snapshot.WorkingSetBytes.Value);
+        Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
+        Assert.Equal(45d, snapshot.Gpu.UtilizationPercent.Value);
+        Assert.Equal(
+            MetricAvailability.Unavailable,
+            snapshot.PhysicalDisk.ReadBytesPerSecond.Availability);
+        Assert.Equal(
+            MetricAvailability.Unavailable,
+            snapshot.Network.DownloadBytesPerSecond.Availability);
+    }
+
     private sealed class Discovery(ProcessDescriptor process) : IProcessDiscoveryService
     {
         public ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken) => ValueTask.FromResult<IReadOnlyList<ProcessDescriptor>>([process]);
@@ -256,6 +307,28 @@ public sealed class MonitoringCoordinatorTests
                 default)]);
     }
 
+    private sealed class UnavailablePhysicalCollector(ProcessDescriptor process)
+        : IPhysicalDiskMetricCollector
+    {
+        public ValueTask<IReadOnlyList<PhysicalDiskProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAt,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IReadOnlyList<PhysicalDiskProcessSample>>(
+            [
+                new(
+                    process.InstanceId,
+                    capturedAt.ToUniversalTime(),
+                    MetricValue<double>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<double>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    default)
+            ]);
+    }
+
     private sealed class PhysicalAggregator(ApplicationIdentity identity) : IPhysicalDiskAggregationService
     {
         public IReadOnlyDictionary<string, PhysicalDiskMetricSet> Aggregate(
@@ -288,6 +361,28 @@ public sealed class MonitoringCoordinatorTests
                 MetricValue<int>.Unavailable(MetricAvailability.Unsupported),
                 MetricValue<int>.Unavailable(MetricAvailability.Unsupported),
                 default)]);
+    }
+
+    private sealed class UnavailableNetworkCollector(ProcessDescriptor process)
+        : INetworkMetricCollector
+    {
+        public ValueTask<IReadOnlyList<NetworkProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAt,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IReadOnlyList<NetworkProcessSample>>(
+            [
+                new(
+                    process.InstanceId,
+                    capturedAt.ToUniversalTime(),
+                    MetricValue<double>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<double>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<int>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<int>.Unavailable(MetricAvailability.Unavailable),
+                    default)
+            ]);
     }
 
     private sealed class NetworkAggregator(ApplicationIdentity identity) : INetworkMetricAggregationService
