@@ -2,5 +2,5 @@ namespace MonitoringXS.Storage;
 
 public static class StorageMilestone
 {
-    public const string Status = "JSON attribution overrides are available in Milestone 1; SQLite metric history begins in Milestone 5.";
+    public const string Status = "JSON attribution overrides and the Milestone 5 SQLite metric-history backend are available.";
 }

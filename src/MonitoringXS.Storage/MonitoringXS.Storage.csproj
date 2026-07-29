@@ -4,6 +4,7 @@
     <RootNamespace>MonitoringXS.Storage</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
     <ProjectReference Include="..\MonitoringXS.Core\MonitoringXS.Core.csproj" />
   </ItemGroup>
 </Project>

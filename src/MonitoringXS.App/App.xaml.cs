@@ -16,6 +16,7 @@ using MonitoringXS.Platform.Windows.Packages;
 using MonitoringXS.Platform.Windows.Processes;
 using MonitoringXS.Platform.Windows.Security;
 using MonitoringXS.Storage.Attribution;
+using MonitoringXS.Storage.History;
 
 namespace MonitoringXS.App;
 
@@ -76,6 +77,12 @@ public partial class App : Microsoft.UI.Xaml.Application
             string localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string path = Path.Combine(localData, "MonitoringXS", "appearance.txt");
             return new FileAppearancePreferenceStore(path);
+        });
+        services.AddSingleton<IMetricHistoryStore>(_ =>
+        {
+            string localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return new SqliteMetricHistoryStore(new SqliteMetricHistoryOptions(
+                Path.Combine(localData, "MonitoringXS", "history.db")));
         });
         services.AddSingleton<IProcessDiscoveryService, WindowsProcessDiscoveryService>();
         services.AddSingleton<IApplicationAttributionService, ApplicationAttributionService>();

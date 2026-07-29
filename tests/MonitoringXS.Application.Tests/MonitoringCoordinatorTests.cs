@@ -198,7 +198,8 @@ public sealed class MonitoringCoordinatorTests
             new UnavailableNetworkCollector(process),
             new NetworkAggregator(identity),
             new GpuCollector(process),
-            new GpuAggregator(identity));
+            new GpuAggregator(identity),
+            new ThrowingHistoryStore());
 
         MonitoringDashboardSnapshot dashboard =
             await coordinator.CaptureAsync(CancellationToken.None);
@@ -449,6 +450,33 @@ public sealed class MonitoringCoordinatorTests
                     metrics[0].Engines[0].Engine,
                     metrics[0].Diagnostics)
             };
+    }
+
+    private sealed class ThrowingHistoryStore : IMetricHistoryStore
+    {
+        public MetricHistoryStoreDiagnostics Diagnostics =>
+            new(0, 0, 0, 0, 1, 0, 0, 0, 0, "test");
+
+        public ValueTask<MetricHistoryWriteResult> EnqueueAsync(
+            IReadOnlyList<ApplicationMetricSnapshot> snapshots,
+            CancellationToken cancellationToken) =>
+            throw new IOException("Simulated history failure.");
+
+        public ValueTask FlushAsync(CancellationToken cancellationToken) => ValueTask.CompletedTask;
+
+        public ValueTask<MetricHistoryQueryResult> QueryAsync(
+            string logicalApplicationId,
+            MetricHistoryMetric metric,
+            DateTimeOffset fromUtc,
+            DateTimeOffset toUtc,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new MetricHistoryQueryResult([], false, "test"));
+
+        public void Dispose()
+        {
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private sealed class Aggregator(ApplicationIdentity identity, ProcessDescriptor process) : IMetricAggregationService

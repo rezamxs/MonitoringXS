@@ -1,5 +1,19 @@
 # Metric semantics
 
+## Local history
+
+The SQLite history backend stores UTC application samples for CPU, working-set
+memory, Process I/O rates, Physical Disk rates, Network rates, GPU utilization,
+and dedicated/shared GPU memory. Each metric stores its value, availability, and
+diagnostic detail independently; `Partial`, `Unavailable`, and `AccessDenied`
+remain states and missing values remain `NULL`, never zero. The stable logical
+application ID is paired with a process-lifetime key from PID plus
+`StartTimeUtc`, so relaunches do not merge unrelated lifetimes. Raw samples are
+kept for one hour, then grouped into five-minute buckets until the default
+24-hour retention limit. Rates and gauges are averaged within a bucket;
+availability is the worst state in that bucket. The History page is not part of
+this checkpoint. The earliest raw timestamp represents each downsample bucket.
+
 ## Sampling
 
 Live sampling defaults to one second. Each sample carries a UTC wall-clock timestamp. PID plus process start time identifies a process instance and prevents PID-reuse contamination.

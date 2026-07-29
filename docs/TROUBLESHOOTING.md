@@ -60,7 +60,11 @@ Older builds could synchronously redraw the CPU sparkline from `SizeChanged` whi
 
 ## Corrupt local history
 
-Use the future in-app recovery action to quarantine and recreate the database. Do not manually overwrite a database while Monitoring XS is running.
+Close Monitoring XS before inspecting `%LOCALAPPDATA%\MonitoringXS\history.db`.
+The backend automatically quarantines a corrupt file as `.corrupt-*` and creates
+a new version-2 database. Locked/read-only/full-disk failures are reported in
+storage diagnostics and live metrics continue without fabricated zeros. Do not
+manually overwrite the database while Monitoring XS is running.
 # Privileged ETW broker
 
 If Network or Physical disk (ETW) shows `Unavailable` or `Partial`, verify that `MonitoringXS.PrivilegedEtwBroker` is installed as `LocalSystem` and running. LocalService is unsupported because `TraceEventSession.EnableKernelProvider` returned Win32 5 in the validated path. Restarting the service is safe: the client reconnects, reports `Partial` for the first post-restart response, and never fabricates zero. CPU, Memory, Process I/O, and GPU should remain available when the broker is stopped.

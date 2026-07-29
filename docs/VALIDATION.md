@@ -1060,3 +1060,47 @@ temporary services, no temporary installation directory, and no Monitoring XS
 ETW session. The final Release and Debug builds completed with zero warnings and
 zero errors. The Release suite passed 285/285 tests: Core 5, Application 8,
 Collectors 86, Storage 4, Integration 105, and App 77.
+
+### 2026-07-29 SQLite history backend
+
+The existing UI Automation stress harness ran twice against the fresh Release
+build, normally (no `RunAs`) for 30 seconds per run. Both runs observed the
+main window, opened an application tab by keyboard, expanded advanced details,
+stayed responsive for every sample, requested normal close, and exited with
+`DotnetRunExitCode=0`, `CleanExit=true`, and zero new crash events. The second
+run confirmed restart persistence.
+
+The ignored read-only inspector observed `%LOCALAPPDATA%\MonitoringXS\history.db`:
+
+```text
+after first run:  40 rows, 5 applications, 53,248 bytes
+after restart:    80 rows, 5 applications, 77,824 bytes
+after final run: 120 rows, 5 applications, 102,400 bytes
+query latency:    30,369 microseconds
+```
+
+CPU, working-set, Process I/O, and GPU rows contained numeric values. Network
+and Physical Disk rows remained `NULL` where the broker was unavailable; no
+zero was fabricated. Normal `Window.Closed` disposal left no app process.
+
+The ignored accelerated storage benchmark wrote 100 snapshots in four
+transactions, flushed with queue depth 0, zero drops, and zero failures, then
+queried history and downsampled one bucket:
+
+```text
+write+flush: 417,376 microseconds (4,173.76/sample)
+query:        40,854 microseconds
+cleanup:      1 run, 15,671 microseconds
+database:     143,680 bytes
+process CPU:  437.5 ms; working-set delta: 13,815,808 bytes
+```
+
+The benchmark database was deleted in `finally`; storage tests use unique
+temporary databases and clean them up. The final Release suite passed 298/298
+tests (Core 5, Application 8, Collectors 86, Storage 17, Integration 105,
+App 77); the focused SQLite set passed 13/13.
+
+Known limits: History UI/charts remain out of scope; the native SQLite
+dependency must be rechecked during packaging even though
+`SQLitePCLRaw.bundle_e_sqlite3` 2.1.12 is centrally pinned; disk-full behavior
+is classified by the SQLite error path but is not forced by CI.

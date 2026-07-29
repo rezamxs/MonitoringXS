@@ -47,11 +47,12 @@ Currently working:
 - application tabs
 - beginner and advanced views
 - keyboard navigation
+- local SQLite metric history backend with bounded writes and 24-hour retention
 
 Not finished yet:
 
 - broader GPU driver and hardware validation
-- 24-hour history
+- final History page/charts
 - application close, restart and force-stop actions
 - uninstall support
 - installer and release package
@@ -71,7 +72,7 @@ The current repository has:
 - validated real GPU engine and process-memory values with VLC on one dual-adapter development machine
 - validated that a controlled Edge WebGL workload is attributed to Edge while GPU counters remain unavailable on this machine
 
-These results only describe the current development environment and do not mean the application is ready for a public release.
+These results only describe the current development environment and do not mean the application is ready for a public release. SQLite history validation and measurements are recorded in `docs/VALIDATION.md`; the History page remains out of scope.
 
 ## Requirements
 

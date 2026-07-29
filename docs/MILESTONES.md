@@ -85,7 +85,12 @@ Status: in progress.
 
 ## Milestone 5 - History
 
-- SQLite, WAL/batching, 24-hour retention/downsampling, history charts, stopped tabs, and restart reconnection.
+Status: SQLite backend complete; History UI and stopped-tab presentation remain open.
+
+- [x] Version-2 SQLite schema/migrations, WAL fallback, parameterized SQL, UTC timestamps, bounded async batches, crash-safe transactions, recovery, and diagnostics.
+- [x] 24-hour retention, one-hour raw window, five-minute downsampling, bounded database-size pruning, metric queries, availability/completeness persistence, and PID-lifetime separation.
+- [x] Deterministic storage and coordinator-isolation tests; runtime restart persistence measured in `VALIDATION.md`.
+- [ ] History page/charts and stopped application tabs.
 
 ## Milestone 6 - Application actions
 

@@ -44,6 +44,21 @@ disk events, recovered after restart, and removed all service, process, file,
 and ETW artifacts. LocalSystem is therefore limited to this broker and required
 only for the documented kernel ETW operation.
 
+## SQLite history
+
+History stays local under `%LOCALAPPDATA%\MonitoringXS\history.db`. SQL is
+parameterized; schema migrations are versioned and transactions are crash-safe.
+Only logical application metadata, PID-plus-`StartTimeUtc` lifetime keys,
+numeric metric values, UTC timestamps, availability, and bounded diagnostic
+detail are stored. Packet payloads, URLs, hosts, IPs, ports, command lines,
+secrets, and raw ETW events are excluded. WAL is enabled when supported and
+falls back with a diagnostic when unavailable. Corrupt files are quarantined
+with a `.corrupt-*` suffix before recreation; locked, read-only, full-disk, and
+size-limit failures remain explicit and never become zero values.
+`Microsoft.Data.Sqlite` 10.0.10 is used with the compatible
+`SQLitePCLRaw.bundle_e_sqlite3` 2.1.12 security update centrally pinned; the
+deprecated vulnerable 2.1.11 native library is not resolved.
+
 ## Elevated helper design
 
 The helper will accept a versioned request containing only an operation enum and validated identifiers. It will reject unknown fields/operations, verify the caller and target, perform one allow-listed operation, return one structured response, and terminate. General process launch, arbitrary paths, and shell strings are forbidden.

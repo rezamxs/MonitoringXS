@@ -18,6 +18,7 @@ public sealed class MonitoringCoordinator
     private readonly INetworkMetricAggregationService? _networkAggregation;
     private readonly IGpuMetricCollector? _gpuCollector;
     private readonly IGpuMetricAggregationService? _gpuAggregation;
+    private readonly IMetricHistoryStore? _historyStore;
     private readonly Dictionary<string, BoundedTimeSeries<ApplicationHistoryPoint>> _history = new(StringComparer.Ordinal);
 
     public MonitoringCoordinator(
@@ -30,7 +31,8 @@ public sealed class MonitoringCoordinator
         INetworkMetricCollector? networkCollector = null,
         INetworkMetricAggregationService? networkAggregation = null,
         IGpuMetricCollector? gpuCollector = null,
-        IGpuMetricAggregationService? gpuAggregation = null)
+        IGpuMetricAggregationService? gpuAggregation = null,
+        IMetricHistoryStore? historyStore = null)
     {
         _discovery = discovery;
         _attribution = attribution;
@@ -42,6 +44,7 @@ public sealed class MonitoringCoordinator
         _networkAggregation = networkAggregation;
         _gpuCollector = gpuCollector;
         _gpuAggregation = gpuAggregation;
+        _historyStore = historyStore;
     }
 
     public async ValueTask<MonitoringDashboardSnapshot> CaptureAsync(CancellationToken cancellationToken)
@@ -123,6 +126,27 @@ public sealed class MonitoringCoordinator
                 applications = applications
                     .Select(application => application with { Gpu = unavailable })
                     .ToArray();
+            }
+        }
+
+        if (_historyStore is not null)
+        {
+            try
+            {
+                await _historyStore
+                    .EnqueueAsync(applications, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception) when (exception is IOException
+                or UnauthorizedAccessException
+                or InvalidDataException
+                or NotSupportedException)
+            {
+                // History failure must never interrupt live metric collection.
             }
         }
 
