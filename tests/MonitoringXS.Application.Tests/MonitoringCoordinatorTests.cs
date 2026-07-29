@@ -464,6 +464,10 @@ public sealed class MonitoringCoordinatorTests
 
         public ValueTask FlushAsync(CancellationToken cancellationToken) => ValueTask.CompletedTask;
 
+        public ValueTask<MetricHistoryApplicationsResult> ListApplicationsAsync(
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new MetricHistoryApplicationsResult([], false, "test"));
+
         public ValueTask<MetricHistoryQueryResult> QueryAsync(
             string logicalApplicationId,
             MetricHistoryMetric metric,

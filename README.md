@@ -48,11 +48,12 @@ Currently working:
 - beginner and advanced views
 - keyboard navigation
 - local SQLite metric history backend with bounded writes and 24-hour retention
+- History page with application/range selection and honest availability gaps
 
 Not finished yet:
 
 - broader GPU driver and hardware validation
-- final History page/charts
+- stopped-application tab presentation
 - application close, restart and force-stop actions
 - uninstall support
 - installer and release package
@@ -65,14 +66,14 @@ Physical disk and network monitoring may need Administrator access on some Windo
 The current repository has:
 
 - a successful Release build
-- 264 passing tests
+- 305 passing tests
 - no failed or skipped tests
 - validated ETW physical-disk monitoring on the development machine
 - accepted elevated ETW network attribution with controlled Microsoft Edge traffic on the development machine, including retained-helper totals and shared-session cleanup
 - validated real GPU engine and process-memory values with VLC on one dual-adapter development machine
 - validated that a controlled Edge WebGL workload is attributed to Edge while GPU counters remain unavailable on this machine
 
-These results only describe the current development environment and do not mean the application is ready for a public release. SQLite history validation and measurements are recorded in `docs/VALIDATION.md`; the History page remains out of scope.
+These results only describe the current development environment and do not mean the application is ready for a public release. SQLite history and History page validation are recorded in `docs/VALIDATION.md`.
 
 ## Requirements
 

@@ -47,6 +47,25 @@ public sealed class SqliteMetricHistoryStoreTests
     }
 
     [Fact]
+    public async Task ListsPersistedApplicationsForHistorySelection()
+    {
+        using TestDatabase database = new();
+        DateTimeOffset captured = DateTimeOffset.UtcNow;
+        await using SqliteMetricHistoryStore store = database.Store();
+        await store.EnqueueAsync([Snapshot(captured, 25)], TestCancellation);
+        await store.FlushAsync(TestCancellation);
+
+        MetricHistoryApplicationsResult result = await store.ListApplicationsAsync(TestCancellation);
+
+        MetricHistoryApplication application = Assert.Single(result.Applications);
+        Assert.True(result.IsAvailable);
+        Assert.Equal("app.example", application.LogicalApplicationId);
+        Assert.Equal("Example", application.DisplayName);
+        Assert.Equal(ApplicationDisposition.Installed, application.Disposition);
+        Assert.Equal(captured, application.UpdatedUtc);
+    }
+
+    [Fact]
     public async Task QueryOrdersSamplesAndKeepsAvailabilityAndMetricSeparation()
     {
         using TestDatabase database = new();

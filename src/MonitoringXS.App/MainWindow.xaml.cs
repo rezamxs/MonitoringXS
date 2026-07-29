@@ -28,12 +28,14 @@ public sealed partial class MainWindow : Window, IDisposable
     public MainWindow(
         MainWindowViewModel viewModel,
         IAppearancePreferenceStore appearancePreferenceStore,
-        AppearanceMode appearance)
+        AppearanceMode appearance,
+        HistoryPageViewModel historyViewModel)
     {
         ViewModel = viewModel;
         _appearancePreferenceStore = appearancePreferenceStore;
         SelectedAppearanceOption = AppearanceOptions.Single(option => option.Mode == appearance);
         InitializeComponent();
+        HistoryWorkspace.Initialize(historyViewModel, _shutdown.Token);
         ConfigureTitleBar();
         Root.ActualThemeChanged += Root_ActualThemeChanged;
         ApplyAppearance(appearance);
@@ -329,6 +331,19 @@ public sealed partial class MainWindow : Window, IDisposable
         if (AdvancedModeNotice is not null && sender is ToggleSwitch toggle)
         {
             AdvancedModeNotice.Visibility = toggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private async void PrimaryNavigation_SelectionChanged(
+        NavigationView sender,
+        NavigationViewSelectionChangedEventArgs args)
+    {
+        bool historySelected = args.SelectedItemContainer?.Tag?.ToString() == "history";
+        WorkspaceTabs.Visibility = historySelected ? Visibility.Collapsed : Visibility.Visible;
+        HistoryWorkspace.Visibility = historySelected ? Visibility.Visible : Visibility.Collapsed;
+        if (historySelected)
+        {
+            await HistoryWorkspace.ActivateAsync();
         }
     }
 

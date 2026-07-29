@@ -168,10 +168,7 @@ public sealed class SqliteMetricHistoryStore : IMetricHistoryStore
                 points.Add(new(
                     logicalApplicationId,
                     reader.GetString(0),
-                    DateTimeOffset.Parse(
-                        reader.GetString(1),
-                        CultureInfo.InvariantCulture,
-                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal),
+                    ParseDatabaseTimestamp(reader.GetString(1)),
                     metric,
                     reader.IsDBNull(2) ? null : reader.GetDouble(2),
                     (MetricAvailability)reader.GetInt32(3),
@@ -180,6 +177,46 @@ public sealed class SqliteMetricHistoryStore : IMetricHistoryStore
             }
 
             return new(points, true);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (IsStorageException(exception))
+        {
+            SetError(Describe(exception));
+            return new([], false, "Metric history is unavailable.");
+        }
+    }
+
+    public async ValueTask<MetricHistoryApplicationsResult> ListApplicationsAsync(
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await FlushAsync(cancellationToken).ConfigureAwait(false);
+            await using SqliteConnection connection = await OpenInitializedConnectionAsync(
+                cancellationToken).ConfigureAwait(false);
+            await using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT logical_application_id, display_name, disposition, updated_utc
+                FROM applications
+                ORDER BY display_name COLLATE NOCASE, logical_application_id;
+                """;
+            List<MetricHistoryApplication> applications = [];
+            await using SqliteDataReader reader = await command
+                .ExecuteReaderAsync(cancellationToken)
+                .ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                applications.Add(new(
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    (ApplicationDisposition)reader.GetInt32(2),
+                    ParseDatabaseTimestamp(reader.GetString(3))));
+            }
+
+            return new(applications, true);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -919,6 +956,12 @@ public sealed class SqliteMetricHistoryStore : IMetricHistoryStore
         timestamp.ToUniversalTime().ToString(
             "yyyy-MM-dd HH:mm:ss.fffffff",
             CultureInfo.InvariantCulture);
+
+    private static DateTimeOffset ParseDatabaseTimestamp(string timestamp) =>
+        DateTimeOffset.Parse(
+            timestamp,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
 
     private static string? BoundDetail(string? detail) =>
         detail is { Length: > 512 } ? detail[..512] : detail;

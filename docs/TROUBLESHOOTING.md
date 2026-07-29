@@ -65,6 +65,16 @@ The backend automatically quarantines a corrupt file as `.corrupt-*` and creates
 a new version-2 database. Locked/read-only/full-disk failures are reported in
 storage diagnostics and live metrics continue without fabricated zeros. Do not
 manually overwrite the database while Monitoring XS is running.
+
+## History is empty, partial, or unavailable
+
+History lists only logical applications already persisted in
+`%LOCALAPPDATA%\MonitoringXS\history.db`. Run the app long enough to collect
+samples, then use Refresh. A blank selected range is not a zero. `Partial` and
+`Unavailable` samples, broker outages, and application relaunch boundaries are
+drawn as gaps. If the database is locked, read-only, corrupt, or full, History
+reports the database/query state while live monitoring continues independently.
+
 # Privileged ETW broker
 
 If Network or Physical disk (ETW) shows `Unavailable` or `Partial`, verify that `MonitoringXS.PrivilegedEtwBroker` is installed as `LocalSystem` and running. LocalService is unsupported because `TraceEventSession.EnableKernelProvider` returned Win32 5 in the validated path. Restarting the service is safe: the client reconnects, reports `Partial` for the first post-restart response, and never fabricates zero. CPU, Memory, Process I/O, and GPU should remain available when the broker is stopped.

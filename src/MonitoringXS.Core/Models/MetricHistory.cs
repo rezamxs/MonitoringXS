@@ -40,6 +40,17 @@ public sealed record MetricHistoryQueryResult(
     bool IsAvailable,
     string? Error = null);
 
+public sealed record MetricHistoryApplication(
+    string LogicalApplicationId,
+    string DisplayName,
+    ApplicationDisposition Disposition,
+    DateTimeOffset UpdatedUtc);
+
+public sealed record MetricHistoryApplicationsResult(
+    IReadOnlyList<MetricHistoryApplication> Applications,
+    bool IsAvailable,
+    string? Error = null);
+
 public sealed record MetricHistoryStoreDiagnostics(
     long BatchesEnqueued,
     long BatchesWritten,

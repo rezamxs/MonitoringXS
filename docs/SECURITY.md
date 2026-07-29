@@ -59,6 +59,13 @@ size-limit failures remain explicit and never become zero values.
 `SQLitePCLRaw.bundle_e_sqlite3` 2.1.12 security update centrally pinned; the
 deprecated vulnerable 2.1.11 native library is not resolved.
 
+The History page only selects logical application IDs already present in this
+local store and queries the requested UTC range off the UI thread. It exposes
+numeric summaries, availability states, and local-time chart labels; it does
+not add packet data, URLs, hosts, addresses, ports, command lines, or secrets.
+Unavailable and partial rows remain gaps, so the page cannot turn missing
+storage or broker data into a fabricated zero.
+
 ## Elevated helper design
 
 The helper will accept a versioned request containing only an operation enum and validated identifiers. It will reject unknown fields/operations, verify the caller and target, perform one allow-listed operation, return one structured response, and terminate. General process launch, arbitrary paths, and shell strings are forbidden.

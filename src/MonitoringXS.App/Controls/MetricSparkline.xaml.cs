@@ -15,6 +15,18 @@ public sealed partial class MetricSparkline : UserControl
         typeof(MetricSparkline),
         new PropertyMetadata(null, OnSamplesChanged));
 
+    public static readonly DependencyProperty SummaryTextProperty = DependencyProperty.Register(
+        nameof(SummaryText),
+        typeof(string),
+        typeof(MetricSparkline),
+        new PropertyMetadata(null, OnTextChanged));
+
+    public static readonly DependencyProperty EmptyTextProperty = DependencyProperty.Register(
+        nameof(EmptyText),
+        typeof(string),
+        typeof(MetricSparkline),
+        new PropertyMetadata("Waiting for real samples…", OnTextChanged));
+
     private INotifyCollectionChanged? _observableSamples;
     private bool _resizeRedrawPending;
 
@@ -31,6 +43,18 @@ public sealed partial class MetricSparkline : UserControl
         set => SetValue(SamplesProperty, value);
     }
 
+    public string? SummaryText
+    {
+        get => (string?)GetValue(SummaryTextProperty);
+        set => SetValue(SummaryTextProperty, value);
+    }
+
+    public string EmptyText
+    {
+        get => (string)GetValue(EmptyTextProperty);
+        set => SetValue(EmptyTextProperty, value);
+    }
+
     private static void OnSamplesChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
     {
         MetricSparkline chart = (MetricSparkline)sender;
@@ -43,6 +67,9 @@ public sealed partial class MetricSparkline : UserControl
 
         chart.Redraw();
     }
+
+    private static void OnTextChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args) =>
+        ((MetricSparkline)sender).Redraw();
 
     private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs args) => Redraw();
 
@@ -83,6 +110,7 @@ public sealed partial class MetricSparkline : UserControl
             ChartRoot.ActualWidth,
             ChartRoot.ActualHeight);
         bool hasSeries = layout.Segments.Count > 0;
+        EmptyState.Text = EmptyText;
         EmptyState.Visibility = hasSeries ? Visibility.Collapsed : Visibility.Visible;
         Line.Visibility = hasSeries ? Visibility.Visible : Visibility.Collapsed;
         PathGeometry geometry = new();
@@ -106,7 +134,7 @@ public sealed partial class MetricSparkline : UserControl
 
         Line.Data = geometry;
 
-        Summary.Text = layout.Summary;
+        Summary.Text = string.IsNullOrWhiteSpace(SummaryText) ? layout.Summary : SummaryText;
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args) => Unsubscribe();

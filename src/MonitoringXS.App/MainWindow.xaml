@@ -483,7 +483,8 @@
                 IsBackButtonVisible="Collapsed"
                 IsSettingsVisible="False"
                 PaneDisplayMode="LeftCompact"
-                PaneTitle="Monitoring XS">
+                PaneTitle="Monitoring XS"
+                SelectionChanged="PrimaryNavigation_SelectionChanged">
             <NavigationView.Resources>
                 <StaticResource x:Key="NavigationViewItemBackgroundSelected" ResourceKey="SurfaceRaisedBrush" />
                 <StaticResource x:Key="NavigationViewItemBackgroundSelectedPointerOver" ResourceKey="SurfaceRaisedBrush" />
@@ -494,6 +495,7 @@
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Dashboard" Icon="Home" IsEnabled="False" Tag="dashboard" ToolTipService.ToolTip="Dashboard" />
                 <NavigationViewItem
+                    x:Name="RunningNavigationItem"
                     Content="Running Apps"
                     FontWeight="SemiBold"
                     Icon="AllApps"
@@ -502,10 +504,17 @@
                     ToolTipService.ToolTip="Running Apps"
                     UseSystemFocusVisuals="True" />
                 <NavigationViewItem Content="Portable Apps" Icon="OpenFile" IsEnabled="False" Tag="portable" ToolTipService.ToolTip="Portable Apps" />
-                <NavigationViewItem Content="History" Icon="Clock" IsEnabled="False" Tag="history" ToolTipService.ToolTip="History" />
+                <NavigationViewItem
+                    x:Name="HistoryNavigationItem"
+                    Content="History"
+                    Icon="Clock"
+                    Tag="history"
+                    ToolTipService.ToolTip="History"
+                    UseSystemFocusVisuals="True" />
                 <NavigationViewItem Content="Settings" Icon="Setting" IsEnabled="False" Tag="settings" ToolTipService.ToolTip="Settings" />
                 <NavigationViewItem Content="About" Icon="Help" IsEnabled="False" Tag="about" ToolTipService.ToolTip="About" />
             </NavigationView.MenuItems>
+            <Grid>
             <TabView
                 x:Name="WorkspaceTabs"
                 Background="{StaticResource PageBrush}"
@@ -705,6 +714,10 @@
                     </Grid>
                 </TabViewItem>
             </TabView>
+            <local:HistoryPage
+                x:Name="HistoryWorkspace"
+                Visibility="Collapsed" />
+            </Grid>
             </NavigationView>
         </Grid>
     </Grid>

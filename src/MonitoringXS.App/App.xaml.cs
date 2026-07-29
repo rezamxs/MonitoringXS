@@ -40,7 +40,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         MainWindow mainWindow = new(
             _services.GetRequiredService<MainWindowViewModel>(),
             appearanceStore,
-            appearance);
+            appearance,
+            _services.GetRequiredService<HistoryPageViewModel>());
         _window = mainWindow;
         _window.Closed += Window_Closed;
         _window.Activate();
@@ -103,6 +104,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<IGpuMetricAggregationService, GpuMetricAggregationService>();
         services.AddSingleton<MonitoringCoordinator>();
         services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<HistoryPageViewModel>();
         return services.BuildServiceProvider(validateScopes: true);
     }
 

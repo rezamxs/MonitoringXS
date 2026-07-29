@@ -12,6 +12,9 @@ public interface IMetricHistoryStore : IDisposable, IAsyncDisposable
 
     ValueTask FlushAsync(CancellationToken cancellationToken);
 
+    ValueTask<MetricHistoryApplicationsResult> ListApplicationsAsync(
+        CancellationToken cancellationToken);
+
     ValueTask<MetricHistoryQueryResult> QueryAsync(
         string logicalApplicationId,
         MetricHistoryMetric metric,

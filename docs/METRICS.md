@@ -11,8 +11,11 @@ application ID is paired with a process-lifetime key from PID plus
 `StartTimeUtc`, so relaunches do not merge unrelated lifetimes. Raw samples are
 kept for one hour, then grouped into five-minute buckets until the default
 24-hour retention limit. Rates and gauges are averaged within a bucket;
-availability is the worst state in that bucket. The History page is not part of
-this checkpoint. The earliest raw timestamp represents each downsample bucket.
+availability is the worst state in that bucket. The History page queries 15
+minutes, 1 hour, 6 hours, or 24 hours by logical application. It shows
+availability and downsample counts, converts timestamps to local time for
+presentation, and preserves unavailable samples and process-lifetime changes as
+chart gaps. The earliest raw timestamp represents each downsample bucket.
 
 ## Sampling
 

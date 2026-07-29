@@ -13,6 +13,7 @@ Implementation rules:
 - no permanent elevation or decorative GPU animation;
 - collector timing, dropped samples, queue depth, DB latency, and cache hit rate exposed in internal diagnostics.
 - SQLite history uses a 256-batch bounded queue, 32-snapshot transactions, WAL when supported, one-hour raw retention, five-minute downsampling, and a 64 MiB logical size policy. Queue drops and write failures are diagnostic counters; live collection does not wait on SQLite.
+- History range queries run off the UI thread, rapid selection changes cancel and supersede older requests, and each of the 11 chart series is decimated to at most 360 displayed points while retaining endpoints, global extrema, and availability gaps where capacity permits.
 - physical-disk ETW callbacks use a non-blocking bounded queue of 16,384 events; overflow is counted and reported as partial data;
 - thread-to-PID state is capped at 32,768 entries and removed on thread end or cleared after ETW loss;
 - init-to-completion IRP correlation is capped at 32,768 entries and cleared after ETW loss;

@@ -1100,7 +1100,34 @@ temporary databases and clean them up. The final Release suite passed 298/298
 tests (Core 5, Application 8, Collectors 86, Storage 17, Integration 105,
 App 77); the focused SQLite set passed 13/13.
 
-Known limits: History UI/charts remain out of scope; the native SQLite
+Known limits: stopped-application tabs remain out of scope; the native SQLite
 dependency must be rechecked during packaging even though
 `SQLitePCLRaw.bundle_e_sqlite3` 2.1.12 is centrally pinned; disk-full behavior
 is classified by the SQLite error path but is not forced by CI.
+
+### 2026-07-29 History page
+
+The fresh Release build was launched normally with no `RunAs` and exercised by
+the ignored `.artifacts/validation/history-page/Invoke-HistoryPageValidation.ps1`
+harness. UI Automation selected the History navigation item, loaded all 11
+metric series, and changed the range to 15 minutes, 1 hour, 6 hours, and
+24 hours. The selected persisted application had no sample in the final
+15-minute range, which produced the explicit empty-range state; the 1-hour,
+6-hour, and 24-hour ranges completed with partial/unavailable gaps.
+Query/display timings were 76-91 ms and 0-539 bounded chart points across the page. The page
+reported real CPU, Working Set, Process I/O, and GPU history values. Network
+and Physical Disk rows with no broker data remained explicit chart gaps and
+were not converted to zero. PID-lifetime boundaries are also inserted as
+gaps. The final run observed all 11 chart accessibility summaries, about
+`204,615,680` bytes working set and `1.1719%` CPU during a settled 10-second
+UI-automation sample (instrumentation was active), then closed normally with no
+`MonitoringXS.App` process remaining.
+
+The deterministic App tests passed 83/83 and Storage tests passed 18/18. The
+full Release suite passed 305/305 tests (Core 5, Application 8, Collectors 86,
+Storage 18, Integration 105, App 83). Release and Debug builds completed with
+zero warnings and errors; `git diff --check` passed. Restore first failed in
+the sandbox because NuGet TLS credentials were unavailable, then the identical
+restore completed with approved network access. The History page remains
+limited to persisted local SQLite data and does not yet provide stopped-tab
+presentation, export, or chart zooming.
