@@ -1,8 +1,10 @@
 using System.Collections.Specialized;
+using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Shapes;
 using Windows.Foundation;
 
 namespace MonitoringXS.App.Controls;
@@ -26,6 +28,30 @@ public sealed partial class MetricSparkline : UserControl
         typeof(string),
         typeof(MetricSparkline),
         new PropertyMetadata("Waiting for real samples…", OnTextChanged));
+
+    public static readonly DependencyProperty ChartScaleProperty = DependencyProperty.Register(
+        nameof(ChartScale),
+        typeof(MetricSparklineScale),
+        typeof(MetricSparkline),
+        new PropertyMetadata(MetricSparklineScale.Percent, OnLayoutChanged));
+
+    public static readonly DependencyProperty RangeStartUtcProperty = DependencyProperty.Register(
+        nameof(RangeStartUtc),
+        typeof(DateTimeOffset?),
+        typeof(MetricSparkline),
+        new PropertyMetadata(null, OnLayoutChanged));
+
+    public static readonly DependencyProperty RangeEndUtcProperty = DependencyProperty.Register(
+        nameof(RangeEndUtc),
+        typeof(DateTimeOffset?),
+        typeof(MetricSparkline),
+        new PropertyMetadata(null, OnLayoutChanged));
+
+    public static readonly DependencyProperty UnitTextProperty = DependencyProperty.Register(
+        nameof(UnitText),
+        typeof(string),
+        typeof(MetricSparkline),
+        new PropertyMetadata(string.Empty, OnTextChanged));
 
     private INotifyCollectionChanged? _observableSamples;
     private bool _resizeRedrawPending;
@@ -55,6 +81,30 @@ public sealed partial class MetricSparkline : UserControl
         set => SetValue(EmptyTextProperty, value);
     }
 
+    public MetricSparklineScale ChartScale
+    {
+        get => (MetricSparklineScale)GetValue(ChartScaleProperty);
+        set => SetValue(ChartScaleProperty, value);
+    }
+
+    public DateTimeOffset? RangeStartUtc
+    {
+        get => (DateTimeOffset?)GetValue(RangeStartUtcProperty);
+        set => SetValue(RangeStartUtcProperty, value);
+    }
+
+    public DateTimeOffset? RangeEndUtc
+    {
+        get => (DateTimeOffset?)GetValue(RangeEndUtcProperty);
+        set => SetValue(RangeEndUtcProperty, value);
+    }
+
+    public string UnitText
+    {
+        get => (string)GetValue(UnitTextProperty);
+        set => SetValue(UnitTextProperty, value);
+    }
+
     private static void OnSamplesChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
     {
         MetricSparkline chart = (MetricSparkline)sender;
@@ -69,6 +119,9 @@ public sealed partial class MetricSparkline : UserControl
     }
 
     private static void OnTextChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args) =>
+        ((MetricSparkline)sender).Redraw();
+
+    private static void OnLayoutChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args) =>
         ((MetricSparkline)sender).Redraw();
 
     private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs args) => Redraw();
@@ -107,9 +160,12 @@ public sealed partial class MetricSparkline : UserControl
     {
         MetricSparklineLayout layout = MetricSparklineLayout.Create(
             Samples?.ToArray() ?? [],
-            ChartRoot.ActualWidth,
-            ChartRoot.ActualHeight);
-        bool hasSeries = layout.Segments.Count > 0;
+            PlotArea.ActualWidth,
+            PlotArea.ActualHeight,
+            ChartScale,
+            RangeStartUtc,
+            RangeEndUtc);
+        bool hasSeries = layout.Segments.Count > 0 || layout.Markers.Count > 0;
         EmptyState.Text = EmptyText;
         EmptyState.Visibility = hasSeries ? Visibility.Collapsed : Visibility.Visible;
         Line.Visibility = hasSeries ? Visibility.Visible : Visibility.Collapsed;
@@ -133,8 +189,57 @@ public sealed partial class MetricSparkline : UserControl
         }
 
         Line.Data = geometry;
+        Rect plotClip = new(
+            layout.PlotLeft,
+            layout.PlotTop,
+            Math.Max(0, layout.PlotRight - layout.PlotLeft),
+            Math.Max(0, layout.PlotBottom - layout.PlotTop));
+        Line.Clip = new RectangleGeometry { Rect = plotClip };
+        Markers.Clip = new RectangleGeometry { Rect = plotClip };
+        Markers.Children.Clear();
+        foreach (MetricSparklinePoint marker in layout.Markers)
+        {
+            Ellipse ellipse = new()
+            {
+                Width = 6,
+                Height = 6,
+                Fill = Line.Stroke
+            };
+            Canvas.SetLeft(ellipse, marker.X - 3);
+            Canvas.SetTop(ellipse, marker.Y - 3);
+            Markers.Children.Add(ellipse);
+        }
+
+        TopAxisLabel.Text = FormatAxis(layout.DomainMaximum);
+        BottomAxisLabel.Text = FormatAxis(layout.DomainMinimum);
+        StartAxisLabel.Text = layout.RangeStartUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
+        EndAxisLabel.Text = layout.RangeEndUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
 
         Summary.Text = string.IsNullOrWhiteSpace(SummaryText) ? layout.Summary : SummaryText;
+    }
+
+    private string FormatAxis(double value) =>
+        ChartScale == MetricSparklineScale.Percent
+            ? $"{value:0}%"
+            : UnitText switch
+            {
+                "bytes/s" => $"{FormatBytes(value)}/s",
+                "bytes" => FormatBytes(value),
+                _ => $"{FormatBytes(value)} {UnitText}".Trim()
+            };
+
+    private static string FormatBytes(double value)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        int unit = 0;
+        value = Math.Max(0, value);
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.#} {units[unit]}";
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args) => Unsubscribe();

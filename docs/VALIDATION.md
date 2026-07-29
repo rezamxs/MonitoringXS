@@ -1131,3 +1131,85 @@ the sandbox because NuGet TLS credentials were unavailable, then the identical
 restore completed with approved network access. The History page remains
 limited to persisted local SQLite data and does not yet provide stopped-tab
 presentation, export, or chart zooming.
+
+### 2026-07-29 History chart and LocalSystem broker runtime repair
+
+This pass changed only History chart projection/rendering, safe broker connection
+diagnostics, and deterministic tests. The base branch was
+`fix/history-charts-broker-runtime` at History checkpoint
+`6721d18248019f0e25012209752a56380225a72c`. No commit was created.
+
+The chart harness launched the fresh Release app normally with no `RunAs`.
+Window size was exactly 1180 x 760 and normal close left zero
+`MonitoringXS.App` processes. It selected 15-minute, 1-hour, 6-hour, and
+24-hour ranges. The first two were honest empty ranges (0 chart points); the
+6-hour and 24-hour ranges loaded partial/unavailable gaps with 352 aggregate
+displayed points. Timings recorded by the UI were `84/4 ms`, `80/2 ms`,
+`128/4 ms`, and `87/8 ms`. Screenshots and complete point/status/axis diagnostics are in
+`.artifacts/validation/history-chart-fix`. Real runtime was 96 DPI (100%);
+deterministic layout tests passed the equivalent 144-DPI (150%) environment.
+Real 125%/150% runtime validation remains a non-blocking limitation; Windows
+global scaling was not changed.
+
+The existing elevated harness was rerun once against a fresh matching Release
+build. It installed only a temporary LocalSystem service and launched the app
+through Explorer (`asInvoker`, no UAC on normal launch). The v1 handshake
+matched on both sides:
+
+```text
+pipe: MonitoringXS.PrivilegedEtwBroker.v1.4F92F58E2050CECB54A6BE5E
+client SHA-256: B9EDAEB0CDB742319618F9E77BC11548D03A88F102AFEE70ED92ADF676BB0ADA
+server SHA-256: E82664DF29671C9784878F7898E81E249D6CD94C0D563F3CA863104722305876
+protocol: 1
+service: LocalSystem, Running
+```
+
+`TraceEventSession.EnableKernelProvider` succeeded for
+`MonitoringXS.KernelMetrics.v1`; `logman query ... -ets` reported Running and
+0 buffers lost. The controlled attributed probe returned `Available` Network
+with 7 events, 3 send events, 4 receive events, 1,048,635 send bytes, and
+1,048,615 receive bytes. Physical Disk returned `Available` with 1 read event
+and 32,768 read bytes; write activity was issued but no write event was
+observed, so no write value is claimed. The event PID and `StartTimeUtc`
+matched the probe process and no system/unattributed event was mapped.
+Restarting the service changed its instance ID and the v1 reconnect succeeded;
+the first recovered response remains lower-bound partial by design. CPU,
+Memory, Process I/O, and GPU remained independent.
+
+Cleanup evidence: service list empty, MonitoringXS process list empty,
+validation ProgramData directory absent, and the MonitoringXS kernel ETW
+session absent (`logman` reported no data collector set). The DACL remained
+explicit and protected: Network denied; LocalSystem, service SID, and the
+configured user SID allowed; no `Everyone` ACE.
+
+The deterministic suite passed 323/323 tests: Core 5, Application 8,
+Collectors 86, Storage 18, Integration 105, and App 101. Release build and
+Debug build completed with zero warnings/errors. The sandbox-only restore
+attempts returned `NU1301`; identical commands with approved network access
+succeeded. Real 125%/150% runtime validation remains a non-blocking
+limitation; changing the user's global scale was intentionally not performed.
+
+### 2026-07-29 tracked Broker-management lifecycle
+
+The tracked `scripts/privileged-broker/Manage-PrivilegedBroker.ps1` entry point
+was exercised from the repository checkout. `Status` reported `Installed: No`
+before installation. Install used one UAC-approved elevated child, published
+the matching Release broker, and created the fixed automatic LocalSystem
+service with protocol compatibility `v1`; normal `Status` then reported
+`Running`, `LocalSystem`, binary `present`, version `1.0.0.0`, and
+`ProtocolCompatibility: compatible`.
+
+The Release app launched normally with `Start-Process` and no `RunAs` or
+launch-time UAC. UI Automation observed `Physical disk (ETW)` and `Network
+(ETW)` with `Available` status before the service restart. One UAC-approved
+`Restart-Service` returned the service to `Running`; the same app observed
+`Available` Physical Disk and `Available`/lower-bound Network after reconnect.
+The app closed normally and `RemainingAppProcesses` was `0`. This lifecycle
+probe did not claim a new controlled traffic measurement; prior nonzero
+Network/Physical Disk attribution evidence remains recorded above.
+
+The elevated tracked `Remove` completed. Final checks found no
+`MonitoringXS.PrivilegedEtwBroker` service, no installation directory, zero
+`MonitoringXS*` processes, and no `MonitoringXS.KernelMetrics.v1` ETW session.
+User `appearance.txt` and `history.db` size/hash stayed unchanged across
+install, restart, and removal.

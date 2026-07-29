@@ -89,14 +89,20 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             snapshot.PhysicalDisk.ReadBytesPerSecond,
             "read",
             snapshot.PhysicalDisk.WriteBytesPerSecond,
-            "write");
+            "write",
+            HasNoAttributedActivity(
+                snapshot.PhysicalDisk.SessionReadBytes,
+                snapshot.PhysicalDisk.SessionWriteBytes));
         PhysicalDiskText = physicalDisk.ValueText;
         PhysicalDiskStatusText = physicalDisk.StatusText;
         MetricPairPresentation network = FormatRatePair(
             snapshot.Network.DownloadBytesPerSecond,
             "receive",
             snapshot.Network.UploadBytesPerSecond,
-            "send");
+            "send",
+            HasNoAttributedActivity(
+                snapshot.Network.SessionDownloadedBytes,
+                snapshot.Network.SessionUploadedBytes));
         NetworkText = network.ValueText;
         NetworkStatusText = network.StatusText;
         ScalarPresentation gpu = FormatGpu(snapshot.Gpu.UtilizationPercent);
@@ -236,14 +242,15 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
     private static ScalarPresentation FormatUnavailableScalar<T>(MetricValue<T> metric)
         where T : struct => new(
             FormatCompactUnavailable(metric.Availability),
-            FormatSupportingAvailability(metric.Availability),
+            FormatSupportingAvailability(metric.Availability, metric.Detail),
             FormatAvailability(metric));
 
     private static MetricPairPresentation FormatRatePair(
         MetricValue<double> first,
         string firstDirection,
         MetricValue<double> second,
-        string secondDirection)
+        string secondDirection,
+        bool noAttributedActivityYet = false)
     {
         if (!first.IsAvailable
             && !second.IsAvailable
@@ -251,7 +258,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         {
             return new(
                 FormatCompactUnavailable(first.Availability),
-                FormatSupportingAvailability(first.Availability),
+                FormatSupportingAvailability(first.Availability, first.Detail ?? second.Detail),
                 FormatAvailability(first));
         }
 
@@ -261,7 +268,8 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         string[] statuses =
         [
             FormatMetricStatus(first),
-            FormatMetricStatus(second)
+            FormatMetricStatus(second),
+            noAttributedActivityYet ? "No attributed activity yet." : string.Empty
         ];
         string status = string.Join(
             " · ",
@@ -301,18 +309,54 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
     private static string FormatMetricStatus<T>(MetricValue<T> metric)
         where T : struct => metric.Availability == MetricAvailability.Partial
         ? "Partial · lower bound"
-        : FormatSupportingAvailability(metric.Availability);
+        : FormatSupportingAvailability(metric.Availability, metric.Detail);
 
     private static string FormatCompactUnavailable(MetricAvailability availability) =>
         availability == MetricAvailability.WarmingUp ? "Warming up" : "Unavailable";
 
-    private static string FormatSupportingAvailability(MetricAvailability availability) => availability switch
+    private static string FormatSupportingAvailability(
+        MetricAvailability availability,
+        string? detail = null)
     {
-        MetricAvailability.AccessDenied => "Access denied",
-        MetricAvailability.Unsupported => "Unsupported",
-        MetricAvailability.Error => "Error",
-        _ => string.Empty
-    };
+        string? safeDetail = SafeBrokerDetail(detail);
+        return safeDetail ?? availability switch
+        {
+            MetricAvailability.AccessDenied => "Access denied",
+            MetricAvailability.Unsupported => "Unsupported",
+            MetricAvailability.Error => "Error",
+            _ => string.Empty
+        };
+    }
+
+    private static string? SafeBrokerDetail(string? detail)
+    {
+        if (string.IsNullOrWhiteSpace(detail))
+        {
+            return null;
+        }
+
+        string firstLine = detail.Split('\r', '\n')[0];
+        return firstLine.StartsWith("Broker service not installed.", StringComparison.Ordinal)
+            || firstLine.StartsWith("Broker service stopped.", StringComparison.Ordinal)
+            || firstLine.StartsWith("Broker connection failed.", StringComparison.Ordinal)
+            || firstLine.StartsWith("ETW unavailable.", StringComparison.Ordinal)
+            || firstLine.StartsWith("No attributed activity yet.", StringComparison.Ordinal)
+            || firstLine.StartsWith(
+                "The privileged ETW broker protocol version is incompatible.",
+                StringComparison.Ordinal)
+            ? firstLine
+            : firstLine.Contains("TraceEventSession.", StringComparison.Ordinal)
+                ? "ETW unavailable."
+                : null;
+    }
+
+    private static bool HasNoAttributedActivity(
+        MetricValue<ulong> firstTotal,
+        MetricValue<ulong> secondTotal) =>
+        firstTotal.IsComplete
+        && secondTotal.IsComplete
+        && firstTotal.Value == 0
+        && secondTotal.Value == 0;
 
     private static string FormatRate(MetricValue<double> metric)
     {

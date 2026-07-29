@@ -152,8 +152,12 @@
                                     AutomationProperties.Name="{Binding AccessibilityText, Mode=OneWay}"
                                     EmptyText="{Binding StateText, Mode=OneWay}"
                                     IsTabStop="True"
+                                    RangeEndUtc="{Binding RangeEndUtc, Mode=OneWay}"
+                                    RangeStartUtc="{Binding RangeStartUtc, Mode=OneWay}"
                                     Samples="{Binding Samples, Mode=OneWay}"
+                                    ChartScale="{Binding Scale, Mode=OneTime}"
                                     SummaryText="{Binding Summary, Mode=OneWay}"
+                                    UnitText="{Binding UnitText, Mode=OneTime}"
                                     UseSystemFocusVisuals="True" />
                             </Grid>
                         </Border>

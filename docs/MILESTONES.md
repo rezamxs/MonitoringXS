@@ -91,6 +91,7 @@ Status: SQLite backend and History page complete; stopped-tab presentation remai
 - [x] 24-hour retention, one-hour raw window, five-minute downsampling, bounded database-size pruning, metric queries, availability/completeness persistence, and PID-lifetime separation.
 - [x] Deterministic storage and coordinator-isolation tests; runtime restart persistence measured in `VALIDATION.md`.
 - [x] Cancellable History page with logical-application selector, 15-minute/1-hour/6-hour/24-hour ranges, bounded charts, local timestamps, and honest unavailable/partial gaps.
+- [x] Repair History projection, scale domains, single-point rendering, duplicate/PID/gap handling, stale-result suppression, and extrema-preserving decimation.
 - [ ] Stopped application tabs.
 
 ## Milestone 6 - Application actions

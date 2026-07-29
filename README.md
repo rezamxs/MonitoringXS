@@ -13,6 +13,30 @@ Broker loss is shown honestly as `Unavailable`/`Partial`, while CPU, Memory,
 Process I/O, and GPU continue independently. See
 [architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), and
 [ADR 0004](docs/adr/0004-privileged-etw-broker-service.md).
+Development builds distinguish a missing or stopped service, connection failure,
+protocol mismatch, ETW failure, and a healthy broker with no attributed activity
+yet without exposing local paths or SIDs in normal UI.
+
+### Development Broker management
+
+From the repository root, use the tracked operator entry point:
+
+```powershell
+# Install/start (requires elevated PowerShell/UAC)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Install
+
+# Safe status check (normal PowerShell)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Status
+
+# Stop/remove (requires elevated PowerShell/UAC)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Remove
+```
+
+Install publishes the matching Release broker from the current checkout and
+creates the automatic non-interactive LocalSystem service. Status and
+`MonitoringXS.App` run normally; running the app as Administrator is not a
+substitute for installing the Broker. Network and Physical Disk remain
+`Unavailable` when the Broker is absent or stopped.
 
 ## Author and direction
 
@@ -49,6 +73,8 @@ Currently working:
 - keyboard navigation
 - local SQLite metric history backend with bounded writes and 24-hour retention
 - History page with application/range selection and honest availability gaps
+- gap-aware History charts with fixed 0-100% CPU/GPU domains, bounded dynamic
+  byte/rate domains, single-point markers, UTC ordering, and 360-point caps
 
 Not finished yet:
 

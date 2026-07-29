@@ -100,6 +100,72 @@ public sealed class ApplicationCardViewModelTests
         Assert.Equal(expectedStatus, card.NetworkStatusText);
     }
 
+    [Theory]
+    [InlineData("Broker service not installed.", "Broker service not installed.")]
+    [InlineData("Broker service stopped.", "Broker service stopped.")]
+    [InlineData("Broker connection failed.", "Broker connection failed.")]
+    [InlineData("The privileged ETW broker protocol version is incompatible. Client version 1; server version 2.", "The privileged ETW broker protocol version is incompatible. Client version 1; server version 2.")]
+    [InlineData("TraceEventSession.EnableKernelProvider failed with Win32 5.", "ETW unavailable.")]
+    [InlineData(@"C:\sensitive\broker.exe failed.", "")]
+    public void BrokerStatusShowsOnlySafeActionableDetail(string detail, string expected)
+    {
+        ApplicationCardViewModel card = Card();
+        ApplicationMetricSnapshot snapshot = Snapshot(
+            MetricValue<double>.Available(1),
+            MetricValue<long>.Available(128 * 1024 * 1024),
+            MetricValue<double>.Available(0),
+            MetricValue<double>.Available(0)) with
+        {
+            PhysicalDisk = PhysicalDiskMetricSet.Unavailable(MetricAvailability.Unavailable, detail),
+            Network = NetworkMetricSet.Unavailable(
+                MetricAvailability.Unavailable,
+                NetworkAvailabilityReason.CollectorError,
+                detail)
+        };
+
+        card.Update(snapshot, []);
+
+        Assert.Equal(expected, card.PhysicalDiskStatusText);
+        Assert.Equal(expected, card.NetworkStatusText);
+    }
+
+    [Fact]
+    public void AvailableZeroRatesWithoutSessionTotalsSayNoAttributedActivityYet()
+    {
+        ApplicationCardViewModel card = Card();
+        MetricValue<double> zeroRate = MetricValue<double>.Available(0);
+        MetricValue<ulong> zeroTotal = MetricValue<ulong>.Available(0);
+        ApplicationMetricSnapshot snapshot = Snapshot(
+            MetricValue<double>.Available(1),
+            MetricValue<long>.Available(128 * 1024 * 1024),
+            zeroRate,
+            zeroRate) with
+        {
+            PhysicalDisk = new(
+                zeroRate,
+                zeroRate,
+                zeroTotal,
+                zeroTotal,
+                zeroTotal,
+                zeroTotal,
+                default),
+            Network = new(
+                zeroRate,
+                zeroRate,
+                zeroTotal,
+                zeroTotal,
+                MetricValue<int>.Available(0),
+                MetricValue<int>.Available(0),
+                default)
+        };
+
+        card.Update(snapshot, []);
+
+        Assert.Equal("No attributed activity yet.", card.PhysicalDiskStatusText);
+        Assert.Equal("No attributed activity yet.", card.NetworkStatusText);
+        Assert.Contains("0 B/s", card.NetworkText, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void PartialPairsKeepMeasuredLowerBoundsAndExposePartialStatus()
     {

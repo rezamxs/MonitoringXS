@@ -13,7 +13,7 @@ Implementation rules:
 - no permanent elevation or decorative GPU animation;
 - collector timing, dropped samples, queue depth, DB latency, and cache hit rate exposed in internal diagnostics.
 - SQLite history uses a 256-batch bounded queue, 32-snapshot transactions, WAL when supported, one-hour raw retention, five-minute downsampling, and a 64 MiB logical size policy. Queue drops and write failures are diagnostic counters; live collection does not wait on SQLite.
-- History range queries run off the UI thread, rapid selection changes cancel and supersede older requests, and each of the 11 chart series is decimated to at most 360 displayed points while retaining endpoints, global extrema, and availability gaps where capacity permits.
+- History range queries run off the UI thread, rapid selection changes cancel and supersede older requests, and each of the 11 chart series is decimated to at most 360 displayed points while retaining endpoints, global extrema, PID/time gaps, and availability gaps where capacity permits. Projection also collapses effectively identical X coordinates before WinUI geometry creation.
 - physical-disk ETW callbacks use a non-blocking bounded queue of 16,384 events; overflow is counted and reported as partial data;
 - thread-to-PID state is capped at 32,768 entries and removed on thread end or cleared after ETW loss;
 - init-to-completion IRP correlation is capped at 32,768 entries and cleared after ETW loss;
@@ -24,6 +24,17 @@ Implementation rules:
 - the read-only process-parent snapshot used only to detect unassignable GPU descendants is cached for five seconds; it never authorizes attribution without PID/start-time validation.
 
 Measurements must record hardware, OS build, build configuration, duration, sample interval, app count, CPU, working set, and database state.
+
+## 2026-07-29 History chart and broker runtime pass
+
+The fresh x64 Release app used an 1180 x 760 window. The validation monitor
+reported 96 DPI (100%); this machine did not expose a safe per-application way
+to emulate 150% display scaling, so 150% remains a follow-up validation limit.
+History range query/display timings were `84/4 ms` (15 minutes), `80/2 ms`
+(1 hour), `128/4 ms` (6 hours), and `87/8 ms` (24 hours), with 0, 0, 352, and
+352 displayed chart points. The run closed normally with zero remaining app
+processes. Four ignored PNG screenshots and `result.json` are under
+`.artifacts/validation/history-chart-fix`.
 
 ## 2026-07-19 focused runtime smoke measurement
 

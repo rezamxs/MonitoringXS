@@ -32,7 +32,8 @@ internal sealed record HistoryMetricDefinition(
     MetricHistoryMetric Metric,
     string Title,
     HistoryValueKind ValueKind,
-    string UnitText = "");
+    string UnitText = "",
+    bool UsesPercentScale = false);
 
 public sealed partial class HistoryMetricSeries : ObservableObject
 {
@@ -41,6 +42,7 @@ public sealed partial class HistoryMetricSeries : ObservableObject
         Definition = definition;
         Title = definition.Title;
         UnitText = definition.UnitText;
+        UsesPercentScale = definition.UsesPercentScale;
     }
 
     internal HistoryMetricDefinition Definition { get; }
@@ -48,6 +50,11 @@ public sealed partial class HistoryMetricSeries : ObservableObject
     public string Title { get; }
 
     public string UnitText { get; }
+
+    public bool UsesPercentScale { get; }
+
+    public MetricSparklineScale Scale =>
+        UsesPercentScale ? MetricSparklineScale.Percent : MetricSparklineScale.Dynamic;
 
     [ObservableProperty]
     public partial IList<CpuHistorySample> Samples { get; set; } = Array.Empty<CpuHistorySample>();
@@ -60,6 +67,12 @@ public sealed partial class HistoryMetricSeries : ObservableObject
 
     [ObservableProperty]
     public partial string AccessibilityText { get; set; } = "No history loaded.";
+
+    [ObservableProperty]
+    public partial DateTimeOffset? RangeStartUtc { get; set; }
+
+    [ObservableProperty]
+    public partial DateTimeOffset? RangeEndUtc { get; set; }
 }
 
 internal static class HistorySeriesPresentation
@@ -78,17 +91,30 @@ internal static class HistorySeriesPresentation
         }
 
         MetricHistoryPoint[] ordered = result.Points
-            .OrderBy(point => point.TimestampUtc)
-            .ThenBy(point => point.ProcessLifetimeKey, StringComparer.Ordinal)
+            .Select((point, index) => new { Point = point, Index = index })
+            .OrderBy(item => item.Point.TimestampUtc.UtcTicks)
+            .ThenBy(item => item.Index)
+            .GroupBy(item => item.Point.TimestampUtc.UtcTicks)
+            .Select(group => group.Last().Point)
             .ToArray();
         List<CpuHistorySample> samples = [];
         string? lifetime = null;
+        DateTimeOffset? previousTimestampUtc = null;
+        TimeSpan gapThreshold = GapThreshold(ordered, range, maximumPoints);
         foreach (MetricHistoryPoint point in ordered)
         {
-            if (lifetime is not null
-                && !string.Equals(lifetime, point.ProcessLifetimeKey, StringComparison.Ordinal))
+            DateTimeOffset timestampUtc = point.TimestampUtc.ToUniversalTime();
+            bool lifetimeChanged = lifetime is not null
+                && !string.Equals(lifetime, point.ProcessLifetimeKey, StringComparison.Ordinal);
+            bool timeGap = previousTimestampUtc is { } previous
+                && timestampUtc - previous > gapThreshold;
+            if (lifetimeChanged || timeGap)
             {
-                samples.Add(new(point.TimestampUtc.ToLocalTime().AddTicks(-1), null));
+                DateTimeOffset gapTimestamp = previousTimestampUtc is { } previousTimestamp
+                    && timestampUtc > previousTimestamp
+                    ? previousTimestamp + ((timestampUtc - previousTimestamp) / 2)
+                    : timestampUtc.AddTicks(-1);
+                samples.Add(new(gapTimestamp, null));
             }
 
             double? value = point.Availability is MetricAvailability.Available or MetricAvailability.Partial
@@ -97,8 +123,9 @@ internal static class HistorySeriesPresentation
                 && measured >= 0
                     ? measured
                     : null;
-            samples.Add(new(point.TimestampUtc.ToLocalTime(), value));
+            samples.Add(new(timestampUtc, value));
             lifetime = point.ProcessLifetimeKey;
+            previousTimestampUtc = timestampUtc;
         }
 
         CpuHistorySample[] real = samples.Where(sample => sample.Value.HasValue).ToArray();
@@ -129,6 +156,29 @@ internal static class HistorySeriesPresentation
         return (display, summaryText, partial > 0 || unavailableCount > 0 ? "Partial" : "Available", $"{definition.Title}. {summaryText}");
     }
 
+    private static TimeSpan GapThreshold(
+        IReadOnlyList<MetricHistoryPoint> points,
+        HistoryRangeOption range,
+        int maximumPoints)
+    {
+        long[] intervals = points
+            .Select(point => point.TimestampUtc.ToUniversalTime().UtcTicks)
+            .Order()
+            .Zip(points.Select(point => point.TimestampUtc.ToUniversalTime().UtcTicks).Order().Skip(1),
+                (first, second) => second - first)
+            .Where(interval => interval > 0)
+            .Order()
+            .ToArray();
+        TimeSpan median = intervals.Length == 0
+            ? TimeSpan.Zero
+            : TimeSpan.FromTicks(intervals[intervals.Length / 2]);
+        TimeSpan expected = points.Any(point => point.IsDownsampled)
+            ? TimeSpan.FromMinutes(5)
+            : TimeSpan.FromTicks(range.Duration.Ticks / Math.Max(1, maximumPoints));
+        TimeSpan cadence = median > TimeSpan.Zero && median < expected ? median : expected;
+        return TimeSpan.FromTicks(Math.Max(TimeSpan.TicksPerSecond, cadence.Ticks * 3));
+    }
+
     internal static string Format(double value, HistoryValueKind kind) => kind switch
     {
         HistoryValueKind.Percent => string.Create(CultureInfo.InvariantCulture, $"{value:0.0}%"),
@@ -157,16 +207,23 @@ internal static class HistoryPointDecimator
         int maximumPoints)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(maximumPoints, 2);
-        if (samples.Count <= maximumPoints)
+        CpuHistorySample[] normalized = samples
+            .Select((sample, index) => new { Sample = sample, Index = index })
+            .OrderBy(item => item.Sample.Timestamp.UtcTicks)
+            .ThenBy(item => item.Index)
+            .GroupBy(item => item.Sample.Timestamp.UtcTicks)
+            .Select(group => group.Last().Sample)
+            .ToArray();
+        if (normalized.Length <= maximumPoints)
         {
-            return samples.ToArray();
+            return normalized;
         }
 
-        HashSet<int> selected = [0, samples.Count - 1];
-        AddExtrema(samples, selected);
-        for (int index = 0; index < samples.Count; index++)
+        HashSet<int> selected = [0, normalized.Length - 1];
+        AddExtrema(normalized, selected);
+        for (int index = 0; index < normalized.Length; index++)
         {
-            if (!samples[index].Value.HasValue)
+            if (!normalized[index].Value.HasValue)
             {
                 selected.Add(index);
                 if (index > 0)
@@ -174,39 +231,55 @@ internal static class HistoryPointDecimator
                     selected.Add(index - 1);
                 }
 
-                if (index + 1 < samples.Count)
+                if (index + 1 < normalized.Length)
                 {
                     selected.Add(index + 1);
                 }
             }
         }
 
+        if (selected.Count > maximumPoints)
+        {
+            int[] mandatory = selected.Order().ToArray();
+            selected = SelectEvenly(mandatory, maximumPoints).ToHashSet();
+            selected.Add(0);
+            selected.Add(normalized.Length - 1);
+            while (selected.Count > maximumPoints)
+            {
+                int removable = selected
+                    .Where(index => index is not 0 && index != normalized.Length - 1)
+                    .OrderBy(index => Math.Min(index, normalized.Length - 1 - index))
+                    .First();
+                selected.Remove(removable);
+            }
+        }
+
         for (int slot = 1; selected.Count < maximumPoints && slot < maximumPoints - 1; slot++)
         {
             selected.Add((int)Math.Round(
-                slot * (samples.Count - 1d) / (maximumPoints - 1d),
+                slot * (normalized.Length - 1d) / (maximumPoints - 1d),
                 MidpointRounding.AwayFromZero));
         }
 
-        int[] ordered = selected.Order().ToArray();
-        if (ordered.Length > maximumPoints)
-        {
-            ordered = Enumerable.Range(0, maximumPoints)
-                .Select(slot => ordered[(int)Math.Round(
-                    slot * (ordered.Length - 1d) / (maximumPoints - 1d),
-                    MidpointRounding.AwayFromZero)])
-                .Distinct()
-                .ToArray();
-        }
-
-        return ordered.Select(index => samples[index]).ToArray();
+        return selected
+            .Order()
+            .Take(maximumPoints)
+            .Select(index => normalized[index])
+            .ToArray();
     }
 
-    private static void AddExtrema(IReadOnlyList<CpuHistorySample> samples, HashSet<int> selected)
+    private static IEnumerable<int> SelectEvenly(int[] indices, int count) =>
+        Enumerable.Range(0, count)
+            .Select(slot => indices[(int)Math.Round(
+                slot * (indices.Length - 1d) / (count - 1d),
+                MidpointRounding.AwayFromZero)])
+            .Distinct();
+
+    private static void AddExtrema(CpuHistorySample[] samples, HashSet<int> selected)
     {
         int minimum = -1;
         int maximum = -1;
-        for (int index = 0; index < samples.Count; index++)
+        for (int index = 0; index < samples.Length; index++)
         {
             if (!samples[index].Value.HasValue)
             {

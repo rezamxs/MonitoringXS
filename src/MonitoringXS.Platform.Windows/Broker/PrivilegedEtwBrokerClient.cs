@@ -201,7 +201,7 @@ public sealed class PrivilegedEtwBrokerClient :
             : exception is BrokerProtocolException { Code: BrokerErrorCode.Unauthorized }
             ? (MetricAvailability.AccessDenied, "The privileged ETW broker denied this local client.")
             : exception is BrokerProtocolException { Code: BrokerErrorCode.ProtocolMismatch }
-                ? (MetricAvailability.Unsupported, "The privileged ETW broker protocol version is incompatible.")
+                ? (MetricAvailability.Unsupported, exception.Message)
                 : exception is UnauthorizedAccessException
                     ? (MetricAvailability.Unavailable, "Named pipe connect was denied before protocol handshake.")
                 : (MetricAvailability.Unavailable, "The privileged ETW broker is unavailable.");
@@ -349,7 +349,19 @@ internal sealed class NamedPipeEtwBrokerTransport : IPrivilegedEtwBrokerTranspor
             catch (UnauthorizedAccessException exception)
             {
                 throw new BrokerConnectionException(
-                    $"Named pipe connect to '{_pipeName}' was denied before protocol handshake.",
+                    BrokerServiceProbe.ConnectionFailureDetail(),
+                    exception);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new BrokerConnectionException(
+                    BrokerServiceProbe.ConnectionFailureDetail(),
+                    new TimeoutException());
+            }
+            catch (IOException exception)
+            {
+                throw new BrokerConnectionException(
+                    BrokerServiceProbe.ConnectionFailureDetail(),
                     exception);
             }
             int requestId = NextRequestId();

@@ -23,7 +23,7 @@ PrivilegedBroker -> Platform.Windows -> Core
 8. `IMetricAggregationService`, `IPhysicalDiskAggregationService`, `INetworkMetricAggregationService`, and `IGpuMetricAggregationService` aggregate only confidently attributed application processes. GPU values are summed per identical adapter/engine and the busiest engine becomes the headline percentage; parallel engines are not added together. Network aggregation retains bytes already observed for an exited helper while another process of the same logical application remains active. A process baseline is tracked independently of its current logical-application key, so reclassification moves only future deltas and never transfers historical bytes to the new application. Retained application state is capped at 512 active logical applications and is removed when the entire application leaves the snapshot. Totals beyond the cap are unavailable, not guessed; if capacity later becomes available, accumulation resumes from the bounded process baseline as a lower bound.
 9. The application coordinator samples only processes included in application totals, bounds live one-minute history to 512 application series, publishes immutable snapshots, and best-effort enqueues each snapshot to `IMetricHistoryStore`. Storage errors and queue drops never interrupt live metrics.
 10. `SqliteMetricHistoryStore` writes version-2 SQLite rows asynchronously in bounded batches. Logical application ID is paired with a SHA-256 process-lifetime key derived from PID plus UTC start time, so relaunches remain queryable without merging lifetimes. Raw rows are retained for one hour; older rows in the 24-hour retention window become five-minute buckets. Rate/gauge values are averaged, availability uses the worst state, and cumulative totals are never averaged or persisted as rates.
-11. ViewModels project snapshots into virtualized WinUI collections and bounded chart buffers. `HistoryPageViewModel` lists persisted logical applications, issues cancellable time-range queries off the UI thread, rejects stale results after rapid selection changes, and decimates each displayed series to at most 360 points. The History page reuses the gap-aware sparkline; unavailable samples and PID-lifetime boundaries render as gaps rather than zero or connected lines.
+11. ViewModels project snapshots into virtualized WinUI collections and bounded chart buffers. `HistoryPageViewModel` lists persisted logical applications, issues cancellable time-range queries off the UI thread, rejects stale results after rapid selection changes, and decimates each displayed series to at most 360 points while retaining endpoints, gaps, and extrema. The History page normalizes stable ascending UTC timestamps, keeps the last duplicate, and uses the selected range for X coordinates. Unavailable/non-numeric partial samples, PID-lifetime changes, and large sampling gaps split paths; numeric partial samples remain plotted and labelled partial. CPU/GPU use a fixed 0-100% domain; byte/rate charts use a padded percentile domain. Single samples use markers and all geometry is clipped to the plot rectangle.
 
 ## Failure model
 
@@ -32,6 +32,19 @@ Process exit, access denied, missing counters, ETW session conflicts/loss, queue
 ## Privilege boundary
 
 The main app remains `asInvoker` and never triggers UAC during normal launch. `MonitoringXS.PrivilegedBroker` is an automatically started Windows Service running as `LocalSystem`; elevation is limited to installation/setup. LocalService reached `TraceEventSession.EnableKernelProvider` but failed with Win32 5, while the matching hardened LocalSystem service succeeded. The broker reuses the shared kernel ETW session and exposes only version-1 named-pipe hello, network-read, and physical-disk-read operations. The pipe name is a hash of user SID, optional logon SID, and session; its protected DACL is explicit and denies Network SID. Bounded frames/queues, one connection, request/idle timeouts, and reconnect-safe service-instance identifiers limit resource use. The broker authorizes the exact `MonitoringXS.App.exe` client, session, user SID, and every PID plus `StartTimeUtc` before and after each read. Responses are filtered to that process set, so cross-user and PID-reuse leakage is rejected. Broker failure maps to `Unavailable`/`Partial`; CPU, memory, process I/O, and GPU remain independent.
+
+Before attempting the pipe handshake, the client reads only the broker service
+status through SCM. Normal UI maps the result to a small safe vocabulary:
+service not installed, service stopped, connection failed, protocol mismatch,
+ETW unavailable, or no attributed activity yet. Detailed paths, SIDs, and native
+exceptions remain restricted to validation diagnostics.
+
+Persistent development/operator setup uses the tracked
+`scripts/privileged-broker/Manage-PrivilegedBroker.ps1` entry point. It publishes
+the current Release broker, creates only the fixed automatic LocalSystem service
+with a dedicated service SID, verifies its binary/configuration, and confines
+removal to its fixed ProgramData directory. It never launches or elevates the
+main application.
 
 ## Version choices
 

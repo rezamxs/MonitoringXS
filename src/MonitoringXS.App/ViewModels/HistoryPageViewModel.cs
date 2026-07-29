@@ -10,7 +10,7 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
 {
     private static readonly HistoryMetricDefinition[] Definitions =
     [
-        new(MetricHistoryMetric.CpuPercent, "CPU", HistoryValueKind.Percent, "%"),
+        new(MetricHistoryMetric.CpuPercent, "CPU", HistoryValueKind.Percent, "%", true),
         new(MetricHistoryMetric.WorkingSetBytes, "Working Set memory", HistoryValueKind.Bytes, "bytes"),
         new(MetricHistoryMetric.ProcessIoReadBytesPerSecond, "Process I/O read", HistoryValueKind.BytesPerSecond, "bytes/s"),
         new(MetricHistoryMetric.ProcessIoWriteBytesPerSecond, "Process I/O write", HistoryValueKind.BytesPerSecond, "bytes/s"),
@@ -18,7 +18,7 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
         new(MetricHistoryMetric.PhysicalDiskWriteBytesPerSecond, "Physical Disk write", HistoryValueKind.BytesPerSecond, "bytes/s"),
         new(MetricHistoryMetric.NetworkDownloadBytesPerSecond, "Network receive", HistoryValueKind.BytesPerSecond, "bytes/s"),
         new(MetricHistoryMetric.NetworkUploadBytesPerSecond, "Network send", HistoryValueKind.BytesPerSecond, "bytes/s"),
-        new(MetricHistoryMetric.GpuUtilizationPercent, "GPU utilization", HistoryValueKind.Percent, "%"),
+        new(MetricHistoryMetric.GpuUtilizationPercent, "GPU utilization", HistoryValueKind.Percent, "%", true),
         new(MetricHistoryMetric.GpuDedicatedMemoryBytes, "Dedicated GPU memory", HistoryValueKind.Bytes, "bytes"),
         new(MetricHistoryMetric.GpuSharedMemoryBytes, "Shared GPU memory", HistoryValueKind.Bytes, "bytes")
     ];
@@ -218,6 +218,8 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
                 Charts[index].Summary = presentations[index].Summary;
                 Charts[index].StateText = presentations[index].State;
                 Charts[index].AccessibilityText = presentations[index].Accessibility;
+                Charts[index].RangeStartUtc = fromUtc;
+                Charts[index].RangeEndUtc = toUtc;
             }
 
             State = databaseUnavailable

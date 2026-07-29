@@ -16,13 +16,29 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid
-            Margin="16,12,16,8"
+            x:Name="PlotArea"
+            Grid.Row="0"
+            FlowDirection="LeftToRight"
             IsHitTestVisible="False">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
+            <TextBlock
+                x:Name="TopAxisLabel"
+                Margin="2,8,0,0"
+                Foreground="{StaticResource SecondaryTextBrush}"
+                FontSize="10"
+                FlowDirection="LeftToRight" />
+            <TextBlock
+                x:Name="BottomAxisLabel"
+                Grid.Row="2"
+                Margin="2,0,0,8"
+                VerticalAlignment="Bottom"
+                Foreground="{StaticResource SecondaryTextBrush}"
+                FontSize="10"
+                FlowDirection="LeftToRight" />
             <Border
                 Grid.Row="1"
                 VerticalAlignment="Top"
@@ -38,15 +54,39 @@
         </Grid>
         <Path
             x:Name="Line"
+            Grid.Row="0"
             Stroke="{StaticResource DataAccentBrush}"
             StrokeLineJoin="Round"
             StrokeThickness="2" />
+        <Canvas
+            x:Name="Markers"
+            Grid.Row="0"
+            IsHitTestVisible="False" />
         <TextBlock
             x:Name="EmptyState"
+            Grid.Row="0"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Foreground="{StaticResource SecondaryTextBrush}"
             Text="Waiting for real samples…" />
+        <TextBlock
+            x:Name="StartAxisLabel"
+            Grid.Row="0"
+            Margin="54,0,0,8"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            Foreground="{StaticResource SecondaryTextBrush}"
+            FontSize="10"
+            FlowDirection="LeftToRight" />
+        <TextBlock
+            x:Name="EndAxisLabel"
+            Grid.Row="0"
+            Margin="0,0,12,8"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Foreground="{StaticResource SecondaryTextBrush}"
+            FontSize="10"
+            FlowDirection="LeftToRight" />
         <TextBlock
             x:Name="Summary"
             Grid.Row="1"

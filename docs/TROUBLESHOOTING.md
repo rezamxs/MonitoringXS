@@ -80,3 +80,26 @@ reports the database/query state while live monitoring continues independently.
 If Network or Physical disk (ETW) shows `Unavailable` or `Partial`, verify that `MonitoringXS.PrivilegedEtwBroker` is installed as `LocalSystem` and running. LocalService is unsupported because `TraceEventSession.EnableKernelProvider` returned Win32 5 in the validated path. Restarting the service is safe: the client reconnects, reports `Partial` for the first post-restart response, and never fabricates zero. CPU, Memory, Process I/O, and GPU should remain available when the broker is stopped.
 
 If the client reports `Broker Unavailable` while connecting, collect the per-user/session pipe name and identity diagnostics. The expected owner is LocalSystem (`S-1-5-18`); the DACL must contain LocalSystem, the configured user/logon SID, and the dedicated service SID, and must deny Network SID. A connect-time `UnauthorizedAccessException` means the client ACE did not match the installed user/session; it is not an ETW provider authorization result. After a successful v1 handshake, ETW failures are reported separately with the native operation and Win32 status.
+
+Current development builds distinguish `Broker service not installed`,
+`Broker service stopped`, `Broker connection failed`, protocol mismatch,
+`ETW unavailable`, and `No attributed activity yet`. The last state means the
+broker is healthy and the application has not accumulated attributed bytes; a
+measured zero remains a real zero.
+
+From the repository root, use the tracked development/operator commands:
+
+```powershell
+# Install/start: elevated PowerShell/UAC required
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Install
+
+# Status: normal PowerShell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Status
+
+# Remove: elevated PowerShell/UAC required
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Remove
+```
+
+The app itself remains `asInvoker`; running it as Administrator does not install
+or replace the Broker. When the service is absent or stopped, Network and
+Physical Disk remain honestly `Unavailable`.

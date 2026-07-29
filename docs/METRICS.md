@@ -91,6 +91,20 @@ Services and related background components are excluded by default. Advanced opt
 
 When the LocalSystem broker is installed and reachable, Network and Physical disk (ETW) use the shared ETW semantics and PID-plus-`StartTimeUtc` attribution described above. LocalSystem is required because LocalService returned Win32 5 from `TraceEventSession.EnableKernelProvider`. The broker never returns another user's events or a reused PID's pre-start events. Missing, denied, stopped, or restarting broker state is `Unavailable` or `Partial` with diagnostics; it is never converted to zero. CPU, Memory, Process I/O, and GPU do not depend on the broker.
 
+## History chart projection
+
+History timestamps are normalized to UTC, stably sorted, and deduplicated before
+projection; the last sample at an identical timestamp wins. Numeric `Partial`
+values remain lower bounds. `Unavailable`, non-numeric `Partial`, PID-lifetime
+changes, and unexpectedly large timestamp gaps split paths. Measured zero stays
+zero.
+
+CPU and GPU utilization always use a 0-100% Y domain. Memory and byte-rate
+metrics use a padded 5th/95th-percentile domain for five or more values; flat
+series receive symmetric padding. Queries display at most 360 points while
+retaining endpoints, gaps, and extrema. Single values render as markers. X
+coordinates cover the complete selected range, not only stored sample bounds.
+
 ## Retention target
 
 - 0-10 minutes: about 1 second.

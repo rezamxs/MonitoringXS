@@ -147,6 +147,27 @@ public sealed class HistoryPageViewModelTests
             () => viewModel.RefreshAsync(CancellationToken.None));
     }
 
+    [Fact]
+    public async Task NewSelectionCannotBeReplacedByStaleQueryResults()
+    {
+        DateTimeOffset now = new(2026, 7, 29, 12, 0, 0, TimeSpan.Zero);
+        StaleHistoryStore store = new(now);
+        using HistoryPageViewModel viewModel = new(store, () => now, TimeSpan.Zero, 360);
+        await viewModel.InitializeAsync(CancellationToken.None);
+
+        store.DelaySixHourQueries = true;
+        Task stale = viewModel.SelectRangeAsync(viewModel.Ranges[2], CancellationToken.None);
+        await store.SixHourStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        store.DelaySixHourQueries = false;
+        Task current = viewModel.SelectRangeAsync(viewModel.Ranges[3], CancellationToken.None);
+        await current;
+        store.ReleaseSixHourQueries.SetResult();
+        await stale;
+
+        Assert.Equal("Selected range: 24 hours", viewModel.SelectedRangeText);
+        Assert.All(viewModel.Charts, chart => Assert.Equal(24, Assert.Single(chart.Samples).Value));
+    }
+
     private sealed class FakeHistoryStore(
         IReadOnlyList<MetricHistoryApplication> applications,
         Func<MetricHistoryMetric, MetricHistoryQueryResult> query)
@@ -176,6 +197,62 @@ public sealed class HistoryPageViewModelTests
             cancellationToken.ThrowIfCancellationRequested();
             QueriedMetrics.Add(metric);
             return ValueTask.FromResult(query(metric));
+        }
+
+        public void Dispose()
+        {
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private sealed class StaleHistoryStore(DateTimeOffset now) : IMetricHistoryStore
+    {
+        private int _sixHourCalls;
+
+        public bool DelaySixHourQueries { get; set; }
+
+        public TaskCompletionSource SixHourStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource ReleaseSixHourQueries { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public MetricHistoryStoreDiagnostics Diagnostics => new(0, 0, 0, 0, 0, 0, 0, 0, 0, null);
+
+        public ValueTask<MetricHistoryApplicationsResult> ListApplicationsAsync(CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new MetricHistoryApplicationsResult(
+                [new("app", "App", ApplicationDisposition.Installed, now)],
+                true));
+
+        public ValueTask<MetricHistoryWriteResult> EnqueueAsync(
+            IReadOnlyList<ApplicationMetricSnapshot> snapshots,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult(MetricHistoryWriteResult.Success);
+
+        public ValueTask FlushAsync(CancellationToken cancellationToken) => ValueTask.CompletedTask;
+
+        public async ValueTask<MetricHistoryQueryResult> QueryAsync(
+            string logicalApplicationId,
+            MetricHistoryMetric metric,
+            DateTimeOffset fromUtc,
+            DateTimeOffset toUtc,
+            CancellationToken cancellationToken)
+        {
+            int hours = (int)Math.Round((toUtc - fromUtc).TotalHours);
+            if (hours == 6 && DelaySixHourQueries)
+            {
+                if (Interlocked.Increment(ref _sixHourCalls) == 11)
+                {
+                    SixHourStarted.SetResult();
+                }
+
+                await ReleaseSixHourQueries.Task;
+            }
+
+            return new(
+                [new("app", "lifetime", now.AddMinutes(-1), metric, hours, MetricAvailability.Available, null, false)],
+                true);
         }
 
         public void Dispose()

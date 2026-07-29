@@ -36,6 +36,22 @@ The broker is a restricted, non-interactive service under `LocalSystem`. LocalSe
 
 The original authorization failure was the missing explicit ACE for the current interactive user on the per-user pipe; the client therefore received `UnauthorizedAccessException` during connect. The fixed client connects and completes protocol v1; a later unauthorized executable is rejected after handshake with broker error code 4. No `Everyone` ACE is used.
 
+The unelevated client queries SCM only for the fixed service name before
+classifying a connection failure. Normal UI exposes an allowlisted message:
+service not installed, service stopped, connection failed, protocol mismatch,
+ETW unavailable, or no attributed activity yet. Arbitrary broker exception
+text, executable paths, pipe names, and SIDs are not rendered in normal UI;
+full native evidence remains in local validation diagnostics.
+
+The tracked development/operator entry point is
+`scripts/privileged-broker/Manage-PrivilegedBroker.ps1`. Install and Remove
+require elevation; Status and normal app launch do not. The script publishes the
+matching Release broker, verifies LocalSystem/automatic-start/path/protocol
+state, and removes only the fixed service and
+`%ProgramData%\MonitoringXS\PrivilegedEtwBroker`. It does not grant broad pipe
+access, accept provider/path/command input, touch history/settings, or elevate
+`MonitoringXS.App`.
+
 The final identity probe first completed the version-1 pipe handshake under
 LocalService, then captured Win32 5 from
 `TraceEventSession.EnableKernelProvider`. A matching LocalSystem deployment
