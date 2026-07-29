@@ -5,7 +5,7 @@ public sealed record PhysicalDiskIoEvent
     public PhysicalDiskIoEvent(
         int processId,
         int threadId,
-        DateTimeOffset timestamp,
+        DateTimeOffset timestampUtc,
         PhysicalDiskOperation operation,
         int transferSize)
     {
@@ -15,7 +15,7 @@ public sealed record PhysicalDiskIoEvent
 
         ProcessId = processId;
         ThreadId = threadId;
-        TimestampUtc = timestamp.ToUniversalTime();
+        TimestampUtc = timestampUtc.ToUniversalTime();
         Operation = operation;
         TransferSize = transferSize;
     }

@@ -144,6 +144,42 @@ public sealed class PrivilegedEtwBrokerTests
     }
 
     [Fact]
+    public void MetricEventBatchesRoundTripNonEmptyPayloads()
+    {
+        DateTimeOffset timestamp = new(2026, 7, 29, 12, 0, 0, TimeSpan.FromHours(3.5));
+        PhysicalDiskEventBatch disk = BrokerJson.Deserialize<PhysicalDiskEventBatch>(
+            BrokerJson.Serialize(new PhysicalDiskEventBatch(
+                [new PhysicalDiskIoEvent(20, 30, timestamp, PhysicalDiskOperation.Write, 4096)],
+                MetricAvailability.Available,
+                0,
+                0,
+                0)));
+        NetworkEventBatch network = BrokerJson.Deserialize<NetworkEventBatch>(
+            BrokerJson.Serialize(new NetworkEventBatch(
+                [
+                    new NetworkTrafficEvent(
+                        20,
+                        timestamp,
+                        NetworkDirection.Download,
+                        NetworkTransport.Tcp,
+                        NetworkAddressFamily.IPv4,
+                        2048)
+                ],
+                MetricAvailability.Available,
+                NetworkAvailabilityReason.None,
+                0,
+                0,
+                0)));
+
+        PhysicalDiskIoEvent diskEvent = Assert.Single(disk.Events);
+        NetworkTrafficEvent networkEvent = Assert.Single(network.Events);
+        Assert.Equal(4096, diskEvent.TransferSize);
+        Assert.Equal(2048, networkEvent.TransferSize);
+        Assert.Equal(TimeSpan.Zero, diskEvent.TimestampUtc.Offset);
+        Assert.Equal(TimeSpan.Zero, networkEvent.TimestampUtc.Offset);
+    }
+
+    [Fact]
     public void PipeEndpointBindsUserAndSessionAndRejectsMalformedIdentity()
     {
         BrokerPipeEndpoint endpoint = BrokerPipeEndpoint.Create(

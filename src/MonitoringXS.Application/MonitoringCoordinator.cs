@@ -8,6 +8,7 @@ public sealed class MonitoringCoordinator
 {
     private const int OneMinuteCapacity = 60;
     private const int MaximumApplicationHistorySeries = 512;
+    private static readonly TimeSpan CollectorTimeout = TimeSpan.FromMilliseconds(750);
     private readonly IProcessDiscoveryService _discovery;
     private readonly IApplicationAttributionService _attribution;
     private readonly IProcessMetricCollector _collector;
@@ -61,48 +62,93 @@ public sealed class MonitoringCoordinator
             capturedAt,
             cancellationToken);
         IReadOnlyList<ApplicationMetricSnapshot> applications = _aggregation.Aggregate(attribution, metrics, capturedAt);
+        Task<IReadOnlyList<PhysicalDiskProcessSample>>? physicalDiskTask =
+            _physicalDiskCollector is null || _physicalDiskAggregation is null
+                ? null
+                : CollectWithTimeoutAsync(
+                    token => _physicalDiskCollector.CollectAsync(attributedProcesses, capturedAt, token),
+                    cancellationToken);
+        Task<IReadOnlyList<NetworkProcessSample>>? networkTask =
+            _networkCollector is null || _networkAggregation is null
+                ? null
+                : CollectWithTimeoutAsync(
+                    token => _networkCollector.CollectAsync(attributedProcesses, capturedAt, token),
+                    cancellationToken);
+        Task<IReadOnlyList<GpuProcessSample>>? gpuTask =
+            _gpuCollector is null || _gpuAggregation is null
+                ? null
+                : CollectWithTimeoutAsync(
+                    token => _gpuCollector.CollectAsync(attributedProcesses, capturedAt, token),
+                    cancellationToken);
+
         if (_physicalDiskCollector is not null && _physicalDiskAggregation is not null)
         {
-            IReadOnlyList<PhysicalDiskProcessSample> physicalDiskSamples = await _physicalDiskCollector.CollectAsync(
-                attributedProcesses,
-                capturedAt,
-                cancellationToken);
-            IReadOnlyDictionary<string, PhysicalDiskMetricSet> physicalDiskByApplication =
-                _physicalDiskAggregation.Aggregate(attribution, physicalDiskSamples);
-            applications = applications
-                .Select(application => physicalDiskByApplication.TryGetValue(
-                    application.Application.LogicalApplicationId,
-                    out PhysicalDiskMetricSet? physicalDisk)
-                    ? application with { PhysicalDisk = physicalDisk }
-                    : application)
-                .ToArray();
+            try
+            {
+                IReadOnlyList<PhysicalDiskProcessSample> physicalDiskSamples =
+                    await physicalDiskTask!;
+                IReadOnlyDictionary<string, PhysicalDiskMetricSet> physicalDiskByApplication =
+                    _physicalDiskAggregation.Aggregate(attribution, physicalDiskSamples);
+                applications = applications
+                    .Select(application => physicalDiskByApplication.TryGetValue(
+                        application.Application.LogicalApplicationId,
+                        out PhysicalDiskMetricSet? physicalDisk)
+                        ? application with { PhysicalDisk = physicalDisk }
+                        : application)
+                    .ToArray();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                PhysicalDiskMetricSet unavailable = PhysicalDiskMetricSet.Unavailable(
+                    MetricAvailability.Error,
+                    "Physical Disk collection failed; other live metrics remain available.");
+                applications = applications
+                    .Select(application => application with { PhysicalDisk = unavailable })
+                    .ToArray();
+            }
         }
 
         if (_networkCollector is not null && _networkAggregation is not null)
         {
-            IReadOnlyList<NetworkProcessSample> networkSamples = await _networkCollector.CollectAsync(
-                attributedProcesses,
-                capturedAt,
-                cancellationToken);
-            IReadOnlyDictionary<string, NetworkMetricSet> networkByApplication =
-                _networkAggregation.Aggregate(attribution, networkSamples);
-            applications = applications
-                .Select(application => networkByApplication.TryGetValue(
-                    application.Application.LogicalApplicationId,
-                    out NetworkMetricSet? network)
-                    ? application with { Network = network }
-                    : application)
-                .ToArray();
+            try
+            {
+                IReadOnlyList<NetworkProcessSample> networkSamples =
+                    await networkTask!;
+                IReadOnlyDictionary<string, NetworkMetricSet> networkByApplication =
+                    _networkAggregation.Aggregate(attribution, networkSamples);
+                applications = applications
+                    .Select(application => networkByApplication.TryGetValue(
+                        application.Application.LogicalApplicationId,
+                        out NetworkMetricSet? network)
+                        ? application with { Network = network }
+                        : application)
+                    .ToArray();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                NetworkMetricSet unavailable = NetworkMetricSet.Unavailable(
+                    MetricAvailability.Error,
+                    NetworkAvailabilityReason.CollectorError,
+                    "Network collection failed; other live metrics remain available.");
+                applications = applications
+                    .Select(application => application with { Network = unavailable })
+                    .ToArray();
+            }
         }
 
         if (_gpuCollector is not null && _gpuAggregation is not null)
         {
             try
             {
-                IReadOnlyList<GpuProcessSample> gpuSamples = await _gpuCollector.CollectAsync(
-                    attributedProcesses,
-                    capturedAt,
-                    cancellationToken);
+                IReadOnlyList<GpuProcessSample> gpuSamples = await gpuTask!;
                 IReadOnlyDictionary<string, GpuMetricSet> gpuByApplication =
                     _gpuAggregation.Aggregate(attribution, gpuSamples);
                 applications = applications
@@ -117,7 +163,7 @@ public sealed class MonitoringCoordinator
             {
                 throw;
             }
-            catch (Exception exception) when (IsRecoverableGpuException(exception))
+            catch (Exception)
             {
                 GpuMetricSet unavailable = GpuMetricSet.Unavailable(
                     MetricAvailability.Error,
@@ -141,10 +187,7 @@ public sealed class MonitoringCoordinator
             {
                 throw;
             }
-            catch (Exception exception) when (exception is IOException
-                or UnauthorizedAccessException
-                or InvalidDataException
-                or NotSupportedException)
+            catch (Exception)
             {
                 // History failure must never interrupt live metric collection.
             }
@@ -190,9 +233,13 @@ public sealed class MonitoringCoordinator
             historySnapshot);
     }
 
-    private static bool IsRecoverableGpuException(Exception exception) =>
-        exception is ArgumentException
-            or ArithmeticException
-            or InvalidOperationException
-            or System.Runtime.InteropServices.ExternalException;
+    private static async Task<T> CollectWithTimeoutAsync<T>(
+        Func<CancellationToken, ValueTask<T>> collectAsync,
+        CancellationToken cancellationToken)
+    {
+        using CancellationTokenSource timeout =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(CollectorTimeout);
+        return await collectAsync(timeout.Token);
+    }
 }

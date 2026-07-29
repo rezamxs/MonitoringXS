@@ -240,14 +240,11 @@ public sealed partial class MainWindow : Window, IDisposable
     }
 
     private async Task RunMonitoringLoopAsync(CancellationToken cancellationToken)
-    {
-        await ViewModel.RefreshAsync(cancellationToken);
-        using PeriodicTimer timer = new(TimeSpan.FromSeconds(1));
-        while (await timer.WaitForNextTickAsync(cancellationToken))
-        {
-            await ViewModel.RefreshAsync(cancellationToken);
-        }
-    }
+        => await LiveRefreshLoop.RunAsync(
+            ViewModel.RefreshAsync,
+            TimeSpan.FromSeconds(1),
+            ViewModel.ReportRefreshFailure,
+            cancellationToken);
 
     private void ApplicationList_ItemClick(object sender, ItemClickEventArgs args)
     {

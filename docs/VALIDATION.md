@@ -1213,3 +1213,36 @@ The elevated tracked `Remove` completed. Final checks found no
 `MonitoringXS*` processes, and no `MonitoringXS.KernelMetrics.v1` ETW session.
 User `appearance.txt` and `history.db` size/hash stayed unchanged across
 install, restart, and removal.
+
+### 2026-07-29 live-refresh stall repair
+
+Ignored pipeline diagnostics reproduced the stall with the refresh timer and
+Broker requests still progressing. Publication stopped when
+`BrokerJson.Deserialize<PhysicalDiskEventBatch>` threw because
+`PhysicalDiskIoEvent.timestamp` could not bind to `TimestampUtc`; the same
+latent defect existed for `NetworkTrafficEvent`. Nonempty payload round-trip
+tests now cover both types.
+
+The fresh Release app ran normally for 80 seconds with controlled CPU, memory,
+file, loopback-network, and available GPU activity. UI Automation recorded 30
+distinct rendered timestamps, including more than 10 consecutive updates,
+zero unresponsive samples, and normal shutdown. Observed live values included
+CPU `0.2-11.7%`, memory `193 MB-2.09 GB`, Process I/O up to `128.7 KB/s` read
+and `120.0 KB/s` write, Physical Disk up to `259.2 KB/s` write, and Network up
+to `2.5 KB/s` receive and `288 B/s` send. GPU remained an honest measured
+`0.0%` for attributed apps or explicitly unavailable/quarantined.
+
+During a four-second Broker stop, rendered timestamps advanced through
+`20:58:32`, `20:58:33`, and `20:58:34`. The controlled PowerShell workload
+continued changing from CPU `17.7%` to `12.3%` to `12.1%`, memory `420-425 MB`,
+and Process I/O `1.3 MB/s` to `15.4 KB/s`; only Physical Disk and Network
+became unavailable/error. After restart, the same app recovered automatically:
+by `20:58:42` Physical Disk was available again, and the next sample measured
+`65.0 KB/s` read and `191.1 KB/s` write. Navigation between Running Apps and
+History did not stop refresh. No app or workload process remained.
+
+The final suite passed 335/335 tests: Core 5, Application 10, Collectors 86,
+Storage 18, Integration 110, and App 106. Release and Debug builds completed
+with zero warnings/errors; `git diff --check` passed. Final cleanup found no
+Broker service/install directory, Monitoring XS process, workload file, or
+Monitoring XS ETW session.

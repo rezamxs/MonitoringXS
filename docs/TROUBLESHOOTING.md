@@ -16,6 +16,15 @@ Confirm `https://api.nuget.org/v3/index.json` is reachable and that an authentic
 
 Monitoring XS must keep other metrics running and show `Unavailable`. Confirm the Windows performance counter service/ETW permissions and graphics driver are healthy. Never substitute zero.
 
+## Live metrics stop changing after the Broker starts
+
+Rebuild both app and Broker from the same checkout. Older builds could reject a
+nonempty Broker event batch because the JSON constructor parameter `timestamp`
+did not bind to `TimestampUtc`; the refresh then retried without publishing a
+new snapshot. Current builds bind both event types correctly, isolate each
+collector behind a 750 ms timeout, and keep the single non-overlapping refresh
+loop alive after transient collector or history failures.
+
 ## Access denied for a process
 
 Protected or higher-integrity processes may expose limited metadata. This is expected degradation; the primary app should remain unelevated.

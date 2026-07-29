@@ -121,9 +121,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            LogMonitoringRefreshFailed(_logger, exception);
-            StatusMessage = "Some monitoring data is temporarily unavailable. Retrying…";
+            ReportRefreshFailure(exception);
         }
+    }
+
+    internal void ReportRefreshFailure(Exception exception)
+    {
+        LogMonitoringRefreshFailed(_logger, exception);
+        StatusMessage = "Some monitoring data is temporarily unavailable. Retrying…";
     }
 
     public ApplicationTabViewModel OpenTab(ApplicationCardViewModel card)
