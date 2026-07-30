@@ -84,6 +84,18 @@ samples, then use Refresh. A blank selected range is not a zero. `Partial` and
 drawn as gaps. If the database is locked, read-only, corrupt, or full, History
 reports the database/query state while live monitoring continues independently.
 
+## Settings are unavailable or reset to defaults
+
+Per-user settings are stored in
+`%LOCALAPPDATA%\MonitoringXS\settings.json`. Invalid or corrupt version-1
+documents are quarantined beside it with a `.corrupt-*` suffix and safe
+defaults are loaded. A document from a newer app version is preserved and
+reported unavailable instead of being overwritten. Read-only, locked, or
+full-disk failures do not stop live metrics, History, navigation, or the
+Broker. Live cadence changes apply immediately; retention changes apply during
+future asynchronous maintenance and can remove older history. The Settings
+page never installs or elevates the Broker.
+
 # Privileged ETW broker
 
 If Network or Physical disk (ETW) shows `Unavailable` or `Partial`, verify that `MonitoringXS.PrivilegedEtwBroker` is installed as `LocalSystem` and running. LocalService is unsupported because `TraceEventSession.EnableKernelProvider` returned Win32 5 in the validated path. Restarting the service is safe: the client reconnects, reports `Partial` for the first post-restart response, and never fabricates zero. CPU, Memory, Process I/O, and GPU should remain available when the broker is stopped.

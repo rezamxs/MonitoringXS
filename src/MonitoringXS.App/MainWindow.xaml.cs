@@ -6,8 +6,10 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Windowing;
 using MonitoringXS.App.Appearance;
 using MonitoringXS.App.ViewModels;
+using MonitoringXS.Core.Models;
 using MonitoringXS.Platform.Windows.Accessibility;
 using Windows.Graphics;
+using SettingsTheme = MonitoringXS.Core.Models.ApplicationTheme;
 
 namespace MonitoringXS.App;
 
@@ -20,41 +22,34 @@ public sealed partial class MainWindow : Window, IDisposable
         new("ms-appx:///Assets/Branding/MonitoringXS.Logo.Dark.24.png");
     private readonly CancellationTokenSource _shutdown = new();
     private readonly Dictionary<string, TabViewItem> _applicationTabs = new(StringComparer.Ordinal);
-    private readonly IAppearancePreferenceStore _appearancePreferenceStore;
+    private readonly LiveRefreshCadence _cadence;
+    private readonly SettingsPageViewModel _settingsViewModel;
     private bool _disposed;
-    private bool _appearanceSelectionReady;
     private bool? _toolbarUsesSingleRow;
 
     public MainWindow(
         MainWindowViewModel viewModel,
-        IAppearancePreferenceStore appearancePreferenceStore,
-        AppearanceMode appearance,
-        HistoryPageViewModel historyViewModel)
+        ApplicationSettings settings,
+        HistoryPageViewModel historyViewModel,
+        SettingsPageViewModel settingsViewModel,
+        LiveRefreshCadence cadence)
     {
         ViewModel = viewModel;
-        _appearancePreferenceStore = appearancePreferenceStore;
-        SelectedAppearanceOption = AppearanceOptions.Single(option => option.Mode == appearance);
+        _cadence = cadence;
+        _settingsViewModel = settingsViewModel;
         InitializeComponent();
         HistoryWorkspace.Initialize(historyViewModel, _shutdown.Token);
+        SettingsWorkspace.Initialize(settingsViewModel, _shutdown.Token);
+        settingsViewModel.ThemeRequested += ApplyAppearance;
         ConfigureTitleBar();
         Root.ActualThemeChanged += Root_ActualThemeChanged;
-        ApplyAppearance(appearance);
-        _appearanceSelectionReady = true;
+        ApplyAppearance(settings.Theme);
         AppWindow.Resize(new SizeInt32(1180, 760));
         Root.Loaded += Root_Loaded;
         Closed += MainWindow_Closed;
     }
 
     public MainWindowViewModel ViewModel { get; }
-
-    public IReadOnlyList<AppearanceOption> AppearanceOptions { get; } =
-    [
-        new(AppearanceMode.System, "System — follows Windows"),
-        new(AppearanceMode.Light, "Light"),
-        new(AppearanceMode.Dark, "Dark")
-    ];
-
-    public AppearanceOption SelectedAppearanceOption { get; }
 
     internal void EnableResponsiveToolbar()
     {
@@ -81,8 +76,6 @@ public sealed partial class MainWindow : Window, IDisposable
         }
 
         _toolbarUsesSingleRow = useSingleRow;
-        Grid.SetRow(ToolbarAppearanceGroup, useSingleRow ? 0 : 1);
-        Grid.SetColumn(ToolbarAppearanceGroup, useSingleRow ? 2 : 0);
         Grid.SetRow(ToolbarAdvancedGroup, useSingleRow ? 0 : 1);
     }
 
@@ -112,20 +105,7 @@ public sealed partial class MainWindow : Window, IDisposable
         }
     }
 
-    private async void AppearanceSelector_SelectionChanged(
-        object sender,
-        SelectionChangedEventArgs args)
-    {
-        if (!_appearanceSelectionReady || AppearanceSelector.SelectedItem is not AppearanceOption option)
-        {
-            return;
-        }
-
-        ApplyAppearance(option.Mode);
-        await _appearancePreferenceStore.SaveAsync(option.Mode, CancellationToken.None);
-    }
-
-    private void ApplyAppearance(AppearanceMode appearance)
+    private void ApplyAppearance(SettingsTheme appearance)
     {
         AppearanceThemeChoice theme = AppearanceThemeResolver.Resolve(
             appearance,
@@ -138,14 +118,12 @@ public sealed partial class MainWindow : Window, IDisposable
         };
         UpdateCaptionButtonColors();
         UpdateTitleBarLogo();
-        UpdateResolvedAppearanceState();
     }
 
     private void Root_ActualThemeChanged(FrameworkElement sender, object args)
     {
         UpdateCaptionButtonColors();
         UpdateTitleBarLogo();
-        UpdateResolvedAppearanceState();
     }
 
     private void UpdateTitleBarLogo()
@@ -165,20 +143,6 @@ public sealed partial class MainWindow : Window, IDisposable
         }
 
         AppTitleBar.IconSource = iconSource;
-    }
-
-    private void UpdateResolvedAppearanceState()
-    {
-        string resolvedState = AppearancePresentation.ResolvedStateLabel(
-            Root.ActualTheme == ElementTheme.Dark);
-        ResolvedAppearanceText.Text = resolvedState;
-
-        if (AppearanceSelector.SelectedItem is AppearanceOption option)
-        {
-            AutomationProperties.SetName(
-                AppearanceSelector,
-                $"Application appearance. {option.Label}. {resolvedState}.");
-        }
     }
 
     private void UpdateCaptionButtonColors()
@@ -242,7 +206,7 @@ public sealed partial class MainWindow : Window, IDisposable
     private async Task RunMonitoringLoopAsync(CancellationToken cancellationToken)
         => await LiveRefreshLoop.RunAsync(
             ViewModel.RefreshAsync,
-            TimeSpan.FromSeconds(1),
+            _cadence,
             ViewModel.ReportRefreshFailure,
             cancellationToken);
 
@@ -335,12 +299,20 @@ public sealed partial class MainWindow : Window, IDisposable
         NavigationView sender,
         NavigationViewSelectionChangedEventArgs args)
     {
-        bool historySelected = args.SelectedItemContainer?.Tag?.ToString() == "history";
-        WorkspaceTabs.Visibility = historySelected ? Visibility.Collapsed : Visibility.Visible;
+        string? selected = args.SelectedItemContainer?.Tag?.ToString();
+        bool historySelected = selected == "history";
+        bool settingsSelected = selected == "settings";
+        WorkspaceTabs.Visibility =
+            historySelected || settingsSelected ? Visibility.Collapsed : Visibility.Visible;
         HistoryWorkspace.Visibility = historySelected ? Visibility.Visible : Visibility.Collapsed;
+        SettingsWorkspace.Visibility = settingsSelected ? Visibility.Visible : Visibility.Collapsed;
         if (historySelected)
         {
             await HistoryWorkspace.ActivateAsync();
+        }
+        else if (settingsSelected)
+        {
+            await SettingsWorkspace.ActivateAsync();
         }
     }
 
@@ -362,6 +334,7 @@ public sealed partial class MainWindow : Window, IDisposable
         _disposed = true;
         AppWindow.Changed -= AppWindow_Changed;
         Root.ActualThemeChanged -= Root_ActualThemeChanged;
+        _settingsViewModel.ThemeRequested -= ApplyAppearance;
         _shutdown.Cancel();
     }
 }

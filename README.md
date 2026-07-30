@@ -92,7 +92,7 @@ Physical disk and network monitoring may need Administrator access on some Windo
 The current repository has:
 
 - a successful Release build
-- 305 passing tests
+- 358 passing tests
 - no failed or skipped tests
 - validated ETW physical-disk monitoring on the development machine
 - accepted elevated ETW network attribution with controlled Microsoft Edge traffic on the development machine, including retained-helper totals and shared-session cleanup
@@ -132,6 +132,7 @@ Packaging profiles will be added before the release milestone. Some monitoring d
 - [Engineering style](docs/ENGINEERING_STYLE.md)
 - [Logical applications and honest metrics decision](docs/adr/0001-logical-applications-and-honest-metrics.md)
 - [Shared kernel metrics session decision](docs/adr/0002-shared-kernel-metrics-session.md)
+- [Per-user settings decision](docs/adr/0006-versioned-per-user-settings.md)
 - [Application attribution](docs/APPLICATION_ATTRIBUTION.md)
 - [Metric semantics](docs/METRICS.md)
 - [Precision Glass design system](docs/DESIGN_SYSTEM.md)

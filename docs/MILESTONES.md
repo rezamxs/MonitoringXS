@@ -80,6 +80,7 @@ Status: in progress.
 - [x] Refine application-card identity, primary metric, supporting metric, and unavailable-state hierarchy.
 - [x] Add runtime System, Light, and Dark appearance modes with a persisted lightweight preference.
 - [x] Repair the one-minute CPU chart so ordered timestamps, duplicate samples, unavailable gaps, invalid numbers, and real zero values render honestly.
+- [x] Complete runtime accessibility stabilization for the Settings page (predefined cadence/retention, immediate theme, typed persistence, and read-only Broker health).
 - [ ] Complete Dashboard and Portable Apps pages, remaining final UI pages, and final chart work.
 - [ ] Complete dark-theme, High Contrast, 150-200% scaling, Windows 11 Snap Layout, and broader screen-reader validation.
 

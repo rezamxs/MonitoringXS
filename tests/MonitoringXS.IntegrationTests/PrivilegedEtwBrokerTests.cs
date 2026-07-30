@@ -14,6 +14,21 @@ namespace MonitoringXS.IntegrationTests;
 public sealed class PrivilegedEtwBrokerTests
 {
     [Fact]
+    public void ServiceStatusProbeUsesCompleteNativeSignature()
+    {
+        var method = typeof(BrokerServiceProbe).GetMethod(
+            "QueryServiceStatusEx",
+            System.Reflection.BindingFlags.NonPublic
+            | System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(method);
+        System.Reflection.ParameterInfo[] parameters = method.GetParameters();
+        Assert.Equal(5, parameters.Length);
+        Assert.True(parameters[4].IsOut);
+        Assert.Equal(typeof(int).MakeByRefType(), parameters[4].ParameterType);
+    }
+
+    [Fact]
     public void ProductionServiceAccountIsLocalSystem()
     {
         Assert.Equal("LocalSystem", Program.RequiredServiceAccount);

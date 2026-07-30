@@ -511,7 +511,13 @@
                     Tag="history"
                     ToolTipService.ToolTip="History"
                     UseSystemFocusVisuals="True" />
-                <NavigationViewItem Content="Settings" Icon="Setting" IsEnabled="False" Tag="settings" ToolTipService.ToolTip="Settings" />
+                <NavigationViewItem
+                    x:Name="SettingsNavigationItem"
+                    Content="Settings"
+                    Icon="Setting"
+                    Tag="settings"
+                    ToolTipService.ToolTip="Settings"
+                    UseSystemFocusVisuals="True" />
                 <NavigationViewItem Content="About" Icon="Help" IsEnabled="False" Tag="about" ToolTipService.ToolTip="About" />
             </NavigationView.MenuItems>
             <Grid>
@@ -618,42 +624,6 @@
                                         ToolTipService.ToolTip="All values are unavailable. Applications are ordered by name."
                                         Visibility="{Binding HasNoComparableData, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-                                    <Grid
-                                        x:Name="ToolbarAppearanceGroup"
-                                        Grid.Row="1"
-                                        Grid.Column="0"
-                                        ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock
-                                            VerticalAlignment="Center"
-                                            FontFamily="Segoe UI Variable"
-                                            FontWeight="SemiBold"
-                                            Foreground="{StaticResource SecondaryTextBrush}"
-                                            Text="Appearance" />
-                                        <ComboBox
-                                            x:Name="AppearanceSelector"
-                                            Grid.Column="1"
-                                            Width="196"
-                                            Height="36"
-                                            AutomationProperties.Name="Application appearance"
-                                            CornerRadius="6"
-                                            DisplayMemberPath="Label"
-                                            ItemsSource="{x:Bind AppearanceOptions, Mode=OneTime}"
-                                            SelectedItem="{x:Bind SelectedAppearanceOption, Mode=OneTime}"
-                                            SelectionChanged="AppearanceSelector_SelectionChanged"
-                                            ToolTipService.ToolTip="System follows Windows. Light and Dark stay fixed." />
-                                        <TextBlock
-                                            x:Name="ResolvedAppearanceText"
-                                            Grid.Column="2"
-                                            VerticalAlignment="Center"
-                                            AutomationProperties.LiveSetting="Polite"
-                                            FontFamily="Segoe UI Variable"
-                                            Foreground="{StaticResource SecondaryTextBrush}" />
-                                    </Grid>
                                     <StackPanel
                                         x:Name="ToolbarAdvancedGroup"
                                         Grid.Row="1"
@@ -716,6 +686,9 @@
             </TabView>
             <local:HistoryPage
                 x:Name="HistoryWorkspace"
+                Visibility="Collapsed" />
+            <local:SettingsPage
+                x:Name="SettingsWorkspace"
                 Visibility="Collapsed" />
             </Grid>
             </NavigationView>

@@ -6,7 +6,9 @@ using System.Globalization;
 
 namespace MonitoringXS.Storage.History;
 
-public sealed class SqliteMetricHistoryStore : IMetricHistoryStore
+public sealed class SqliteMetricHistoryStore :
+    IMetricHistoryStore,
+    IMetricHistoryRetentionController
 {
     public const int SchemaVersion = 2;
     private const int RawSampleKind = 0;
@@ -30,6 +32,7 @@ public sealed class SqliteMetricHistoryStore : IMetricHistoryStore
     private long _databaseBytes;
     private long _cleanupRuns;
     private long _lastCleanupMicroseconds;
+    private long _retentionTicks;
     private string? _lastError;
     private DateTimeOffset _lastCleanupUtc;
 
@@ -38,6 +41,7 @@ public sealed class SqliteMetricHistoryStore : IMetricHistoryStore
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
         _options = options;
+        _retentionTicks = options.Retention.Ticks;
         _lastCleanupUtc = DateTimeOffset.UtcNow;
         _worker = Task.Run(WorkerAsync);
     }
@@ -120,6 +124,28 @@ public sealed class SqliteMetricHistoryStore : IMetricHistoryStore
         }
 
         await drain.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public ValueTask<MetricHistoryRetentionResult> UpdateRetentionAsync(
+        TimeSpan retention,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (retention <= _options.RawSampleRetention)
+        {
+            return ValueTask.FromResult(
+                new MetricHistoryRetentionResult(
+                    false,
+                    "History retention must exceed raw-sample retention."));
+        }
+
+        lock (_queueGate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            Interlocked.Exchange(ref _retentionTicks, retention.Ticks);
+        }
+
+        return ValueTask.FromResult(MetricHistoryRetentionResult.Success);
     }
 
     public async ValueTask<MetricHistoryQueryResult> QueryAsync(
@@ -465,7 +491,8 @@ public sealed class SqliteMetricHistoryStore : IMetricHistoryStore
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         string rawCutoff = ToDatabaseTimestamp(now - _options.RawSampleRetention);
-        string retentionCutoff = ToDatabaseTimestamp(now - _options.Retention);
+        TimeSpan retention = TimeSpan.FromTicks(Interlocked.Read(ref _retentionTicks));
+        string retentionCutoff = ToDatabaseTimestamp(now - retention);
         int bucketSeconds = checked((int)_options.DownsampleBucket.TotalSeconds);
         await using SqliteTransaction transaction = (SqliteTransaction)await connection
             .BeginTransactionAsync(cancellationToken)

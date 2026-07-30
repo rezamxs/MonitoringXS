@@ -82,6 +82,18 @@ not add packet data, URLs, hosts, addresses, ports, command lines, or secrets.
 Unavailable and partial rows remain gaps, so the page cannot turn missing
 storage or broker data into a fabricated zero.
 
+## Per-user settings
+
+Settings stay under `%LOCALAPPDATA%\MonitoringXS\settings.json` as a small
+version-1 JSON document. It contains only the live interval, history-retention
+hours, and System/Light/Dark theme. It stores no credentials, tokens, SIDs,
+Broker ACLs, executable paths, command lines, or network data. Values are
+allowlisted, writes use a temporary file plus atomic replacement, and corrupt
+or invalid files are quarantined before safe defaults are used. A newer
+document version fails closed without overwriting it. Normal UI receives only
+allowlisted Broker states and never installs, removes, restarts, or elevates
+the service. See [ADR 0006](adr/0006-versioned-per-user-settings.md).
+
 ## Elevated helper design
 
 The helper will accept a versioned request containing only an operation enum and validated identifiers. It will reject unknown fields/operations, verify the caller and target, perform one allow-listed operation, return one structured response, and terminate. General process launch, arbitrary paths, and shell strings are forbidden.

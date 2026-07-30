@@ -1,0 +1,197 @@
+<UserControl
+    x:Class="MonitoringXS.App.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    AutomationProperties.Name="Application settings page"
+    IsTabStop="False">
+    <Grid
+        Padding="24,16,24,24"
+        Background="{StaticResource PageBrush}">
+        <ScrollViewer
+            AutomationProperties.Name="Settings sections"
+            HorizontalScrollBarVisibility="Disabled"
+            VerticalScrollBarVisibility="Auto">
+            <StackPanel
+                MaxWidth="900"
+                HorizontalAlignment="Stretch"
+                Spacing="14">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="4">
+                        <TextBlock
+                            FontSize="28"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Text="Settings" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="Per-user monitoring preferences"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ProgressRing
+                        Grid.Column="1"
+                        Width="28"
+                        Height="28"
+                        VerticalAlignment="Center"
+                        AutomationProperties.Name="Saving settings"
+                        IsActive="{Binding IsSaving, Mode=OneWay}" />
+                </Grid>
+
+                <TextBlock
+                    AutomationProperties.LiveSetting="Polite"
+                    Foreground="{StaticResource PrimaryTextBrush}"
+                    Text="{Binding StatusText, Mode=OneWay}"
+                    TextWrapping="Wrap" />
+
+                <Border
+                    Padding="16"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource SubtleBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12">
+                    <StackPanel Spacing="10">
+                        <TextBlock
+                            Style="{StaticResource SectionTitleStyle}"
+                            Text="Monitoring" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="Choose a safe live sampling interval. Changes apply without restarting and captures never overlap."
+                            TextWrapping="Wrap" />
+                        <ComboBox
+                            x:Name="SamplingSelector"
+                            MaxWidth="320"
+                            HorizontalAlignment="Stretch"
+                            AutomationProperties.HelpText="Choose 1, 2, or 5 seconds."
+                            AutomationProperties.Name="Live sampling interval"
+                            DisplayMemberPath="Label"
+                            ItemsSource="{Binding SamplingOptions}"
+                            SelectedItem="{Binding SelectedSampling, Mode=TwoWay}"
+                            UseSystemFocusVisuals="True" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="{Binding SelectedSampling.Description, Mode=OneWay}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Padding="16"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource SubtleBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12">
+                    <StackPanel Spacing="10">
+                        <TextBlock
+                            Style="{StaticResource SectionTitleStyle}"
+                            Text="History" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="Retention changes apply during future asynchronous maintenance. Reducing retention may remove older history."
+                            TextWrapping="Wrap" />
+                        <ComboBox
+                            x:Name="RetentionSelector"
+                            MaxWidth="320"
+                            HorizontalAlignment="Stretch"
+                            AutomationProperties.HelpText="Choose 6 hours, 24 hours, 3 days, or 7 days."
+                            AutomationProperties.Name="History retention"
+                            DisplayMemberPath="Label"
+                            ItemsSource="{Binding RetentionOptions}"
+                            SelectedItem="{Binding SelectedRetention, Mode=TwoWay}"
+                            UseSystemFocusVisuals="True" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="{Binding SelectedRetention.Description, Mode=OneWay}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Padding="16"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource SubtleBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12">
+                    <StackPanel Spacing="10">
+                        <TextBlock
+                            Style="{StaticResource SectionTitleStyle}"
+                            Text="Appearance" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="Theme changes apply immediately. System follows Windows and High Contrast."
+                            TextWrapping="Wrap" />
+                        <ComboBox
+                            x:Name="ThemeSelector"
+                            MaxWidth="320"
+                            HorizontalAlignment="Stretch"
+                            AutomationProperties.Name="Application theme"
+                            DisplayMemberPath="Label"
+                            ItemsSource="{Binding ThemeOptions}"
+                            SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
+                            UseSystemFocusVisuals="True" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="{Binding SelectedTheme.Description, Mode=OneWay}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    Padding="16"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource SubtleBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12">
+                    <StackPanel Spacing="10">
+                        <TextBlock
+                            Style="{StaticResource SectionTitleStyle}"
+                            Text="Privileged metrics" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="Network and Physical Disk require the Privileged Broker. Settings never install, remove, restart, or elevate it."
+                            TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button
+                                AutomationProperties.Name="Refresh Privileged Broker status"
+                                Command="{Binding RefreshBrokerStatusCommand}"
+                                Content="Refresh status"
+                                UseSystemFocusVisuals="True" />
+                            <ProgressRing
+                                Width="22"
+                                Height="22"
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="Checking Privileged Broker status"
+                                IsActive="{Binding IsBrokerRefreshing, Mode=OneWay}" />
+                        </StackPanel>
+                        <TextBlock
+                            AutomationProperties.LiveSetting="Polite"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Text="{Binding BrokerStateText, Mode=OneWay}" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="{Binding BrokerDetailText, Mode=OneWay}"
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="Operator command: scripts/privileged-broker/Manage-PrivilegedBroker.ps1"
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="Install and Remove require an elevated PowerShell. Normal app launch remains unelevated."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock
+                    Margin="0,2,0,8"
+                    AutomationProperties.LiveSetting="Polite"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="{Binding AccessibilitySummary, Mode=OneWay}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

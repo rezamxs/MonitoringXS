@@ -5,6 +5,7 @@ Release targets are idle CPU below 1% on a typical modern system, normal working
 Implementation rules:
 
 - one-second sampling with cancellation and drift-aware timing;
+- runtime-selectable 1/2/5-second cadence wakes one single-execution loop; rapid changes are coalesced and never create parallel capture loops;
 - metadata/signature/icon/package caches with bounded eviction;
 - no per-refresh signature verification or full metadata reload;
 - bounded in-memory history and bounded storage queues;
@@ -13,6 +14,7 @@ Implementation rules:
 - no permanent elevation or decorative GPU animation;
 - collector timing, dropped samples, queue depth, DB latency, and cache hit rate exposed in internal diagnostics.
 - SQLite history uses a 256-batch bounded queue, 32-snapshot transactions, WAL when supported, one-hour raw retention, five-minute downsampling, and a 64 MiB logical size policy. Queue drops and write failures are diagnostic counters; live collection does not wait on SQLite.
+- settings writes are asynchronous, serialized, and limited to selector changes; retention changes only update the policy consumed by future asynchronous maintenance.
 - History range queries run off the UI thread, rapid selection changes cancel and supersede older requests, and each of the 11 chart series is decimated to at most 360 displayed points while retaining endpoints, global extrema, PID/time gaps, and availability gaps where capacity permits. Projection also collapses effectively identical X coordinates before WinUI geometry creation.
 - physical-disk ETW callbacks use a non-blocking bounded queue of 16,384 events; overflow is counted and reported as partial data;
 - thread-to-PID state is capped at 32,768 entries and removed on thread end or cleared after ETW loss;

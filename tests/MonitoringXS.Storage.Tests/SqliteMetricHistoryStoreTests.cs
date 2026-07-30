@@ -241,6 +241,52 @@ public sealed class SqliteMetricHistoryStoreTests
     }
 
     [Fact]
+    public async Task RetentionChangeAppliesToFutureMaintenanceWithoutMigration()
+    {
+        using TestDatabase database = new();
+        DateTimeOffset expiredUnderNewSetting = DateTimeOffset.UtcNow.AddHours(-7);
+        await using SqliteMetricHistoryStore store = new(new(database.Path)
+        {
+            Retention = TimeSpan.FromHours(24),
+            RawSampleRetention = TimeSpan.FromMilliseconds(1),
+            DownsampleBucket = TimeSpan.FromMinutes(5),
+            CleanupInterval = TimeSpan.FromMilliseconds(1)
+        });
+        await Task.Delay(10, TestCancellation);
+
+        MetricHistoryRetentionResult updated = await store.UpdateRetentionAsync(
+            TimeSpan.FromHours(6),
+            TestCancellation);
+        await store.EnqueueAsync(
+            [Snapshot(expiredUnderNewSetting, 10)],
+            TestCancellation);
+        await store.FlushAsync(TestCancellation);
+        MetricHistoryQueryResult result = await store.QueryAsync(
+            "app.example",
+            MetricHistoryMetric.CpuPercent,
+            expiredUnderNewSetting.AddMinutes(-1),
+            DateTimeOffset.UtcNow,
+            TestCancellation);
+
+        Assert.True(updated.Succeeded);
+        Assert.Empty(result.Points);
+    }
+
+    [Fact]
+    public async Task InvalidRetentionIsRejectedWithoutChangingMaintenancePolicy()
+    {
+        using TestDatabase database = new();
+        await using SqliteMetricHistoryStore store = database.Store();
+
+        MetricHistoryRetentionResult result = await store.UpdateRetentionAsync(
+            TimeSpan.FromMinutes(30),
+            TestCancellation);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("raw-sample", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task SplitsCapturesIntoBoundedTransactionalBatches()
     {
         using TestDatabase database = new();

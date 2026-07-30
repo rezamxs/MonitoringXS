@@ -34,7 +34,7 @@ public sealed class LiveRefreshLoopTests
                     Interlocked.Decrement(ref active);
                 }
             },
-            TimeSpan.FromMilliseconds(1),
+            new LiveRefreshCadence(TimeSpan.FromMilliseconds(1)),
             faults.Add,
             shutdown.Token);
 
@@ -66,7 +66,7 @@ public sealed class LiveRefreshLoopTests
                 }
                 return Task.CompletedTask;
             },
-            TimeSpan.FromMilliseconds(1),
+            new LiveRefreshCadence(TimeSpan.FromMilliseconds(1)),
             _ => throw new Xunit.Sdk.XunitException("No live-loop fault expected."),
             shutdown.Token);
 
@@ -93,7 +93,7 @@ public sealed class LiveRefreshLoopTests
                 }
                 return Task.CompletedTask;
             },
-            TimeSpan.FromMilliseconds(1),
+            new LiveRefreshCadence(TimeSpan.FromMilliseconds(1)),
             _ => throw new Xunit.Sdk.XunitException("No live-loop fault expected."),
             shutdown.Token);
 
@@ -117,10 +117,56 @@ public sealed class LiveRefreshLoopTests
                     calls++;
                     return Task.CompletedTask;
                 },
-                TimeSpan.FromMilliseconds(1),
+                new LiveRefreshCadence(TimeSpan.FromMilliseconds(1)),
                 _ => { },
                 shutdown.Token));
 
         Assert.Equal(0, calls);
+    }
+
+    [Fact]
+    public async Task CadenceChangesWakeCurrentWaitAndRemainSingleExecution()
+    {
+        using CancellationTokenSource shutdown = new();
+        LiveRefreshCadence cadence = new(TimeSpan.FromMinutes(1));
+        int calls = 0;
+        int active = 0;
+        int maximumActive = 0;
+        TaskCompletionSource firstCapture = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        Task run = LiveRefreshLoop.RunAsync(
+            async cancellationToken =>
+            {
+                int current = Interlocked.Increment(ref active);
+                maximumActive = Math.Max(maximumActive, current);
+                try
+                {
+                    int call = Interlocked.Increment(ref calls);
+                    if (call == 1)
+                    {
+                        firstCapture.SetResult();
+                    }
+                    await Task.Delay(5, cancellationToken);
+                    if (call == 3)
+                    {
+                        shutdown.Cancel();
+                    }
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref active);
+                }
+            },
+            cadence,
+            _ => throw new Xunit.Sdk.XunitException("No live-loop fault expected."),
+            shutdown.Token);
+
+        await firstCapture.Task.WaitAsync(TestContext.Current.CancellationToken);
+        cadence.Update(TimeSpan.FromMilliseconds(1));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
+
+        Assert.Equal(3, calls);
+        Assert.Equal(1, maximumActive);
+        Assert.Equal(TimeSpan.FromMilliseconds(1), cadence.Interval);
     }
 }

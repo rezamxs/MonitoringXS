@@ -1246,3 +1246,87 @@ Storage 18, Integration 110, and App 106. Release and Debug builds completed
 with zero warnings/errors; `git diff --check` passed. Final cleanup found no
 Broker service/install directory, Monitoring XS process, workload file, or
 Monitoring XS ETW session.
+
+### 2026-07-29 Settings page implementation and blocked runtime validation
+
+Prerequisites passed on `feature/settings-page`: the required
+`572d4e6435670b6c1bb930e4930243de94745a0d` commit was an ancestor, the tracked
+worktree was clean, and the baseline suite passed 335/335.
+
+The implementation adds one version-1 typed JSON store at
+`%LOCALAPPDATA%\MonitoringXS\settings.json`, serialized async writes with
+temporary-file replacement, validation/quarantine/default handling, and one
+serialized ViewModel save path. The only values are 1/2/5-second cadence,
+6/24/72/168-hour retention, and System/Light/Dark. Retention changes update
+future SQLite maintenance without a migration or UI-thread deletion. Settings
+queries the existing Broker service/protocol path and performs no install,
+remove, restart, elevation, or security change.
+
+Deterministic tests cover defaults, round trips, current/future versions,
+unknown fields, corrupt/invalid values, atomic replacement, cancellation,
+concurrent writes, unavailable storage, rapid/stale saves, all mappings,
+single-execution cadence changes, retention maintenance, theme application,
+safe Broker states, keyboard/focus markup, scrolling, and 100/150/200% layout
+equivalents. The focused current binaries passed Storage 31/31 and App 111/111.
+
+Runtime evidence is mixed and therefore not approved. An unelevated Release
+launch (`Verb=none`, session 1) opened at 1180 x 760 and remained responsive
+for 60 seconds without Automation: working set 190,701,568 bytes, normal close,
+exit code 0. Partial Automation runs observed 150,757,376-153,108,480-byte
+working sets, keyboard focus on all four controls, scroll reachability, writes
+in 295.6-341.0 ms, and live timestamps at 1-second and 2-3-second cadence.
+One run recorded 20+ changing metric-card strings.
+
+The original XAML hookup exposed a confirmed layout-reentrancy defect: initial
+ComboBox binding invoked `SamplingSelector_SelectionChanged` from
+`MeasureOverride`, entered `SettingsPageViewModel.ChangeAsync`, and terminated
+with `AccessViolationException`. The selector handlers now attach only after
+`Loaded`, and a regression contract prevents XAML-time handler hookup.
+However, repeated end-to-end UI Automation still terminated fresh Release
+processes with CoreCLR `0x80131506` / native `0xc0000005`; the final run did so
+before selector changes. A separate isolated Settings navigation plus 24 real
+Tab presses remained responsive for 30 seconds and closed normally, so the
+remaining trigger is Automation-specific but unresolved. Full persistence
+restart, all three Broker runtime states, and final theme switching cannot be
+claimed.
+
+Every failed harness run restored the initial state: zero
+`MonitoringXS.App` processes, no settings file (the initial state), and the
+pre-existing Broker service installed, Automatic, and Running. Ignored evidence
+is under `.artifacts/validation/settings-page`.
+
+Final restore passed after the sandbox-only TLS/authentication failure was
+retried with network access. Release and Debug builds passed with zero warnings
+and errors. The full current x64 suite passed 353/353: Core 5, Application 10,
+Collectors 86, Storage 31, Integration 110, and App 111. `git diff --check`
+passed.
+
+### 2026-07-30 Settings interaction and persistence acceptance
+
+Direct Release interaction found the product defect in the page event gate:
+popup and pointer selection could leave the owning `ComboBox` unfocused, so
+the three handlers rejected valid user changes after the TwoWay binding had
+updated only the visible selection. Removing that focus predicate retained
+safe initialization suppression because handlers still attach only after the
+first `Loaded`.
+
+Mouse and keyboard input passed for every selector and Broker Refresh. Runtime
+cadence changed to 2 and 5 seconds without overlapping capture. Retention
+reached the authoritative SQLite maintenance controller without synchronous
+deletion or schema migration. Dark and System applied immediately. Broker
+Refresh used the existing non-overlapping service/protocol probe and performed
+no service or security mutation.
+
+The version-1 file at `%LOCALAPPDATA%\MonitoringXS\settings.json` was created
+and atomically replaced with no temporary file left behind. Restart cycle one
+restored 2 seconds, 72 hours, and Dark. Cycle two restored 5 seconds, 24 hours,
+and System. A 300.58-second Release run produced 60 rendered timestamp changes,
+kept History usable, closed normally, and left zero app processes. No
+validation-period Application Error, WER, CoreCLR fatal error, or
+`0xc0000005` occurred.
+
+`dotnet build MonitoringXS.sln -c Release`, `dotnet test MonitoringXS.sln -c
+Release --no-build`, and `dotnet build MonitoringXS.sln -c Debug` passed.
+Release and Debug builds had zero warnings/errors. Tests passed 358/358: Core
+5, Collectors 86, Application 10, App 115, Storage 31, and Integration 111.
+`git diff --check` passed.

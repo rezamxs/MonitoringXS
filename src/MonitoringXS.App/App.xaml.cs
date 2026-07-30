@@ -1,11 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
-using MonitoringXS.App.Appearance;
 using MonitoringXS.App.ViewModels;
 using MonitoringXS.Application;
 using MonitoringXS.Collectors;
 using MonitoringXS.Core.Abstractions;
+using MonitoringXS.Core.Models;
 using MonitoringXS.Platform.Windows.Broker;
 using MonitoringXS.Platform.Windows.Attribution;
 using MonitoringXS.Platform.Windows.Catalogs;
@@ -17,6 +17,7 @@ using MonitoringXS.Platform.Windows.Processes;
 using MonitoringXS.Platform.Windows.Security;
 using MonitoringXS.Storage.Attribution;
 using MonitoringXS.Storage.History;
+using MonitoringXS.Storage.Settings;
 
 namespace MonitoringXS.App;
 
@@ -33,15 +34,35 @@ public partial class App : Microsoft.UI.Xaml.Application
 
     public IServiceProvider Services => _services;
 
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
-        IAppearancePreferenceStore appearanceStore = _services.GetRequiredService<IAppearancePreferenceStore>();
-        AppearanceMode appearance = appearanceStore.Load();
+        IApplicationSettingsStore settingsStore =
+            _services.GetRequiredService<IApplicationSettingsStore>();
+        ApplicationSettingsLoadResult load;
+        try
+        {
+            load = await settingsStore.LoadAsync(CancellationToken.None);
+        }
+        catch
+        {
+            load = new(
+                ApplicationSettings.Default,
+                false,
+                false,
+                "Settings storage is unavailable.");
+        }
+
+        LiveRefreshCadence cadence = _services.GetRequiredService<LiveRefreshCadence>();
+        cadence.Update(load.Settings.LiveSamplingInterval);
+        SettingsPageViewModel settingsViewModel =
+            _services.GetRequiredService<SettingsPageViewModel>();
+        settingsViewModel.Initialize(load);
         MainWindow mainWindow = new(
             _services.GetRequiredService<MainWindowViewModel>(),
-            appearanceStore,
-            appearance,
-            _services.GetRequiredService<HistoryPageViewModel>());
+            load.Settings,
+            _services.GetRequiredService<HistoryPageViewModel>(),
+            settingsViewModel,
+            cadence);
         _window = mainWindow;
         _window.Closed += Window_Closed;
         _window.Activate();
@@ -73,18 +94,22 @@ public partial class App : Microsoft.UI.Xaml.Application
             string path = Path.Combine(localData, "MonitoringXS", "attribution-overrides.json");
             return new JsonUserAttributionOverrideStore(path);
         });
-        services.AddSingleton<IAppearancePreferenceStore>(_ =>
+        services.AddSingleton<IApplicationSettingsStore>(_ =>
         {
             string localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string path = Path.Combine(localData, "MonitoringXS", "appearance.txt");
-            return new FileAppearancePreferenceStore(path);
+            string path = Path.Combine(localData, "MonitoringXS", "settings.json");
+            return new JsonApplicationSettingsStore(path);
         });
-        services.AddSingleton<IMetricHistoryStore>(_ =>
+        services.AddSingleton<SqliteMetricHistoryStore>(_ =>
         {
             string localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             return new SqliteMetricHistoryStore(new SqliteMetricHistoryOptions(
                 Path.Combine(localData, "MonitoringXS", "history.db")));
         });
+        services.AddSingleton<IMetricHistoryStore>(provider =>
+            provider.GetRequiredService<SqliteMetricHistoryStore>());
+        services.AddSingleton<IMetricHistoryRetentionController>(provider =>
+            provider.GetRequiredService<SqliteMetricHistoryStore>());
         services.AddSingleton<IProcessDiscoveryService, WindowsProcessDiscoveryService>();
         services.AddSingleton<IApplicationAttributionService, ApplicationAttributionService>();
         services.AddSingleton<IProcessResourceCounterReader, WindowsProcessResourceCounterReader>();
@@ -103,8 +128,11 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<IGpuMetricCollector, GpuMetricCollector>();
         services.AddSingleton<IGpuMetricAggregationService, GpuMetricAggregationService>();
         services.AddSingleton<MonitoringCoordinator>();
+        services.AddSingleton(_ => new LiveRefreshCadence(
+            ApplicationSettings.Default.LiveSamplingInterval));
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<HistoryPageViewModel>();
+        services.AddSingleton<SettingsPageViewModel>();
         return services.BuildServiceProvider(validateScopes: true);
     }
 
