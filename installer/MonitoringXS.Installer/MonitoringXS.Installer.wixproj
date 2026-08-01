@@ -1,0 +1,30 @@
+<Project Sdk="WixToolset.Sdk/7.0.0">
+  <Import Project="..\InstallerVersion.props" Condition="'$(InstallerProductVersion)' == '' Or '$(InstallerProductCode)' == ''" />
+  <PropertyGroup>
+    <AcceptEula>wix7</AcceptEula>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <Platform>x64</Platform>
+    <InstallerEvidenceRoot Condition="'$(InstallerEvidenceRoot)' == ''">$(MSBuildThisFileDirectory)..\..\.artifacts\validation\installer-packaging</InstallerEvidenceRoot>
+    <AppPublishDir Condition="'$(AppPublishDir)' == ''">$(InstallerEvidenceRoot)\publish\app</AppPublishDir>
+    <BrokerPublishDir Condition="'$(BrokerPublishDir)' == ''">$(InstallerEvidenceRoot)\publish\broker</BrokerPublishDir>
+    <CustomActionPath>$(MSBuildThisFileDirectory)..\MonitoringXS.Installer.CustomActions\bin\$(Configuration)\net472\MonitoringXS.Installer.CustomActions.CA.dll</CustomActionPath>
+    <OutputName>MonitoringXS-$(InstallerProductVersion)-x64</OutputName>
+    <OutputPath>$(InstallerEvidenceRoot)\package\</OutputPath>
+    <!-- WinAppSDK's two multilingual XAML binaries exceed MSI's File.Language column. -->
+    <SuppressIces>ICE03</SuppressIces>
+    <DefineConstants>ProductVersion=$(InstallerProductVersion);ProductCode=$(InstallerProductCode);AppPublishDir=$(AppPublishDir);BrokerPublishDir=$(BrokerPublishDir);CustomActionPath=$(CustomActionPath)</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" />
+    <PackageReference Include="WixToolset.Util.wixext" />
+    <ProjectReference
+        Include="..\MonitoringXS.Installer.CustomActions\MonitoringXS.Installer.CustomActions.csproj"
+        AdditionalProperties="AcceptEula=wix7"
+        ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <Target Name="ValidateInstallerInputs" BeforeTargets="CoreCompile">
+    <Error Condition="!Exists('$(AppPublishDir)\MonitoringXS.App.exe')" Text="Published application executable is missing: $(AppPublishDir)\MonitoringXS.App.exe" />
+    <Error Condition="!Exists('$(BrokerPublishDir)\MonitoringXS.PrivilegedBroker.exe')" Text="Published Broker executable is missing: $(BrokerPublishDir)\MonitoringXS.PrivilegedBroker.exe" />
+    <Error Condition="!Exists('$(CustomActionPath)')" Text="Installer custom action is missing: $(CustomActionPath)" />
+  </Target>
+</Project>

@@ -40,4 +40,10 @@
     <ProjectReference Include="..\MonitoringXS.Platform.Windows\MonitoringXS.Platform.Windows.csproj" />
     <ProjectReference Include="..\MonitoringXS.Storage\MonitoringXS.Storage.csproj" />
   </ItemGroup>
+  <Target Name="CopyAppPriToSelfContainedPublish"
+          AfterTargets="Publish"
+          Condition="'$(SelfContained)' == 'true' and '$(WindowsAppSDKSelfContained)' == 'true' and Exists('$(TargetDir)$(AssemblyName).pri')">
+    <Copy SourceFiles="$(TargetDir)$(AssemblyName).pri"
+          DestinationFolder="$(PublishDir)" />
+  </Target>
 </Project>

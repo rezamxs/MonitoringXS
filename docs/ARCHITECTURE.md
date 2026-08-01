@@ -27,6 +27,16 @@ PrivilegedBroker -> Platform.Windows -> Core
 12. `JsonApplicationSettingsStore` owns the single version-1 per-user settings document under `%LOCALAPPDATA%\MonitoringXS\settings.json`. It validates only predefined sampling, retention, and theme values, accepts unknown fields for the current version, rejects newer versions, quarantines corrupt/invalid files, and writes through one serialized temporary-file replacement. `LiveRefreshCadence` wakes the existing single-execution loop when cadence changes. The SQLite store receives retention policy changes for later bounded maintenance; no schema migration or synchronous deletion is involved. See [ADR 0006](adr/0006-versioned-per-user-settings.md).
 13. `IProcessActionService` is the authoritative typed boundary for selected-process inspection, End Task, bounded End Process Tree, and Open File Location. `WindowsProcessActionService` revalidates PID, UTC start time, process name, and executable path where available immediately before action. Destructive work uses limited query/terminate/synchronize rights, checks Windows critical/protection state, refuses Monitoring XS, its Broker, PID 0/4, and unverifiable targets, and confirms exit before success. Tree snapshots are bounded to three passes and terminate verified leaves before the root. Clipboard formatting stays in the app layer and copies only allowlisted identity and aggregate metric fields.
 
+## Deployment
+
+The release deployment is one x64, per-machine WiX 7 MSI containing
+self-contained application and Broker payloads. Native MSI tables own files,
+shortcuts, upgrades, repair, rollback, uninstall, and Broker service lifecycle.
+One fixed-purpose custom-action assembly captures the interactive SID/session
+and applies the service SID type that MSI cannot express reliably; it has no
+command runner or extensibility surface. There is no bootstrapper, updater, or
+second installer system. See [Windows installer](INSTALLER.md).
+
 ## Failure model
 
 Process exit, access denied, missing counters, ETW session conflicts/loss, queue overflow, and protected processes are expected states. Platform operations return structured availability/results. A collector failure degrades only its metric. Cancellation stops ETW processing and is propagated during shutdown and refresh replacement.

@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package
+      Name="Monitoring XS"
+      Manufacturer="rezam_xs"
+      Version="$(var.ProductVersion)"
+      ProductCode="$(var.ProductCode)"
+      UpgradeCode="75C0FAA3-D030-4D64-9C7B-37FC72154ADD"
+      Language="1033"
+      Scope="perMachine"
+      InstallerVersion="500"
+      Compressed="yes">
+
+    <SummaryInformation Description="Monitoring XS Windows installer" Manufacturer="rezam_xs" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <MajorUpgrade
+        Schedule="afterInstallInitialize"
+        DowngradeErrorMessage="A newer version of Monitoring XS is already installed." />
+
+    <Property Id="ARPCONTACT" Value="rezam_xs" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/rezamxs/MonitoringXS" />
+    <Property Id="ARPPRODUCTICON" Value="MonitoringXS.ico" />
+    <Property Id="WINDOWSBUILDNUMBER" Secure="yes">
+      <RegistrySearch
+          Id="WindowsBuildNumberSearch"
+          Root="HKLM"
+          Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+          Name="CurrentBuildNumber"
+          Type="raw" />
+    </Property>
+    <Property Id="BROKER_USER_SID" Secure="yes">
+      <RegistrySearch Id="BrokerUserSidSearch" Root="HKLM" Key="Software\MonitoringXS\Installer" Name="BrokerUserSid" Type="raw" />
+    </Property>
+    <Property Id="BROKER_LOGON_ARGUMENT" Secure="yes">
+      <RegistrySearch Id="BrokerLogonArgumentSearch" Root="HKLM" Key="Software\MonitoringXS\Installer" Name="BrokerLogonArgument" Type="raw" />
+    </Property>
+    <Property Id="BROKER_SESSION_ID" Secure="yes">
+      <RegistrySearch Id="BrokerSessionIdSearch" Root="HKLM" Key="Software\MonitoringXS\Installer" Name="BrokerSessionId" Type="raw" />
+    </Property>
+
+    <Launch
+        Condition="Installed OR (VersionNT64 AND WINDOWSBUILDNUMBER &gt;= 17763)"
+        Message="Monitoring XS requires 64-bit Windows 10 version 1809 or newer." />
+    <Launch
+        Condition="REMOVE~=&quot;ALL&quot; OR (BROKER_USER_SID AND BROKER_SESSION_ID)"
+        Message="Setup could not resolve a safe interactive identity for the Monitoring XS Broker." />
+
+    <Binary Id="InstallerCustomActions" SourceFile="$(var.CustomActionPath)" />
+    <CustomAction
+        Id="CaptureBrokerIdentity"
+        BinaryRef="InstallerCustomActions"
+        DllEntry="Capture"
+        Execute="immediate"
+        Impersonate="yes"
+        Return="check" />
+    <CustomAction
+        Id="ConfigureBrokerServiceSid"
+        BinaryRef="InstallerCustomActions"
+        DllEntry="SetUnrestrictedSid"
+        Execute="deferred"
+        Impersonate="no"
+        Return="check" />
+    <InstallUISequence>
+      <Custom
+          Action="CaptureBrokerIdentity"
+          Before="LaunchConditions"
+          Condition="NOT Installed OR REINSTALL OR WIX_UPGRADE_DETECTED" />
+    </InstallUISequence>
+    <InstallExecuteSequence>
+      <Custom
+          Action="ConfigureBrokerServiceSid"
+          After="InstallServices"
+          Condition="$BrokerServiceComponent = 3" />
+    </InstallExecuteSequence>
+
+    <util:CloseApplication
+        Id="CloseMonitoringXS"
+        Target="MonitoringXS.App.exe"
+        Description="Monitoring XS must close before setup can continue."
+        CloseMessage="yes"
+        EndSessionMessage="yes"
+        ElevatedCloseMessage="yes"
+        ElevatedEndSessionMessage="yes"
+        Timeout="10"
+        TerminateProcess="1"
+        RebootPrompt="no" />
+
+    <Icon Id="MonitoringXS.ico" SourceFile="$(var.AppPublishDir)\Assets\Branding\MonitoringXS.ico" />
+    <ui:WixUI Id="WixUI_FeatureTree" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Monitoring XS">
+        <Directory Id="APPFOLDER" Name="App" />
+        <Directory Id="BROKERFOLDER" Name="Broker" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ProgramMenuDirectory" Name="Monitoring XS" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Component Id="AppExecutableComponent" Directory="APPFOLDER" Guid="8C8AD4CE-A985-4532-B8E9-7B2C1A6DCD1B" Bitness="always64">
+      <File Id="AppExecutable" Source="$(var.AppPublishDir)\MonitoringXS.App.exe" KeyPath="yes" />
+      <File Id="SqliteNativeLibrary" Source="$(var.AppPublishDir)\e_sqlite3.dll" CompanionFile="AppExecutable" />
+      <File Id="WinUiXamlLibrary" Source="$(var.AppPublishDir)\Microsoft.ui.xaml.dll" CompanionFile="AppExecutable" />
+      <File Id="WinUiXamlPhoneLibrary" Source="$(var.AppPublishDir)\Microsoft.UI.Xaml.Phone.dll" CompanionFile="AppExecutable" />
+    </Component>
+
+    <Component Id="BrokerServiceComponent" Directory="BROKERFOLDER" Guid="D24996F5-8056-4CF9-AEA0-4C512AE6B4B7" Bitness="always64">
+      <File Id="BrokerExecutable" Source="$(var.BrokerPublishDir)\MonitoringXS.PrivilegedBroker.exe" KeyPath="yes" />
+      <ServiceInstall
+          Id="BrokerServiceInstall"
+          Name="MonitoringXS.PrivilegedEtwBroker"
+          DisplayName="Monitoring XS Privileged ETW Broker"
+          Description="Allowlisted Monitoring XS Network and Physical Disk ETW broker."
+          Type="ownProcess"
+          Start="auto"
+          ErrorControl="normal"
+          Account="LocalSystem"
+          Interactive="no"
+          Vital="yes"
+          Arguments="--user-sid [BROKER_USER_SID] --session [BROKER_SESSION_ID] [BROKER_LOGON_ARGUMENT]">
+      </ServiceInstall>
+      <ServiceControl
+          Id="BrokerServiceControl"
+          Name="MonitoringXS.PrivilegedEtwBroker"
+          Start="install"
+          Stop="both"
+          Remove="uninstall"
+          Wait="yes" />
+      <RegistryValue Root="HKLM" Key="Software\MonitoringXS\Installer" Name="BrokerUserSid" Type="string" Value="[BROKER_USER_SID]" />
+      <RegistryValue Root="HKLM" Key="Software\MonitoringXS\Installer" Name="BrokerLogonArgument" Type="string" Value="[BROKER_LOGON_ARGUMENT]" />
+      <RegistryValue Root="HKLM" Key="Software\MonitoringXS\Installer" Name="BrokerSessionId" Type="string" Value="[BROKER_SESSION_ID]" />
+    </Component>
+
+    <Component Id="StartMenuShortcutComponent" Directory="ProgramMenuDirectory" Guid="6119F754-AD03-41B7-8380-D93EFC38E02D" Bitness="always64">
+      <Shortcut
+          Id="StartMenuShortcut"
+          Name="Monitoring XS"
+          Description="Application-centric Windows resource monitor"
+          Target="[APPFOLDER]MonitoringXS.App.exe"
+          WorkingDirectory="APPFOLDER" />
+      <RemoveFolder Id="RemoveProgramMenuDirectory" Directory="ProgramMenuDirectory" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\MonitoringXS\Installer" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcutComponent" Directory="DesktopFolder" Guid="904E324A-97E5-43A5-9868-A3CFA0F68F9F" Bitness="always64">
+      <Shortcut
+          Id="DesktopShortcut"
+          Name="Monitoring XS"
+          Description="Application-centric Windows resource monitor"
+          Target="[APPFOLDER]MonitoringXS.App.exe"
+          WorkingDirectory="APPFOLDER" />
+      <RegistryValue Root="HKCU" Key="Software\MonitoringXS\Installer" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Feature Id="ProductFeature" Title="Monitoring XS" Level="1" AllowAbsent="no">
+      <ComponentRef Id="AppExecutableComponent" />
+      <ComponentRef Id="BrokerServiceComponent" />
+      <ComponentRef Id="StartMenuShortcutComponent" />
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentGroupRef Id="BrokerFiles" />
+      <Feature
+          Id="DesktopShortcutFeature"
+          Title="Desktop shortcut"
+          Description="Add a shortcut for Monitoring XS to the shared desktop."
+          Level="2"
+          AllowAbsent="yes"
+          InstallDefault="local">
+        <ComponentRef Id="DesktopShortcutComponent" />
+      </Feature>
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="AppFiles" Directory="APPFOLDER">
+      <Files Include="$(var.AppPublishDir)\**" Directory="APPFOLDER">
+        <Exclude Files="$(var.AppPublishDir)\MonitoringXS.App.exe" />
+        <Exclude Files="$(var.AppPublishDir)\e_sqlite3.dll" />
+        <Exclude Files="$(var.AppPublishDir)\Microsoft.ui.xaml.dll" />
+        <Exclude Files="$(var.AppPublishDir)\Microsoft.UI.Xaml.Phone.dll" />
+        <Exclude Files="$(var.AppPublishDir)\gd-gb\**" />
+        <Exclude Files="$(var.AppPublishDir)\mi-NZ\**" />
+        <Exclude Files="$(var.AppPublishDir)\ug-CN\**" />
+        <Exclude Files="$(var.AppPublishDir)\**\*.pdb" />
+      </Files>
+    </ComponentGroup>
+    <ComponentGroup Id="BrokerFiles" Directory="BROKERFOLDER">
+      <Files Include="$(var.BrokerPublishDir)\**" Directory="BROKERFOLDER">
+        <Exclude Files="$(var.BrokerPublishDir)\MonitoringXS.PrivilegedBroker.exe" />
+        <Exclude Files="$(var.BrokerPublishDir)\**\*.pdb" />
+      </Files>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

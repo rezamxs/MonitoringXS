@@ -109,7 +109,11 @@ Status: selected-process action implementation and manual Release runtime valida
 
 ## Milestone 7 - Optimization and release
 
-- Profiling, security/accessibility review, packaging, benchmarks, release docs, and open-source readiness.
+- [x] Add the production-oriented x64 MSI with self-contained payloads, native
+  Broker service lifecycle, major-upgrade/repair/uninstall behavior, and
+  installer validation automation.
+- [ ] Profiling, final security/accessibility review, benchmarks, release
+  signing, release docs, and open-source readiness.
 
 ## First vertical slice exit criteria
 

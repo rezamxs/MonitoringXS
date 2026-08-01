@@ -361,6 +361,7 @@ function Remove-Internal {
 
 $script:RepositoryRoot = Get-RepositoryRoot $RepositoryRoot
 $temporaryPackage = $null
+$ownsTemporaryPackage = $false
 $exitCode = 0
 try {
     if ($Mode -eq 'Status') {
@@ -377,6 +378,7 @@ try {
             $temporaryPackage = Join-Path ([IO.Path]::GetTempPath()) (
                 "MonitoringXS.PrivilegedBroker.$([Guid]::NewGuid().ToString('N'))")
             New-Item -ItemType Directory -Path $temporaryPackage -Force | Out-Null
+            $ownsTemporaryPackage = $true
             Invoke-DotNetPublish $script:RepositoryRoot $temporaryPackage
         } else {
             $temporaryPackage = (Resolve-Path -LiteralPath $PackageRoot).Path
@@ -403,7 +405,8 @@ try {
     $exitCode = 1
     Write-Error $_.Exception.Message
 } finally {
-    if ($null -ne $temporaryPackage -and (Test-Path -LiteralPath $temporaryPackage)) {
+    if ($ownsTemporaryPackage -and $null -ne $temporaryPackage -and
+        (Test-Path -LiteralPath $temporaryPackage)) {
         Remove-Item -LiteralPath $temporaryPackage -Recurse -Force -ErrorAction SilentlyContinue
     }
 }

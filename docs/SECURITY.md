@@ -118,6 +118,18 @@ current aggregate metric values/availability, and a Monitoring XS timestamp.
 
 The helper will accept a versioned request containing only an operation enum and validated identifiers. It will reject unknown fields/operations, verify the caller and target, perform one allow-listed operation, return one structured response, and terminate. General process launch, arbitrary paths, and shell strings are forbidden.
 
+## Installer boundary
+
+The per-machine MSI is the only release-time elevation boundary. Program files
+and the LocalSystem Broker binary are installed below `%ProgramFiles%`, not a
+standard-user-writable directory. MSI service tables fix the service name,
+account, start mode, executable, and allowlisted identity arguments. A
+fixed-purpose custom action only configures and verifies the service SID type;
+it cannot launch caller-supplied commands. Installation fails and rolls back if
+the Broker cannot be registered securely. The app manifest remains
+`asInvoker`, and no debug privilege, driver, certificate, secret, or protocol
+exception is introduced. See [Windows installer](INSTALLER.md).
+
 ## Reporting
 
 See the root `SECURITY.md` for responsible disclosure. Do not include sensitive diagnostic data in public issues.

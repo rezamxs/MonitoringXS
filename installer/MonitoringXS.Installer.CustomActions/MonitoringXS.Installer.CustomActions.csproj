@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <RootNamespace>MonitoringXS.Installer.CustomActions</RootNamespace>
+    <AssemblyName>MonitoringXS.Installer.CustomActions</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="all" />
+    <PackageReference Include="WixToolset.Dtf.CustomAction" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="CustomAction.config" />
+    <Content Include="CustomAction.config" />
+  </ItemGroup>
+</Project>

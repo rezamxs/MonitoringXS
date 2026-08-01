@@ -144,6 +144,7 @@ Packaging profiles will be added before the release milestone. Some monitoring d
 - [Development setup](docs/DEVELOPMENT.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Latest validation results](docs/VALIDATION.md)
+- [Windows installer](docs/INSTALLER.md)
 
 ## Unpackaged developer publish
 
@@ -153,7 +154,9 @@ After the first successful build, an unpackaged self-contained x64 developer out
 dotnet publish src/MonitoringXS.App/MonitoringXS.App.csproj -c Release -p:Platform=x64 -r win-x64 --self-contained true
 ```
 
-MSIX packaging and signing are intentionally not claimed yet; they are Milestone 7 work and require a package manifest, identity, certificate/signing policy, and clean-machine installation validation.
+The production-oriented x64 MSI build and lifecycle are documented in
+[Windows installer](docs/INSTALLER.md). Release signing and public certificate
+acquisition remain separate work and are not claimed.
 
 ## Contributing
 
