@@ -3,6 +3,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using MonitoringXS.Application;
+using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
 
 namespace MonitoringXS.App.ViewModels;
@@ -24,6 +25,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private readonly MonitoringCoordinator _coordinator;
     private readonly ILogger<MainWindowViewModel> _logger;
+    private readonly IProcessActionService? _processActions;
+    private readonly IClipboardService? _clipboard;
     private readonly Dictionary<string, ApplicationCardViewModel> _cards = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ApplicationTabViewModel> _openTabs = new(StringComparer.Ordinal);
     private readonly ApplicationSectionViewModel _installedSection = new(
@@ -33,6 +36,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "Portable & unregistered apps",
         "Executables without catalog-backed installation evidence remain separate.");
     private DateTimeOffset _lastLiveSortAt = DateTimeOffset.MinValue;
+    private Func<ProcessActionConfirmation, CancellationToken, Task<bool>>? _confirmProcessAction;
+    private CancellationToken _shutdownToken;
 
     [ObservableProperty]
     public partial bool IsAdvancedMode { get; set; }
@@ -53,9 +58,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public partial ApplicationCardViewModel? SelectedApplication { get; set; }
 
     public MainWindowViewModel(MonitoringCoordinator coordinator, ILogger<MainWindowViewModel> logger)
+        : this(coordinator, logger, null, null)
+    {
+    }
+
+    public MainWindowViewModel(
+        MonitoringCoordinator coordinator,
+        ILogger<MainWindowViewModel> logger,
+        IProcessActionService? processActions,
+        IClipboardService? clipboard)
     {
         _coordinator = coordinator;
         _logger = logger;
+        _processActions = processActions;
+        _clipboard = clipboard;
         ApplicationItems.Add(_installedSection);
         ApplicationItems.Add(_portableSection);
     }
@@ -135,7 +151,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         if (!_openTabs.TryGetValue(card.LogicalApplicationId, out ApplicationTabViewModel? tab))
         {
-            tab = new ApplicationTabViewModel(card.LogicalApplicationId, card.DisplayName);
+            ProcessActionsViewModel? actions =
+                _processActions is null || _clipboard is null
+                    ? null
+                    : new ProcessActionsViewModel(_processActions, _clipboard);
+            if (actions is not null && _confirmProcessAction is not null)
+            {
+                actions.Configure(
+                    _confirmProcessAction,
+                    RefreshAsync,
+                    _shutdownToken);
+            }
+
+            tab = new ApplicationTabViewModel(
+                card.LogicalApplicationId,
+                card.DisplayName,
+                actions);
             _openTabs.Add(card.LogicalApplicationId, tab);
         }
 
@@ -145,6 +176,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         return tab;
+    }
+
+    internal void ConfigureProcessActions(
+        Func<ProcessActionConfirmation, CancellationToken, Task<bool>> confirm,
+        CancellationToken shutdownToken)
+    {
+        _confirmProcessAction = confirm;
+        _shutdownToken = shutdownToken;
     }
 
     public void CloseTab(string logicalApplicationId) => _openTabs.Remove(logicalApplicationId);

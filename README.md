@@ -75,12 +75,14 @@ Currently working:
 - History page with application/range selection and honest availability gaps
 - gap-aware History charts with fixed 0-100% CPU/GPU domains, bounded dynamic
   byte/rate domains, single-point markers, UTC ordering, and 360-point caps
+- selected-process End Task, bounded End Process Tree, Open File Location, and
+  safe Copy Process Details actions
 
 Not finished yet:
 
 - broader GPU driver and hardware validation
 - stopped-application tab presentation
-- application close, restart and force-stop actions
+- graceful close, restart, launch, and stopped-application actions
 - uninstall support
 - installer and release package
 - final UI pages and testing

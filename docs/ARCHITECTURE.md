@@ -25,6 +25,7 @@ PrivilegedBroker -> Platform.Windows -> Core
 10. `SqliteMetricHistoryStore` writes version-2 SQLite rows asynchronously in bounded batches. Logical application ID is paired with a SHA-256 process-lifetime key derived from PID plus UTC start time, so relaunches remain queryable without merging lifetimes. Raw rows are retained for one hour; older rows in the 24-hour retention window become five-minute buckets. Rate/gauge values are averaged, availability uses the worst state, and cumulative totals are never averaged or persisted as rates.
 11. ViewModels project snapshots into virtualized WinUI collections and bounded chart buffers. `HistoryPageViewModel` lists persisted logical applications, issues cancellable time-range queries off the UI thread, rejects stale results after rapid selection changes, and decimates each displayed series to at most 360 points while retaining endpoints, gaps, and extrema. The History page normalizes stable ascending UTC timestamps, keeps the last duplicate, and uses the selected range for X coordinates. Unavailable/non-numeric partial samples, PID-lifetime changes, and large sampling gaps split paths; numeric partial samples remain plotted and labelled partial. CPU/GPU use a fixed 0-100% domain; byte/rate charts use a padded percentile domain. Single samples use markers and all geometry is clipped to the plot rectangle.
 12. `JsonApplicationSettingsStore` owns the single version-1 per-user settings document under `%LOCALAPPDATA%\MonitoringXS\settings.json`. It validates only predefined sampling, retention, and theme values, accepts unknown fields for the current version, rejects newer versions, quarantines corrupt/invalid files, and writes through one serialized temporary-file replacement. `LiveRefreshCadence` wakes the existing single-execution loop when cadence changes. The SQLite store receives retention policy changes for later bounded maintenance; no schema migration or synchronous deletion is involved. See [ADR 0006](adr/0006-versioned-per-user-settings.md).
+13. `IProcessActionService` is the authoritative typed boundary for selected-process inspection, End Task, bounded End Process Tree, and Open File Location. `WindowsProcessActionService` revalidates PID, UTC start time, process name, and executable path where available immediately before action. Destructive work uses limited query/terminate/synchronize rights, checks Windows critical/protection state, refuses Monitoring XS, its Broker, PID 0/4, and unverifiable targets, and confirms exit before success. Tree snapshots are bounded to three passes and terminate verified leaves before the root. Clipboard formatting stays in the app layer and copies only allowlisted identity and aggregate metric fields.
 
 ## Failure model
 
@@ -39,6 +40,11 @@ status through SCM. Normal UI maps the result to a small safe vocabulary:
 service not installed, service stopped, connection failed, protocol mismatch,
 ETW unavailable, or no attributed activity yet. Detailed paths, SIDs, and native
 exceptions remain restricted to validation diagnostics.
+
+Process actions never cross the Broker boundary. The main app performs them as
+`asInvoker`; Access Denied is a normal typed result and never triggers
+elevation. The Broker protocol, service ACL, and service lifecycle contain no
+process-action operation.
 
 Persistent development/operator setup uses the tracked
 `scripts/privileged-broker/Manage-PrivilegedBroker.ps1` entry point. It publishes

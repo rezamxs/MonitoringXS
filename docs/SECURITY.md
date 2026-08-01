@@ -94,6 +94,26 @@ document version fails closed without overwriting it. Normal UI receives only
 allowlisted Broker states and never installs, removes, restarts, or elevates
 the service. See [ADR 0006](adr/0006-versioned-per-user-settings.md).
 
+## Application actions
+
+The main `asInvoker` process owns a typed process-action boundary; neither the
+privileged ETW Broker nor an elevated helper participates. Every destructive
+request captures PID, UTC start time, process name, and executable path when
+available, then revalidates them on the terminating handle. PID 0/4,
+Monitoring XS, its current Broker service PID, critical/protected processes,
+stale identities, and targets whose safety cannot be verified are refused.
+End Process Tree accepts only descendants whose current start time is not
+older than their verified parent, runs leaves before root, and uses bounded
+passes and timeouts. Access Denied remains visible and never causes automatic
+elevation.
+
+Open File Location accepts only the executable path re-read from the verified
+process and passes it as one `ProcessStartInfo.ArgumentList` item to the fixed
+`explorer.exe`; UI text is never launched. Copied details omit command lines,
+environment variables, window text, modules, credentials, and tokens. They
+contain only process identity, executable path when available, safe status,
+current aggregate metric values/availability, and a Monitoring XS timestamp.
+
 ## Elevated helper design
 
 The helper will accept a versioned request containing only an operation enum and validated identifiers. It will reject unknown fields/operations, verify the caller and target, perform one allow-listed operation, return one structured response, and terminate. General process launch, arbitrary paths, and shell strings are forbidden.

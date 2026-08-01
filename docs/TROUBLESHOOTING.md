@@ -29,6 +29,15 @@ loop alive after transient collector or history failures.
 
 Protected or higher-integrity processes may expose limited metadata. This is expected degradation; the primary app should remain unelevated.
 
+End Task, End Process Tree, and Open File Location also remain unelevated.
+`Access denied` means Windows did not grant the limited query/terminate access;
+Monitoring XS does not retry through the ETW Broker, request UAC, or enable
+debug privilege. A stale-identity message means PID/start time, process name,
+or executable identity changed after selection, so the action was safely
+refused. Critical/protected, System, Monitoring XS, Broker, or unverifiable
+targets are intentionally unavailable. Re-select the current process after a
+refresh; do not treat a refusal as successful termination.
+
 ## Physical disk (ETW) is unavailable
 
 Kernel ETW can require administrator rights or membership in **Performance Log Users**. Monitoring XS does not open UAC automatically: it shows `Access denied` while CPU, memory, and Process I/O continue. For a deliberate manual diagnostic, start PowerShell as Administrator and launch the app from that shell.

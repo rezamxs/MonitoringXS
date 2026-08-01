@@ -111,6 +111,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<IMetricHistoryRetentionController>(provider =>
             provider.GetRequiredService<SqliteMetricHistoryStore>());
         services.AddSingleton<IProcessDiscoveryService, WindowsProcessDiscoveryService>();
+        services.AddSingleton<IProcessActionService, WindowsProcessActionService>();
+        services.AddSingleton<IClipboardService, WindowsClipboardService>();
         services.AddSingleton<IApplicationAttributionService, ApplicationAttributionService>();
         services.AddSingleton<IProcessResourceCounterReader, WindowsProcessResourceCounterReader>();
         services.AddSingleton<IProcessMetricCollector, ProcessMetricCollector>();

@@ -86,16 +86,23 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
     [ObservableProperty]
     public partial IList<CpuHistorySample> CpuSamples { get; set; } = Array.Empty<CpuHistorySample>();
 
-    public ApplicationTabViewModel(string logicalApplicationId, string title)
+    public ApplicationTabViewModel(
+        string logicalApplicationId,
+        string title,
+        ProcessActionsViewModel? processActions = null)
     {
         LogicalApplicationId = logicalApplicationId;
         Title = title;
+        ProcessActions = processActions;
     }
 
     public string LogicalApplicationId { get; }
 
+    public ProcessActionsViewModel? ProcessActions { get; }
+
     public void Update(ApplicationMetricSnapshot snapshot, IReadOnlyList<ApplicationHistoryPoint> history)
     {
+        ProcessActions?.Update(snapshot);
         Title = snapshot.Application.DisplayName;
         CpuText = snapshot.CpuPercent.IsAvailable
             ? $"{PartialPrefix(snapshot.CpuPercent)}{snapshot.CpuPercent.Value!.Value.ToString("0.0", CultureInfo.InvariantCulture)}%"

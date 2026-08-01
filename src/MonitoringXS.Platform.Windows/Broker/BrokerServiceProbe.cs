@@ -12,7 +12,8 @@ public enum BrokerServiceState
 
 public sealed record BrokerServiceSnapshot(
     BrokerServiceState State,
-    bool? BinaryPresent);
+    bool? BinaryPresent,
+    int? ProcessId = null);
 
 public static class BrokerServiceProbe
 {
@@ -82,7 +83,10 @@ public static class BrokerServiceProbe
                     status.CurrentState == ServiceRunning
                         ? BrokerServiceState.Running
                         : BrokerServiceState.Stopped,
-                    QueryBinaryPresent(service));
+                    QueryBinaryPresent(service),
+                    status.CurrentState == ServiceRunning && status.ProcessId > 0
+                        ? status.ProcessId
+                        : null);
             }
             finally
             {

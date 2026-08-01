@@ -97,7 +97,15 @@ Status: SQLite backend and History page complete; stopped-tab presentation remai
 
 ## Milestone 6 - Application actions
 
-- Graceful close, force stop, restart, launch, file location, official uninstall, helper isolation, and critical-process safety.
+Status: selected-process action implementation and manual Release runtime validation complete.
+
+- [x] Typed PID/start-time/executable identity and critical/protected/self/Broker fail-closed safety.
+- [x] Confirmed End Task with bounded exit verification and honest Access Denied.
+- [x] Strongly confirmed bounded End Process Tree with leaf-to-root ordering and partial results.
+- [x] Verified Open File Location and safe Copy Process Details without command lines or secrets.
+- [x] Existing details surface integration with process selection, keyboard commands, accessible feedback, and stale-selection suppression.
+- [x] Complete focused Release mouse/keyboard/runtime validation on disposable helpers.
+- [ ] Graceful close, restart, launch, official uninstall, and stopped-application actions.
 
 ## Milestone 7 - Optimization and release
 

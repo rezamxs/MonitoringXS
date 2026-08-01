@@ -38,6 +38,7 @@ public sealed partial class MainWindow : Window, IDisposable
         _cadence = cadence;
         _settingsViewModel = settingsViewModel;
         InitializeComponent();
+        ViewModel.ConfigureProcessActions(ConfirmProcessActionAsync, _shutdown.Token);
         HistoryWorkspace.Initialize(historyViewModel, _shutdown.Token);
         SettingsWorkspace.Initialize(settingsViewModel, _shutdown.Token);
         settingsViewModel.ThemeRequested += ApplyAppearance;
@@ -50,6 +51,25 @@ public sealed partial class MainWindow : Window, IDisposable
     }
 
     public MainWindowViewModel ViewModel { get; }
+
+    private async Task<bool> ConfirmProcessActionAsync(
+        ProcessActionConfirmation request,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ContentDialog dialog = new()
+        {
+            XamlRoot = Root.XamlRoot,
+            Title = request.Title,
+            Content = request.Message,
+            PrimaryButtonText = request.ConfirmButtonText,
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close
+        };
+        ContentDialogResult result = await dialog.ShowAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+        return result == ContentDialogResult.Primary;
+    }
 
     internal void EnableResponsiveToolbar()
     {
