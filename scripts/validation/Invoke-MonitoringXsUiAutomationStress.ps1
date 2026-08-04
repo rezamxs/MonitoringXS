@@ -123,12 +123,13 @@ try
     $deadline = [DateTimeOffset]::UtcNow.AddSeconds(60)
     while ([DateTimeOffset]::UtcNow -lt $deadline -and $null -eq $app)
     {
-        $candidate = Get-CimInstance Win32_Process -Filter "Name = 'MonitoringXS.App.exe'" |
-            Where-Object { $_.ParentProcessId -eq $runner.Id } |
+        # WMI process enumeration is denied in some non-elevated validation sessions.
+        # The harness launches one app instance, so the process name is sufficient.
+        $candidate = Get-Process -Name 'MonitoringXS.App' -ErrorAction SilentlyContinue |
             Select-Object -First 1
         if ($candidate)
         {
-            $app = Get-Process -Id $candidate.ProcessId
+            $app = $candidate
         }
         else
         {

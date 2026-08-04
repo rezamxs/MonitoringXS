@@ -1,6 +1,7 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MonitoringXS.App.Controls;
+using MonitoringXS.App.Localization;
 using MonitoringXS.Core.Models;
 
 namespace MonitoringXS.App.ViewModels;
@@ -47,9 +48,9 @@ public sealed partial class HistoryMetricSeries : ObservableObject
 
     internal HistoryMetricDefinition Definition { get; }
 
-    public string Title { get; }
+    public string Title { get; private set; }
 
-    public string UnitText { get; }
+    public string UnitText { get; private set; }
 
     public bool UsesPercentScale { get; }
 
@@ -73,20 +74,32 @@ public sealed partial class HistoryMetricSeries : ObservableObject
 
     [ObservableProperty]
     public partial DateTimeOffset? RangeEndUtc { get; set; }
+
+    internal void Relocalize(LocalizationService localization)
+    {
+        Title = localization.Get(Definition.Title);
+        UnitText = localization.Get(Definition.UnitText);
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(UnitText));
+    }
 }
 
 internal static class HistorySeriesPresentation
 {
-    public static (IList<CpuHistorySample> Samples, string Summary, string State, string Accessibility)
+        public static (IList<CpuHistorySample> Samples, string Summary, string State, string Accessibility)
         Create(
             HistoryMetricDefinition definition,
             MetricHistoryQueryResult result,
             HistoryRangeOption range,
-            int maximumPoints)
+            int maximumPoints,
+            LocalizationService? localization = null)
     {
+        localization ??= new LocalizationService();
+        string title = TryGet(localization, definition.Title);
         if (!result.IsAvailable)
         {
-            string unavailableMessage = result.Error ?? "Database unavailable.";
+            string unavailableMessage = result.Error
+                ?? localization.Get(LocalizationKeys.HistoryDatabaseUnavailable);
             return (Array.Empty<CpuHistorySample>(), unavailableMessage, "Database unavailable", unavailableMessage);
         }
 
@@ -139,8 +152,8 @@ internal static class HistorySeriesPresentation
         {
             string state = ordered.Length == 0 ? "Empty history" : "Unavailable";
             string summary = ordered.Length == 0
-                ? $"No {definition.Title} history in the selected {range.Label} range."
-                : $"{definition.Title} has no measured values; unavailable samples remain chart gaps.";
+                ? $"No {title} history in the selected {range.Label} range."
+                : $"{title} has no measured values; unavailable samples remain chart gaps.";
             return (display, summary, state, summary);
         }
 
@@ -153,7 +166,19 @@ internal static class HistorySeriesPresentation
         string summaryText = string.Create(
             CultureInfo.InvariantCulture,
             $"{range.Label}; min {Format(minimum, definition.ValueKind)}, max {Format(maximum, definition.ValueKind)}, latest {Format(latest, definition.ValueKind)}; {availability}; {downsampled} downsampled; {display.Count} displayed of {samples.Count} points.");
-        return (display, summaryText, partial > 0 || unavailableCount > 0 ? "Partial" : "Available", $"{definition.Title}. {summaryText}");
+        return (display, summaryText, partial > 0 || unavailableCount > 0 ? "Partial" : "Available", $"{title}. {summaryText}");
+    }
+
+    private static string TryGet(LocalizationService localization, string key)
+    {
+        try
+        {
+            return localization.Get(key);
+        }
+        catch (KeyNotFoundException)
+        {
+            return key;
+        }
     }
 
     private static TimeSpan GapThreshold(

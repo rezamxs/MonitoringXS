@@ -18,12 +18,20 @@
   <ItemGroup>
     <None Remove="Assets\Branding\*.ico" />
     <None Remove="Assets\Branding\*.png" />
+    <None Remove="Strings\**\*.resw" />
     <Content Include="Assets\Branding\MonitoringXS.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\Branding\*.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <PRIResource Include="Strings\**\*.resw" />
+    <Content Include="Strings\**\*.resw">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="Strings\**\*.resw">
+      <LogicalName>MonitoringXS.App.Strings.%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />

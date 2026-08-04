@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Windowing;
 using MonitoringXS.App.Appearance;
+using MonitoringXS.App.Localization;
 using MonitoringXS.App.ViewModels;
 using MonitoringXS.Core.Models;
 using MonitoringXS.Platform.Windows.Accessibility;
@@ -32,7 +33,9 @@ public sealed partial class MainWindow : Window, IDisposable
         ApplicationSettings settings,
         HistoryPageViewModel historyViewModel,
         SettingsPageViewModel settingsViewModel,
-        LiveRefreshCadence cadence)
+        LiveRefreshCadence cadence,
+        LocalizationService localization,
+        string initialNavigationTag = "dashboard")
     {
         ViewModel = viewModel;
         _cadence = cadence;
@@ -41,6 +44,9 @@ public sealed partial class MainWindow : Window, IDisposable
         ViewModel.ConfigureProcessActions(ConfirmProcessActionAsync, _shutdown.Token);
         HistoryWorkspace.Initialize(historyViewModel, _shutdown.Token);
         SettingsWorkspace.Initialize(settingsViewModel, _shutdown.Token);
+        Root.FlowDirection = localization.Direction == TextDirection.RightToLeft
+            ? FlowDirection.RightToLeft
+            : FlowDirection.LeftToRight;
         settingsViewModel.ThemeRequested += ApplyAppearance;
         ConfigureTitleBar();
         Root.ActualThemeChanged += Root_ActualThemeChanged;
@@ -48,9 +54,16 @@ public sealed partial class MainWindow : Window, IDisposable
         AppWindow.Resize(new SizeInt32(1180, 760));
         Root.Loaded += Root_Loaded;
         Closed += MainWindow_Closed;
+        PrimaryNavigation.SelectedItem = PrimaryNavigation.MenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), initialNavigationTag, StringComparison.Ordinal));
+        RestoreOpenTabs();
     }
 
     public MainWindowViewModel ViewModel { get; }
+
+    public string SelectedNavigationTag =>
+        (PrimaryNavigation.SelectedItem as NavigationViewItem)?.Tag?.ToString() ?? "dashboard";
 
     private async Task<bool> ConfirmProcessActionAsync(
         ProcessActionConfirmation request,
@@ -63,7 +76,8 @@ public sealed partial class MainWindow : Window, IDisposable
             Title = request.Title,
             Content = request.Message,
             PrimaryButtonText = request.ConfirmButtonText,
-            CloseButtonText = "Cancel",
+            CloseButtonText = ((App)Microsoft.UI.Xaml.Application.Current).Localization.Get(
+                LocalizationKeys.Cancel),
             DefaultButton = ContentDialogButton.Close
         };
         ContentDialogResult result = await dialog.ShowAsync();
@@ -244,10 +258,20 @@ public sealed partial class MainWindow : Window, IDisposable
         }
 
         ApplicationTabViewModel tabViewModel = ViewModel.OpenTab(card);
+        AddTab(tabViewModel);
+    }
+
+    private void AddTab(ApplicationTabViewModel tabViewModel)
+    {
+        if (_applicationTabs.ContainsKey(tabViewModel.LogicalApplicationId))
+        {
+            return;
+        }
+
         TabViewItem tab = new()
         {
             IsClosable = true,
-            Tag = card.LogicalApplicationId,
+            Tag = tabViewModel.LogicalApplicationId,
             Content = tabViewModel,
             ContentTemplate = (DataTemplate)Root.Resources["ApplicationDetailTemplate"]
         };
@@ -258,9 +282,17 @@ public sealed partial class MainWindow : Window, IDisposable
             Mode = BindingMode.OneWay
         });
         AutomationProperties.SetName(tab, $"{tabViewModel.Title} application tab");
-        _applicationTabs.Add(card.LogicalApplicationId, tab);
+        _applicationTabs.Add(tabViewModel.LogicalApplicationId, tab);
         WorkspaceTabs.TabItems.Add(tab);
         WorkspaceTabs.SelectedItem = tab;
+    }
+
+    private void RestoreOpenTabs()
+    {
+        foreach (ApplicationTabViewModel tab in ViewModel.OpenTabs)
+        {
+            AddTab(tab);
+        }
     }
 
     private void ApplicationList_ContainerContentChanging(

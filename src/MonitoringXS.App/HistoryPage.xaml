@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:MonitoringXS.App.Controls"
+    x:Uid="HistoryPageRoot"
     AutomationProperties.Name="Application metric history page"
     IsTabStop="False">
     <Grid
@@ -26,12 +27,14 @@
                     FontSize="28"
                     FontWeight="SemiBold"
                     Foreground="{StaticResource PrimaryTextBrush}"
+                    x:Uid="HistoryPageTitle"
                     Text="History" />
                 <TextBlock
                     Foreground="{StaticResource SecondaryTextBrush}"
+                    x:Uid="HistoryPageSubtitle"
                     Text="Saved application metrics · local SQLite history" />
             </StackPanel>
-            <ProgressRing
+            <ProgressRing x:Uid="HistoryLoadingProgress"
                 Grid.Column="1"
                 Width="28"
                 Height="28"
@@ -48,7 +51,7 @@
             BorderThickness="1"
             CornerRadius="10">
             <StackPanel Orientation="Horizontal" Spacing="12">
-                <ComboBox
+                <ComboBox x:Uid="HistoryApplicationSelector"
                     x:Name="ApplicationSelector"
                     Width="280"
                     AutomationProperties.Name="History application"
@@ -57,16 +60,16 @@
                     SelectedItem="{Binding SelectedApplication, Mode=TwoWay}"
                     SelectionChanged="ApplicationSelector_SelectionChanged"
                     UseSystemFocusVisuals="True" />
-                <ComboBox
+                <ComboBox x:Uid="HistoryRangeSelector"
                     x:Name="RangeSelector"
                     Width="160"
                     AutomationProperties.Name="History time range"
                     DisplayMemberPath="Label"
                     ItemsSource="{Binding Ranges}"
-                    SelectedItem="{Binding SelectedRange, Mode=TwoWay}"
+                    SelectedItem="{Binding SelectedRange, Mode=OneWay}"
                     SelectionChanged="RangeSelector_SelectionChanged"
                     UseSystemFocusVisuals="True" />
-                <Button
+                <Button x:Uid="HistoryRefreshButton"
                     AutomationProperties.Name="Refresh application history"
                     Click="Refresh_Click"
                     Content="Refresh"
@@ -93,7 +96,7 @@
             </StackPanel>
         </StackPanel>
 
-        <ScrollViewer
+        <ScrollViewer x:Uid="HistoryCharts"
             Grid.Row="3"
             AutomationProperties.Name="History metric charts"
             HorizontalScrollBarVisibility="Disabled"
@@ -138,7 +141,8 @@
                                         <TextBlock
                                             FontSize="11"
                                             Foreground="{StaticResource SecondaryTextBrush}"
-                                            Text="Line = measured; gap = unavailable/partial" />
+                                        x:Uid="HistoryChartLegend"
+                                        Text="Line = measured; gap = unavailable/partial" />
                                     </StackPanel>
                                     <TextBlock
                                         Grid.Column="1"

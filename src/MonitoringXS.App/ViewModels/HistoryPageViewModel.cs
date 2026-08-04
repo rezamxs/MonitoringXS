@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
+using MonitoringXS.App.Localization;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
 
@@ -10,28 +11,31 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
 {
     private static readonly HistoryMetricDefinition[] Definitions =
     [
-        new(MetricHistoryMetric.CpuPercent, "CPU", HistoryValueKind.Percent, "%", true),
-        new(MetricHistoryMetric.WorkingSetBytes, "Working Set memory", HistoryValueKind.Bytes, "bytes"),
-        new(MetricHistoryMetric.ProcessIoReadBytesPerSecond, "Process I/O read", HistoryValueKind.BytesPerSecond, "bytes/s"),
-        new(MetricHistoryMetric.ProcessIoWriteBytesPerSecond, "Process I/O write", HistoryValueKind.BytesPerSecond, "bytes/s"),
-        new(MetricHistoryMetric.PhysicalDiskReadBytesPerSecond, "Physical Disk read", HistoryValueKind.BytesPerSecond, "bytes/s"),
-        new(MetricHistoryMetric.PhysicalDiskWriteBytesPerSecond, "Physical Disk write", HistoryValueKind.BytesPerSecond, "bytes/s"),
-        new(MetricHistoryMetric.NetworkDownloadBytesPerSecond, "Network receive", HistoryValueKind.BytesPerSecond, "bytes/s"),
-        new(MetricHistoryMetric.NetworkUploadBytesPerSecond, "Network send", HistoryValueKind.BytesPerSecond, "bytes/s"),
-        new(MetricHistoryMetric.GpuUtilizationPercent, "GPU utilization", HistoryValueKind.Percent, "%", true),
-        new(MetricHistoryMetric.GpuDedicatedMemoryBytes, "Dedicated GPU memory", HistoryValueKind.Bytes, "bytes"),
-        new(MetricHistoryMetric.GpuSharedMemoryBytes, "Shared GPU memory", HistoryValueKind.Bytes, "bytes")
+        new(MetricHistoryMetric.CpuPercent, LocalizationKeys.MetricCpu, HistoryValueKind.Percent, LocalizationKeys.UnitPercent, true),
+        new(MetricHistoryMetric.WorkingSetBytes, LocalizationKeys.MetricWorkingSet, HistoryValueKind.Bytes, LocalizationKeys.UnitBytes),
+        new(MetricHistoryMetric.ProcessIoReadBytesPerSecond, LocalizationKeys.MetricIoRead, HistoryValueKind.BytesPerSecond, LocalizationKeys.UnitBytesPerSecond),
+        new(MetricHistoryMetric.ProcessIoWriteBytesPerSecond, LocalizationKeys.MetricIoWrite, HistoryValueKind.BytesPerSecond, LocalizationKeys.UnitBytesPerSecond),
+        new(MetricHistoryMetric.PhysicalDiskReadBytesPerSecond, LocalizationKeys.MetricDiskRead, HistoryValueKind.BytesPerSecond, LocalizationKeys.UnitBytesPerSecond),
+        new(MetricHistoryMetric.PhysicalDiskWriteBytesPerSecond, LocalizationKeys.MetricDiskWrite, HistoryValueKind.BytesPerSecond, LocalizationKeys.UnitBytesPerSecond),
+        new(MetricHistoryMetric.NetworkDownloadBytesPerSecond, LocalizationKeys.MetricNetworkReceive, HistoryValueKind.BytesPerSecond, LocalizationKeys.UnitBytesPerSecond),
+        new(MetricHistoryMetric.NetworkUploadBytesPerSecond, LocalizationKeys.MetricNetworkSend, HistoryValueKind.BytesPerSecond, LocalizationKeys.UnitBytesPerSecond),
+        new(MetricHistoryMetric.GpuUtilizationPercent, LocalizationKeys.MetricGpuUtilization, HistoryValueKind.Percent, LocalizationKeys.UnitPercent, true),
+        new(MetricHistoryMetric.GpuDedicatedMemoryBytes, LocalizationKeys.MetricGpuDedicated, HistoryValueKind.Bytes, LocalizationKeys.UnitBytes),
+        new(MetricHistoryMetric.GpuSharedMemoryBytes, LocalizationKeys.MetricGpuShared, HistoryValueKind.Bytes, LocalizationKeys.UnitBytes)
     ];
     private readonly IMetricHistoryStore _store;
     private readonly Func<DateTimeOffset> _utcNow;
     private readonly TimeSpan _debounce;
     private readonly int _maximumPoints;
+    private readonly LocalizationService _localization;
     private CancellationTokenSource? _activeRequest;
     private int _requestVersion;
     private bool _disposed;
 
-    public HistoryPageViewModel(IMetricHistoryStore store)
-        : this(store, () => DateTimeOffset.UtcNow, TimeSpan.FromMilliseconds(180), 360)
+    public HistoryPageViewModel(
+        IMetricHistoryStore store,
+        LocalizationService? localization = null)
+        : this(store, () => DateTimeOffset.UtcNow, TimeSpan.FromMilliseconds(180), 360, localization)
     {
     }
 
@@ -39,24 +43,27 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
         IMetricHistoryStore store,
         Func<DateTimeOffset> utcNow,
         TimeSpan debounce,
-        int maximumPoints)
+        int maximumPoints,
+        LocalizationService? localization = null)
     {
         _store = store;
         _utcNow = utcNow;
         _debounce = debounce;
         _maximumPoints = maximumPoints;
+        _localization = localization ?? new LocalizationService();
         Charts = Definitions.Select(definition => new HistoryMetricSeries(definition)).ToArray();
+        foreach (HistoryMetricSeries chart in Charts)
+        {
+            chart.Relocalize(_localization);
+        }
+        BuildRanges();
+        SelectedRange = Ranges[1];
+        _localization.LanguageChanged += Localization_LanguageChanged;
     }
 
     public ObservableCollection<MetricHistoryApplication> Applications { get; } = [];
 
-    public IReadOnlyList<HistoryRangeOption> Ranges { get; } =
-    [
-        new("15 minutes", TimeSpan.FromMinutes(15)),
-        new("1 hour", TimeSpan.FromHours(1)),
-        new("6 hours", TimeSpan.FromHours(6)),
-        new("24 hours", TimeSpan.FromHours(24))
-    ];
+    public IReadOnlyList<HistoryRangeOption> Ranges { get; private set; } = [];
 
     public IReadOnlyList<HistoryMetricSeries> Charts { get; }
 
@@ -74,13 +81,13 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
     public partial bool IsLoading { get; set; }
 
     [ObservableProperty]
-    public partial string StatusText { get; set; } = "Open History to load saved metrics.";
+    public partial string StatusText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string LastUpdatedText { get; set; } = "Not loaded";
+    public partial string LastUpdatedText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string SelectedRangeText { get; set; } = "Selected range: 1 hour";
+    public partial string SelectedRangeText { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string QueryPerformanceText { get; set; } = "";
@@ -90,7 +97,7 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         State = HistoryPageState.Loading;
         IsLoading = true;
-        StatusText = "Loading saved applications…";
+        StatusText = _localization.Get(LocalizationKeys.HistoryLoading);
         try
         {
             MetricHistoryApplicationsResult result = await Task.Run(
@@ -105,14 +112,14 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
             if (!result.IsAvailable)
             {
                 State = HistoryPageState.DatabaseUnavailable;
-                StatusText = result.Error ?? "History database unavailable.";
+                StatusText = _localization.Get(LocalizationKeys.HistoryDatabaseUnavailable);
                 return;
             }
 
             if (Applications.Count == 0)
             {
                 State = HistoryPageState.Empty;
-                StatusText = "No saved application history yet.";
+                StatusText = _localization.Get(LocalizationKeys.HistoryNoSaved);
                 return;
             }
 
@@ -122,12 +129,12 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             State = HistoryPageState.Cancelled;
-            StatusText = "History request cancelled.";
+            StatusText = _localization.Get(LocalizationKeys.HistoryCancelled);
         }
         catch
         {
             State = HistoryPageState.QueryError;
-            StatusText = "History query failed.";
+            StatusText = _localization.Get(LocalizationKeys.HistoryQueryFailed);
         }
         finally
         {
@@ -148,12 +155,45 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
         CancellationToken cancellationToken)
     {
         SelectedRange = range;
-        SelectedRangeText = $"Selected range: {range.Label}";
+        SelectedRangeText = _localization.Format(LocalizationKeys.SelectedRangeFormat, range.Label);
         return LoadAsync(debounce: true, cancellationToken);
     }
 
     public Task RefreshAsync(CancellationToken cancellationToken) =>
         LoadAsync(debounce: false, cancellationToken);
+
+    private void BuildRanges()
+    {
+        TimeSpan selected = SelectedRange.Duration;
+        Ranges =
+        [
+            new(_localization.Get(LocalizationKeys.Range15Minutes), TimeSpan.FromMinutes(15)),
+            new(_localization.Get(LocalizationKeys.Range1Hour), TimeSpan.FromHours(1)),
+            new(_localization.Get(LocalizationKeys.Range6Hours), TimeSpan.FromHours(6)),
+            new(_localization.Get(LocalizationKeys.Range24Hours), TimeSpan.FromHours(24))
+        ];
+        SelectedRange = Ranges.First(item => item.Duration == selected);
+        SelectedRangeText = _localization.Format(LocalizationKeys.SelectedRangeFormat, SelectedRange.Label);
+        OnPropertyChanged(nameof(Ranges));
+    }
+
+    private void Localization_LanguageChanged(object? sender, LanguageChangedEventArgs args)
+    {
+        BuildRanges();
+        foreach (HistoryMetricSeries chart in Charts)
+        {
+            chart.Relocalize(_localization);
+        }
+
+        StatusText = State switch
+        {
+            HistoryPageState.Loading => _localization.Get(LocalizationKeys.HistoryLoading),
+            HistoryPageState.DatabaseUnavailable => _localization.Get(LocalizationKeys.HistoryDatabaseUnavailable),
+            HistoryPageState.Empty => _localization.Get(LocalizationKeys.HistoryNoRange),
+            _ => StatusText
+        };
+        OnPropertyChanged(nameof(SelectedRangeText));
+    }
 
     private async Task LoadAsync(bool debounce, CancellationToken cancellationToken)
     {
@@ -167,7 +207,9 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
         HistoryRangeOption range = SelectedRange;
         IsLoading = true;
         State = HistoryPageState.Loading;
-        StatusText = application is null ? "Application not found." : $"Loading {application.DisplayName}…";
+        StatusText = application is null
+            ? _localization.Get(LocalizationKeys.HistoryApplicationNotFound)
+            : string.Format(_localization.Culture, "{0}…", application.DisplayName);
         try
         {
             if (application is null)
@@ -199,7 +241,8 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
                         definition,
                         results[index],
                         range,
-                        _maximumPoints))
+                        _maximumPoints,
+                        _localization))
                     .ToArray(),
                 request.Token);
             stopwatch.Stop();
@@ -228,15 +271,15 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
                     ? HistoryPageState.Ready
                     : HistoryPageState.Empty;
             StatusText = databaseUnavailable
-                ? "History database unavailable."
+                ? _localization.Get(LocalizationKeys.HistoryDatabaseUnavailable)
                 : anyPoints
                     ? partial
-                        ? "History loaded with partial or unavailable metric gaps."
-                        : "History loaded."
-                    : "No history in the selected range.";
+                        ? _localization.Get(LocalizationKeys.HistoryLoadedPartial)
+                        : _localization.Get(LocalizationKeys.HistoryLoaded)
+                    : _localization.Get(LocalizationKeys.HistoryNoRange);
             DateTimeOffset localUpdated = toUtc.ToLocalTime();
             LastUpdatedText = $"Last updated {localUpdated:g}";
-            SelectedRangeText = $"Selected range: {range.Label}";
+            SelectedRangeText = _localization.Format(LocalizationKeys.SelectedRangeFormat, range.Label);
             QueryPerformanceText = $"{stopwatch.Elapsed.TotalMilliseconds:0.0} ms · {Charts.Sum(chart => chart.Samples.Count)} chart points";
         }
         catch (OperationCanceledException) when (request.IsCancellationRequested)

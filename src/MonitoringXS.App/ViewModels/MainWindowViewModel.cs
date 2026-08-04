@@ -3,6 +3,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using MonitoringXS.Application;
+using MonitoringXS.App.Localization;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
 
@@ -29,12 +30,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IClipboardService? _clipboard;
     private readonly Dictionary<string, ApplicationCardViewModel> _cards = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ApplicationTabViewModel> _openTabs = new(StringComparer.Ordinal);
-    private readonly ApplicationSectionViewModel _installedSection = new(
-        "Installed applications",
-        "Select an application to open its live tab. Windows infrastructure and services are excluded.");
-    private readonly ApplicationSectionViewModel _portableSection = new(
-        "Portable & unregistered apps",
-        "Executables without catalog-backed installation evidence remain separate.");
+    private readonly LocalizationService _localization;
+    private ApplicationSectionViewModel _installedSection = null!;
+    private ApplicationSectionViewModel _portableSection = null!;
     private DateTimeOffset _lastLiveSortAt = DateTimeOffset.MinValue;
     private Func<ProcessActionConfirmation, CancellationToken, Task<bool>>? _confirmProcessAction;
     private CancellationToken _shutdownToken;
@@ -43,7 +41,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public partial bool IsAdvancedMode { get; set; }
 
     [ObservableProperty]
-    public partial string StatusMessage { get; set; } = "Discovering running applications…";
+    public partial string StatusMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial DateTimeOffset LastUpdated { get; set; }
@@ -57,8 +55,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     public partial ApplicationCardViewModel? SelectedApplication { get; set; }
 
-    public MainWindowViewModel(MonitoringCoordinator coordinator, ILogger<MainWindowViewModel> logger)
-        : this(coordinator, logger, null, null)
+    public MainWindowViewModel(
+        MonitoringCoordinator coordinator,
+        ILogger<MainWindowViewModel> logger,
+        LocalizationService? localization = null)
+        : this(coordinator, logger, null, null, localization)
     {
     }
 
@@ -66,12 +67,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MonitoringCoordinator coordinator,
         ILogger<MainWindowViewModel> logger,
         IProcessActionService? processActions,
-        IClipboardService? clipboard)
+        IClipboardService? clipboard,
+        LocalizationService? localization = null)
     {
         _coordinator = coordinator;
         _logger = logger;
         _processActions = processActions;
         _clipboard = clipboard;
+        _localization = localization ?? new LocalizationService();
+        BuildLocalizedPresentation();
+        StatusMessage = _localization.Get(LocalizationKeys.DiscoveringApplications);
+        _localization.LanguageChanged += Localization_LanguageChanged;
         ApplicationItems.Add(_installedSection);
         ApplicationItems.Add(_portableSection);
     }
@@ -82,15 +88,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<IApplicationListItemViewModel> ApplicationItems { get; } = [];
 
-    public IReadOnlyList<ApplicationSortOption> SortOptions { get; } = AvailableSortOptions;
+    public IReadOnlyList<ApplicationSortOption> SortOptions { get; private set; } = [];
+
+    public IReadOnlyCollection<ApplicationTabViewModel> OpenTabs => _openTabs.Values;
 
     public string SortDirectionLabel => ApplicationSortPresentation.DirectionLabel(
         SelectedSortOption.Field,
-        IsSortDescending);
+        IsSortDescending,
+        _localization);
 
     public string SortDirectionAutomationName => ApplicationSortPresentation.DirectionAutomationName(
         SelectedSortOption.Field,
-        IsSortDescending);
+        IsSortDescending,
+        _localization);
 
     public bool HasNoComparableData
     {
@@ -128,9 +138,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(HasNoComparableData));
             UpdateOpenTabs(snapshot);
             LastUpdated = snapshot.CapturedAt.ToLocalTime();
-            StatusMessage = string.Create(
-                CultureInfo.InvariantCulture,
-                $"{InstalledApplications.Count} installed · {PortableApplications.Count} portable · updated {LastUpdated:HH:mm:ss}");
+            UpdateStatusMessage();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -144,7 +152,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     internal void ReportRefreshFailure(Exception exception)
     {
         LogMonitoringRefreshFailed(_logger, exception);
-        StatusMessage = "Some monitoring data is temporarily unavailable. Retrying…";
+        StatusMessage = _localization.Get(LocalizationKeys.RefreshRetry);
     }
 
     public ApplicationTabViewModel OpenTab(ApplicationCardViewModel card)
@@ -154,7 +162,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             ProcessActionsViewModel? actions =
                 _processActions is null || _clipboard is null
                     ? null
-                    : new ProcessActionsViewModel(_processActions, _clipboard);
+                    : new ProcessActionsViewModel(_processActions, _clipboard, _localization);
             if (actions is not null && _confirmProcessAction is not null)
             {
                 actions.Configure(
@@ -166,7 +174,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             tab = new ApplicationTabViewModel(
                 card.LogicalApplicationId,
                 card.DisplayName,
-                actions);
+                actions,
+                _localization);
             _openTabs.Add(card.LogicalApplicationId, tab);
         }
 
@@ -213,7 +222,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             if (!_cards.TryGetValue(snapshot.Application.LogicalApplicationId, out ApplicationCardViewModel? card))
             {
-                card = new ApplicationCardViewModel
+                card = new ApplicationCardViewModel(_localization)
                 {
                     LogicalApplicationId = snapshot.Application.LogicalApplicationId,
                     Disposition = snapshot.Application.Disposition
@@ -326,6 +335,70 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(SortDirectionAutomationName));
         OnPropertyChanged(nameof(HasNoComparableData));
     }
+
+    private void BuildLocalizedPresentation()
+    {
+        _installedSection = new(
+            _localization.Get(LocalizationKeys.InstalledApplications),
+            _localization.Get(LocalizationKeys.InstalledApplicationsDescription));
+        _portableSection = new(
+            _localization.Get(LocalizationKeys.PortableApplications),
+            _localization.Get(LocalizationKeys.PortableApplicationsDescription));
+        SortOptions = AvailableSortOptions.Select(option => option with
+        {
+            Label = option.Field switch
+            {
+                ApplicationSortField.ApplicationName => _localization.Get(LocalizationKeys.SortApplicationName),
+                ApplicationSortField.CpuUsage => _localization.Get(LocalizationKeys.SortCpu),
+                ApplicationSortField.MemoryUsage => _localization.Get(LocalizationKeys.SortMemory),
+                ApplicationSortField.ProcessIoRate => _localization.Get(LocalizationKeys.SortProcessIo),
+                ApplicationSortField.PhysicalDiskRate => _localization.Get(LocalizationKeys.SortDisk),
+                ApplicationSortField.NetworkRate => _localization.Get(LocalizationKeys.SortNetwork),
+                ApplicationSortField.GpuUsage => _localization.Get(LocalizationKeys.SortGpu),
+                _ => _localization.Get(LocalizationKeys.SortProcessCount)
+            }
+        }).ToArray();
+        ApplicationSortField selectedField = SelectedSortOption.Field;
+        SelectedSortOption = SortOptions.Single(option => option.Field == selectedField);
+        if (ApplicationItems.Count > 0)
+        {
+            ApplicationItems.Clear();
+            ApplicationItems.Add(_installedSection);
+            foreach (ApplicationCardViewModel card in InstalledApplications)
+            {
+                ApplicationItems.Add(card);
+            }
+            ApplicationItems.Add(_portableSection);
+            foreach (ApplicationCardViewModel card in PortableApplications)
+            {
+                ApplicationItems.Add(card);
+            }
+        }
+        OnPropertyChanged(nameof(SortOptions));
+    }
+
+    private void Localization_LanguageChanged(object? sender, LanguageChangedEventArgs args)
+    {
+        BuildLocalizedPresentation();
+        foreach (ApplicationCardViewModel card in _cards.Values)
+        {
+            card.Relocalize();
+        }
+
+        foreach (ApplicationTabViewModel tab in _openTabs.Values)
+        {
+            tab.Relocalize();
+        }
+
+        NotifySortPresentationChanged();
+        UpdateStatusMessage();
+    }
+
+    private void UpdateStatusMessage() => StatusMessage = _localization.Format(
+        LocalizationKeys.DashboardStatus,
+        InstalledApplications.Count,
+        PortableApplications.Count,
+        LastUpdated.ToString("T", _localization.Culture));
 
     private void UpdateOpenTabs(MonitoringDashboardSnapshot dashboard)
     {

@@ -65,7 +65,8 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
                     document.Version,
                     document.LiveSamplingSeconds,
                     document.HistoryRetentionHours,
-                    document.Theme);
+                    document.Theme,
+                    ParseLanguage(document.Language));
             if (settings?.IsValid == true)
             {
                 return new(settings, true, false);
@@ -131,7 +132,8 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
                         settings.Version,
                         settings.LiveSamplingSeconds,
                         settings.HistoryRetentionHours,
-                        settings.Theme),
+                        settings.Theme,
+                        settings.Language.ToString()),
                     SerializerOptions,
                     cancellationToken).ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -204,9 +206,16 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
             or UnauthorizedAccessException
             or NotSupportedException;
 
+    private static ApplicationLanguage ParseLanguage(string? value) =>
+        Enum.TryParse(value, ignoreCase: true, out ApplicationLanguage language)
+        && Enum.IsDefined(language)
+            ? language
+            : ApplicationLanguage.System;
+
     private sealed record SettingsDocument(
         int Version,
         int LiveSamplingSeconds,
         int HistoryRetentionHours,
-        ApplicationTheme Theme);
+        ApplicationTheme Theme,
+        string? Language = null);
 }

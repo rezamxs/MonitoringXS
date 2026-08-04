@@ -1,6 +1,11 @@
 # Windows installer
 
 Monitoring XS ships as one x64, per-machine MSI built with WiX Toolset 7.0.0.
+
+The beta MSI user interface remains English-only. WiX does not provide a
+maintainable built-in Persian UI path for this package, so application
+localization is kept independent from stable product identity, install paths,
+service names, shortcuts, `ProductVersion`, and `UpgradeCode`.
 The MSI contains self-contained .NET 10 and Windows App SDK payloads, so no
 bootstrapper or runtime downloader is required. Windows Installer owns file,
 shortcut, upgrade, rollback, repair, uninstall, and service lifecycle. This is

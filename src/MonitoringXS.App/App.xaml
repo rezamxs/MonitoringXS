@@ -67,12 +67,14 @@
                 <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
             </Style>
             <Style x:Key="MetricValueStyle" TargetType="TextBlock">
+                <Setter Property="FlowDirection" Value="LeftToRight" />
                 <Setter Property="FontFamily" Value="Cascadia Mono, Segoe UI Variable" />
                 <Setter Property="FontSize" Value="18" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
             </Style>
             <Style x:Key="CardIdentityStyle" TargetType="TextBlock">
+                <Setter Property="FlowDirection" Value="LeftToRight" />
                 <Setter Property="FontFamily" Value="Segoe UI Variable" />
                 <Setter Property="FontSize" Value="18" />
                 <Setter Property="FontWeight" Value="SemiBold" />
@@ -94,6 +96,7 @@
                 x:Key="CardPrimaryMetricValueStyle"
                 BasedOn="{StaticResource CardMetricValueStyle}"
                 TargetType="TextBlock">
+                <Setter Property="FlowDirection" Value="LeftToRight" />
                 <Setter Property="FontFamily" Value="Cascadia Mono, Segoe UI Variable" />
                 <Setter Property="FontSize" Value="18" />
                 <Setter Property="Foreground" Value="{StaticResource DataAccentBrush}" />

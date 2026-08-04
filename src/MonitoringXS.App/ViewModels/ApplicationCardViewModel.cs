@@ -1,5 +1,6 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using MonitoringXS.App.Localization;
 using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
 
@@ -7,44 +8,50 @@ namespace MonitoringXS.App.ViewModels;
 
 public sealed partial class ApplicationCardViewModel : ObservableObject, IApplicationListItemViewModel
 {
+    private readonly LocalizationService _localization;
+
+    public ApplicationCardViewModel(LocalizationService? localization = null)
+    {
+        _localization = localization ?? new LocalizationService();
+    }
     [ObservableProperty]
     public partial string DisplayName { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string Publisher { get; set; } = "Publisher unavailable";
+    public partial string Publisher { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string CpuText { get; set; } = "Warming up";
+    public partial string CpuText { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string CpuStatusText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string MemoryText { get; set; } = "Unavailable";
+    public partial string MemoryText { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string MemoryStatusText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string IoText { get; set; } = "Unavailable";
+    public partial string IoText { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string IoStatusText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string PhysicalDiskText { get; set; } = "Warming up";
+    public partial string PhysicalDiskText { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string PhysicalDiskStatusText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string NetworkText { get; set; } = "Warming up";
+    public partial string NetworkText { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string NetworkStatusText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string GpuText { get; set; } = "Warming up";
+    public partial string GpuText { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string GpuStatusText { get; set; } = string.Empty;
@@ -53,10 +60,10 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
     public partial string ProcessCountText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string StatusText { get; set; } = "Running";
+    public partial string StatusText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string AutomationName { get; set; } = "Running application";
+    public partial string AutomationName { get; set; } = string.Empty;
 
     public required string LogicalApplicationId { get; init; }
 
@@ -71,7 +78,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         LatestSnapshot = snapshot;
         History = history;
         DisplayName = snapshot.Application.DisplayName;
-        Publisher = snapshot.Application.Publisher ?? "Publisher unavailable";
+        Publisher = snapshot.Application.Publisher ?? _localization.Get(LocalizationKeys.PublisherUnavailable);
         ScalarPresentation cpu = FormatCpu(snapshot.CpuPercent);
         CpuText = cpu.ValueText;
         CpuStatusText = cpu.StatusText;
@@ -126,7 +133,9 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             : string.IsNullOrEmpty(gpuMemory)
                 ? gpu.StatusText
                 : $"{gpu.StatusText} · {gpuMemory}";
-        ProcessCountText = snapshot.ProcessCount == 1 ? "1 process" : $"{snapshot.ProcessCount} processes";
+        ProcessCountText = snapshot.ProcessCount == 1
+            ? _localization.Format(LocalizationKeys.ProcessCountSingular, snapshot.ProcessCount)
+            : _localization.Format(LocalizationKeys.ProcessCountPlural, snapshot.ProcessCount);
         bool hasPartialMetric = snapshot.CpuPercent.Availability == MetricAvailability.Partial
             || snapshot.WorkingSetBytes.Availability == MetricAvailability.Partial
             || snapshot.IoReadBytesPerSecond.Availability == MetricAvailability.Partial
@@ -139,8 +148,10 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             || snapshot.Gpu.DedicatedMemoryBytes.Availability == MetricAvailability.Partial
             || snapshot.Gpu.SharedMemoryBytes.Availability == MetricAvailability.Partial;
         StatusText = hasPartialMetric
-            ? "Running · partial metrics"
-            : snapshot.CpuPercent.IsAvailable ? "Running · live" : "Running · metrics warming up";
+            ? _localization.Get(LocalizationKeys.RunningPartial)
+            : snapshot.CpuPercent.IsAvailable
+                ? _localization.Get(LocalizationKeys.RunningLive)
+                : _localization.Get(LocalizationKeys.RunningWarming);
         string gpuAccessible = wholeGpuUnavailable || string.IsNullOrEmpty(gpuMemory)
             ? gpu.AccessibleText
             : $"{gpu.AccessibleText}, {gpuMemory}";
@@ -163,7 +174,15 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         AutomationName = $"{DisplayName}. {StatusText}. CPU {cpu.AccessibleText}. Memory {memory.AccessibleText}. Process I/O {io.AccessibleText}. Physical disk {physicalDisk.AccessibleText}. Network {network.AccessibleText}. GPU {gpuAccessible}.";
     }
 
-    private static ScalarPresentation FormatCpu(MetricValue<double> metric)
+    public void Relocalize()
+    {
+        if (LatestSnapshot is not null)
+        {
+            Update(LatestSnapshot, History);
+        }
+    }
+
+    private ScalarPresentation FormatCpu(MetricValue<double> metric)
     {
         if (!metric.IsAvailable)
         {
@@ -174,7 +193,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         return FormatAvailableScalar(value, metric);
     }
 
-    private static ScalarPresentation FormatBytes(MetricValue<long> metric)
+    private ScalarPresentation FormatBytes(MetricValue<long> metric)
     {
         if (!metric.IsAvailable)
         {
@@ -188,7 +207,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         return FormatAvailableScalar(value, metric);
     }
 
-    private static ScalarPresentation FormatGpu(MetricValue<double> metric)
+    private ScalarPresentation FormatGpu(MetricValue<double> metric)
     {
         if (!metric.IsAvailable)
         {
@@ -199,21 +218,21 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         return FormatAvailableScalar(value, metric);
     }
 
-    private static string FormatGpuMemory(
+    private string FormatGpuMemory(
         MetricValue<ulong> dedicated,
         MetricValue<ulong> shared)
     {
         if (!dedicated.IsAvailable && !shared.IsAvailable)
         {
             return dedicated.Availability == shared.Availability
-                ? $"Memory {FormatAvailability(dedicated)}"
-                : $"{FormatAvailability(dedicated)} dedicated, {FormatAvailability(shared)} shared";
+                ? $"{_localization.Get(LocalizationKeys.MemoryLabel)} {FormatAvailability(dedicated)}"
+                : $"{FormatAvailability(dedicated)} {_localization.Get(LocalizationKeys.DedicatedLabel)}, {FormatAvailability(shared)} {_localization.Get(LocalizationKeys.SharedLabel)}";
         }
 
-        return $"{FormatGpuMemoryValue(dedicated)} dedicated · {FormatGpuMemoryValue(shared)} shared";
+        return $"{FormatGpuMemoryValue(dedicated)} {_localization.Get(LocalizationKeys.DedicatedLabel)} · {FormatGpuMemoryValue(shared)} {_localization.Get(LocalizationKeys.SharedLabel)}";
     }
 
-    private static string FormatGpuMemoryValue(MetricValue<ulong> metric)
+    private string FormatGpuMemoryValue(MetricValue<ulong> metric)
     {
         if (!metric.IsAvailable)
         {
@@ -231,21 +250,21 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         return PartialPrefix(metric) + value;
     }
 
-    private static ScalarPresentation FormatAvailableScalar<T>(string value, MetricValue<T> metric)
+    private ScalarPresentation FormatAvailableScalar<T>(string value, MetricValue<T> metric)
         where T : struct => metric.Availability == MetricAvailability.Partial
         ? new(
             value,
-            "Partial · lower bound",
-            $"at least {value.TrimStart('\u2265', ' ')}, partial lower bound")
+            _localization.Get(LocalizationKeys.PartialLowerBound),
+            $"{_localization.Get(LocalizationKeys.AtLeast)} {value.TrimStart('\u2265', ' ')}, partial lower bound")
         : new(value, string.Empty, value);
 
-    private static ScalarPresentation FormatUnavailableScalar<T>(MetricValue<T> metric)
+    private ScalarPresentation FormatUnavailableScalar<T>(MetricValue<T> metric)
         where T : struct => new(
             FormatCompactUnavailable(metric.Availability),
             FormatSupportingAvailability(metric.Availability, metric.Detail),
             FormatAvailability(metric));
 
-    private static MetricPairPresentation FormatRatePair(
+    private MetricPairPresentation FormatRatePair(
         MetricValue<double> first,
         string firstDirection,
         MetricValue<double> second,
@@ -269,7 +288,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         [
             FormatMetricStatus(first),
             FormatMetricStatus(second),
-            noAttributedActivityYet ? "No attributed activity yet." : string.Empty
+            noAttributedActivityYet ? _localization.Get(LocalizationKeys.NoAttributedActivity) : string.Empty
         ];
         string status = string.Join(
             " · ",
@@ -288,12 +307,12 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
                 : $"{accessibleValues}, {accessibleStatus}");
     }
 
-    private static string FormatDirectionalRate(MetricValue<double> metric, string direction) =>
+    private string FormatDirectionalRate(MetricValue<double> metric, string direction) =>
         metric.IsAvailable
             ? $"{FormatRate(metric)} {direction}"
             : $"{FormatCompactUnavailable(metric.Availability)} {direction}";
 
-    private static string FormatAccessibleDirectionalRate(MetricValue<double> metric, string direction)
+    private string FormatAccessibleDirectionalRate(MetricValue<double> metric, string direction)
     {
         if (!metric.IsAvailable)
         {
@@ -303,27 +322,29 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         string rate = FormatRate(metric);
         return metric.IsComplete
             ? $"{rate} {direction}"
-            : $"at least {rate.TrimStart('\u2265', ' ')} {direction}";
+            : $"{_localization.Get(LocalizationKeys.AtLeast)} {rate.TrimStart('\u2265', ' ')} {direction}";
     }
 
-    private static string FormatMetricStatus<T>(MetricValue<T> metric)
+    private string FormatMetricStatus<T>(MetricValue<T> metric)
         where T : struct => metric.Availability == MetricAvailability.Partial
-        ? "Partial · lower bound"
+        ? _localization.Get(LocalizationKeys.PartialLowerBound)
         : FormatSupportingAvailability(metric.Availability, metric.Detail);
 
-    private static string FormatCompactUnavailable(MetricAvailability availability) =>
-        availability == MetricAvailability.WarmingUp ? "Warming up" : "Unavailable";
+    private string FormatCompactUnavailable(MetricAvailability availability) =>
+        availability == MetricAvailability.WarmingUp
+            ? _localization.Get(LocalizationKeys.WarmingUp)
+            : _localization.Get(LocalizationKeys.Unavailable);
 
-    private static string FormatSupportingAvailability(
+    private string FormatSupportingAvailability(
         MetricAvailability availability,
         string? detail = null)
     {
         string? safeDetail = SafeBrokerDetail(detail);
         return safeDetail ?? availability switch
         {
-            MetricAvailability.AccessDenied => "Access denied",
-            MetricAvailability.Unsupported => "Unsupported",
-            MetricAvailability.Error => "Error",
+            MetricAvailability.AccessDenied => _localization.Get(LocalizationKeys.AccessDenied),
+            MetricAvailability.Unsupported => _localization.Get(LocalizationKeys.Unsupported),
+            MetricAvailability.Error => _localization.Get(LocalizationKeys.Error),
             _ => string.Empty
         };
     }
@@ -358,11 +379,13 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         && firstTotal.Value == 0
         && secondTotal.Value == 0;
 
-    private static string FormatRate(MetricValue<double> metric)
+    private string FormatRate(MetricValue<double> metric)
     {
         if (!metric.IsAvailable)
         {
-            return metric.Availability == MetricAvailability.WarmingUp ? "Warming up" : "Unavailable";
+            return metric.Availability == MetricAvailability.WarmingUp
+                ? _localization.Get(LocalizationKeys.WarmingUp)
+                : _localization.Get(LocalizationKeys.Unavailable);
         }
 
         double bytesPerSecond = metric.Value!.Value;
@@ -377,16 +400,16 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
     private static string PartialPrefix<T>(MetricValue<T> metric) where T : struct =>
         metric.IsComplete ? string.Empty : "≥ ";
 
-    private static string FormatAvailability<T>(MetricValue<T> metric)
+    private string FormatAvailability<T>(MetricValue<T> metric)
         where T : struct => metric.Availability switch
         {
-            MetricAvailability.Available => "Available",
-            MetricAvailability.Partial => "Partial (lower bound)",
-            MetricAvailability.WarmingUp => "Warming up",
-            MetricAvailability.AccessDenied => "Access denied",
-            MetricAvailability.Unsupported => "Unsupported",
-            MetricAvailability.Unavailable => "Unavailable",
-            _ => "Error"
+            MetricAvailability.Available => _localization.Get(LocalizationKeys.Available),
+            MetricAvailability.Partial => _localization.Get(LocalizationKeys.PartialLowerBound),
+            MetricAvailability.WarmingUp => _localization.Get(LocalizationKeys.WarmingUp),
+            MetricAvailability.AccessDenied => _localization.Get(LocalizationKeys.AccessDenied),
+            MetricAvailability.Unsupported => _localization.Get(LocalizationKeys.Unsupported),
+            MetricAvailability.Unavailable => _localization.Get(LocalizationKeys.Unavailable),
+            _ => _localization.Get(LocalizationKeys.Error)
         };
 
     private readonly record struct ScalarPresentation(

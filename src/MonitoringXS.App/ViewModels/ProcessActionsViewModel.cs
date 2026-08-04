@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MonitoringXS.App.Localization;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
 
@@ -33,6 +34,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
 {
     private readonly IProcessActionService _actions;
     private readonly IClipboardService _clipboard;
+    private readonly LocalizationService _localization;
     private Func<ProcessActionConfirmation, CancellationToken, Task<bool>>? _confirm;
     private Func<CancellationToken, Task>? _refresh;
     private CancellationToken _shutdownToken;
@@ -59,23 +61,30 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
         Array.Empty<ProcessActionChoice>();
 
     [ObservableProperty]
-    public partial string StatusText { get; set; } = "Select a process.";
+    public partial string StatusText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string IdentityText { get; set; } = "No process selected";
+    public partial string IdentityText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string ExecutablePathText { get; set; } = "Unavailable";
+    public partial string ExecutablePathText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string StartTimeText { get; set; } = "Unavailable";
+    public partial string StartTimeText { get; set; } = string.Empty;
 
     public ProcessActionsViewModel(
         IProcessActionService actions,
-        IClipboardService clipboard)
+        IClipboardService clipboard,
+        LocalizationService? localization = null)
     {
         _actions = actions;
         _clipboard = clipboard;
+        _localization = localization ?? new LocalizationService();
+        StatusText = _localization.Get(LocalizationKeys.SelectProcess);
+        IdentityText = _localization.Get(LocalizationKeys.NoProcessSelected);
+        ExecutablePathText = _localization.Get(LocalizationKeys.Unavailable);
+        StartTimeText = _localization.Get(LocalizationKeys.Unavailable);
+        _localization.LanguageChanged += Localization_LanguageChanged;
     }
 
     internal void Configure(
@@ -137,27 +146,27 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
 
         if (newValue is null)
         {
-            IdentityText = "No process selected";
-            ExecutablePathText = "Unavailable";
-            StartTimeText = "Unavailable";
+            IdentityText = _localization.Get(LocalizationKeys.NoProcessSelected);
+            ExecutablePathText = _localization.Get(LocalizationKeys.Unavailable);
+            StartTimeText = _localization.Get(LocalizationKeys.Unavailable);
             if (identityChanged)
             {
-                StatusText = "Select a process.";
+                StatusText = _localization.Get(LocalizationKeys.SelectProcess);
             }
 
             return;
         }
 
         IdentityText = $"{newValue.Target.ProcessName} · PID {newValue.Target.InstanceId.ProcessId}";
-        ExecutablePathText = newValue.Process.ExecutablePath ?? "Unavailable";
+        ExecutablePathText = newValue.Process.ExecutablePath ?? _localization.Get(LocalizationKeys.Unavailable);
         StartTimeText = newValue.Target.InstanceId.StartTimeUtc
             .ToLocalTime()
             .ToString("G", System.Globalization.CultureInfo.CurrentCulture);
         if (identityChanged)
         {
             StatusText = _lastActionFeedback is null
-                ? "Ready."
-                : $"Ready. Last action: {_lastActionFeedback}";
+                ? _localization.Get(LocalizationKeys.Ready)
+                : _localization.Format(LocalizationKeys.ReadyLastAction, _lastActionFeedback);
         }
     }
 
@@ -176,19 +185,23 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
         {
             bool confirmed = await _confirm(
                 new(
-                    "End task?",
-                    $"End {selected.Target.DisplayName} ({selected.Target.ProcessName}, PID {selected.Target.InstanceId.ProcessId})? Unsaved work may be lost.",
-                    "End task"),
+                    _localization.Get(LocalizationKeys.EndTaskTitle),
+                    _localization.Format(
+                        LocalizationKeys.EndTaskMessage,
+                        selected.Target.DisplayName,
+                        selected.Target.ProcessName,
+                        selected.Target.InstanceId.ProcessId),
+                    _localization.Get(LocalizationKeys.EndTaskConfirm)),
                 _shutdownToken);
             if (!confirmed)
             {
-                SetCurrentStatus(version, "End Task cancelled.");
+                SetCurrentStatus(version, _localization.Get(LocalizationKeys.EndTaskCancelled));
                 return;
             }
 
             await RunActionCoreAsync(
                 version,
-                "Ending task…",
+                _localization.Get(LocalizationKeys.EndingTask),
                 token => _actions.EndProcessAsync(selected.Target, token),
                 refreshAfterCompletion: true);
         }
@@ -209,7 +222,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
 
         long version = _selectionVersion;
         IsBusy = true;
-        StatusText = "Verifying process tree…";
+        StatusText = _localization.Get(LocalizationKeys.VerifyingTree);
         try
         {
             ProcessActionInspection inspection =
@@ -222,19 +235,24 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
 
             bool confirmed = await _confirm(
                 new(
-                    "End process tree?",
-                    $"End {selected.Target.DisplayName} ({selected.Target.ProcessName}, PID {selected.Target.InstanceId.ProcessId}) and {inspection.DescendantCount} currently identified descendant{(inspection.DescendantCount == 1 ? string.Empty : "s")}? Unsaved work in every process may be lost.",
-                    "End process tree"),
+                    _localization.Get(LocalizationKeys.EndTreeTitle),
+                    _localization.Format(
+                        LocalizationKeys.EndTreeMessage,
+                        selected.Target.DisplayName,
+                        selected.Target.ProcessName,
+                        selected.Target.InstanceId.ProcessId,
+                        inspection.DescendantCount),
+                    _localization.Get(LocalizationKeys.EndTreeConfirm)),
                 _shutdownToken);
             if (!confirmed)
             {
-                SetCurrentStatus(version, "End Process Tree cancelled.");
+                SetCurrentStatus(version, _localization.Get(LocalizationKeys.EndTreeCancelled));
                 return;
             }
 
             await RunActionCoreAsync(
                 version,
-                "Ending process tree…",
+                _localization.Get(LocalizationKeys.EndingTree),
                 token => _actions.EndProcessTreeAsync(selected.Target, token),
                 refreshAfterCompletion: true);
         }
@@ -256,7 +274,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
         await RunActionAsync(
             selected,
             _selectionVersion,
-            "Opening file location…",
+            _localization.Get(LocalizationKeys.OpeningLocation),
             token => _actions.OpenFileLocationAsync(selected.Target, token),
             refreshAfterCompletion: false);
     }
@@ -273,7 +291,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
 
         long version = _selectionVersion;
         IsBusy = true;
-        StatusText = "Verifying process details…";
+        StatusText = _localization.Get(LocalizationKeys.VerifyingDetails);
         try
         {
             ProcessActionInspection inspection =
@@ -292,8 +310,8 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
             SetCurrentStatus(
                 version,
                 copied
-                    ? "Process details copied."
-                    : "Clipboard is unavailable; process details were not copied.");
+                    ? _localization.Get(LocalizationKeys.DetailsCopied)
+                    : _localization.Get(LocalizationKeys.ClipboardUnavailable));
         }
         catch (OperationCanceledException) when (_shutdownToken.IsCancellationRequested)
         {
@@ -374,5 +392,27 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
         EndProcessTreeCommand.NotifyCanExecuteChanged();
         OpenFileLocationCommand.NotifyCanExecuteChanged();
         CopyProcessDetailsCommand.NotifyCanExecuteChanged();
+    }
+
+    private void Localization_LanguageChanged(object? sender, LanguageChangedEventArgs args)
+    {
+        ProcessActionChoice? selected = SelectedProcess;
+        if (selected is null)
+        {
+            IdentityText = _localization.Get(LocalizationKeys.NoProcessSelected);
+            ExecutablePathText = _localization.Get(LocalizationKeys.Unavailable);
+            StartTimeText = _localization.Get(LocalizationKeys.Unavailable);
+            StatusText = _localization.Get(LocalizationKeys.SelectProcess);
+            return;
+        }
+
+        ExecutablePathText = selected.Process.ExecutablePath
+            ?? _localization.Get(LocalizationKeys.Unavailable);
+        if (!IsBusy)
+        {
+            StatusText = _lastActionFeedback is null
+                ? _localization.Get(LocalizationKeys.Ready)
+                : _localization.Format(LocalizationKeys.ReadyLastAction, _lastActionFeedback);
+        }
     }
 }

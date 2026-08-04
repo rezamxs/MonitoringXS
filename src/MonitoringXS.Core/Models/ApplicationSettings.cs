@@ -7,11 +7,19 @@ public enum ApplicationTheme
     Dark
 }
 
+public enum ApplicationLanguage
+{
+    System,
+    English,
+    Persian
+}
+
 public sealed record ApplicationSettings(
     int Version,
     int LiveSamplingSeconds,
     int HistoryRetentionHours,
-    ApplicationTheme Theme)
+    ApplicationTheme Theme,
+    ApplicationLanguage Language = ApplicationLanguage.System)
 {
     public const int CurrentVersion = 1;
 
@@ -19,7 +27,8 @@ public sealed record ApplicationSettings(
         CurrentVersion,
         1,
         24,
-        ApplicationTheme.System);
+        ApplicationTheme.System,
+        ApplicationLanguage.System);
 
     public TimeSpan LiveSamplingInterval => TimeSpan.FromSeconds(LiveSamplingSeconds);
 
@@ -29,7 +38,8 @@ public sealed record ApplicationSettings(
         Version == CurrentVersion
         && LiveSamplingSeconds is 1 or 2 or 5
         && HistoryRetentionHours is 6 or 24 or 72 or 168
-        && Enum.IsDefined(Theme);
+        && Enum.IsDefined(Theme)
+        && Enum.IsDefined(Language);
 }
 
 public sealed record ApplicationSettingsLoadResult(

@@ -1,6 +1,7 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MonitoringXS.App.Controls;
+using MonitoringXS.App.Localization;
 using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
 
@@ -8,6 +9,7 @@ namespace MonitoringXS.App.ViewModels;
 
 public sealed partial class ApplicationTabViewModel : ObservableObject
 {
+    private readonly LocalizationService _localization;
     [ObservableProperty]
     public partial string Title { get; set; }
 
@@ -89,11 +91,13 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
     public ApplicationTabViewModel(
         string logicalApplicationId,
         string title,
-        ProcessActionsViewModel? processActions = null)
+        ProcessActionsViewModel? processActions = null,
+        LocalizationService? localization = null)
     {
         LogicalApplicationId = logicalApplicationId;
         Title = title;
         ProcessActions = processActions;
+        _localization = localization ?? new LocalizationService();
     }
 
     public string LogicalApplicationId { get; }
@@ -102,6 +106,8 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
 
     public void Update(ApplicationMetricSnapshot snapshot, IReadOnlyList<ApplicationHistoryPoint> history)
     {
+        _lastSnapshot = snapshot;
+        _lastHistory = history;
         ProcessActions?.Update(snapshot);
         Title = snapshot.Application.DisplayName;
         CpuText = snapshot.CpuPercent.IsAvailable
@@ -157,19 +163,32 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
         CpuSamples = CpuHistorySeries.Create(history).ToArray();
     }
 
+    public void Relocalize()
+    {
+        if (_lastSnapshot is not null)
+        {
+            Update(_lastSnapshot, _lastHistory);
+        }
+    }
+
+    private ApplicationMetricSnapshot? _lastSnapshot;
+    private IReadOnlyList<ApplicationHistoryPoint> _lastHistory = [];
+
     private static string FormatMemory(MetricValue<long> metric) => metric.IsAvailable
         ? $"{PartialPrefix(metric)}{(metric.Value!.Value / (1024d * 1024d)).ToString("0", CultureInfo.InvariantCulture)} MB"
         : "Unavailable";
 
-    private static string FormatPercent(MetricValue<double> metric) => metric.IsAvailable
+    private string FormatPercent(MetricValue<double> metric) => metric.IsAvailable
         ? $"{PartialPrefix(metric)}{metric.Value!.Value.ToString("0.0", CultureInfo.InvariantCulture)}%"
         : FormatAvailability(metric);
 
-    private static string FormatRate(MetricValue<double> metric)
+    private string FormatRate(MetricValue<double> metric)
     {
         if (!metric.IsAvailable)
         {
-            return metric.Availability == MetricAvailability.WarmingUp ? "Warming up" : "Unavailable";
+            return metric.Availability == MetricAvailability.WarmingUp
+                ? _localization.Get(LocalizationKeys.WarmingUp)
+                : _localization.Get(LocalizationKeys.Unavailable);
         }
 
         double bytesPerSecond = metric.Value!.Value;
@@ -181,7 +200,7 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
         return PartialPrefix(metric) + value;
     }
 
-    private static string FormatBytes(MetricValue<ulong> metric)
+    private string FormatBytes(MetricValue<ulong> metric)
     {
         if (!metric.IsAvailable)
         {
@@ -199,24 +218,24 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
         return PartialPrefix(metric) + value;
     }
 
-    private static string FormatCount(MetricValue<ulong> metric) => metric.IsAvailable
+    private string FormatCount(MetricValue<ulong> metric) => metric.IsAvailable
         ? PartialPrefix(metric) + metric.Value!.Value.ToString("N0", CultureInfo.InvariantCulture)
         : FormatAvailability(metric);
 
-    private static string FormatCount(MetricValue<int> metric) => metric.IsAvailable
+    private string FormatCount(MetricValue<int> metric) => metric.IsAvailable
         ? PartialPrefix(metric) + metric.Value!.Value.ToString("N0", CultureInfo.InvariantCulture)
         : FormatAvailability(metric);
 
-    private static string FormatAvailability<T>(MetricValue<T> metric)
+    private string FormatAvailability<T>(MetricValue<T> metric)
         where T : struct => metric.Availability switch
         {
-            MetricAvailability.Available => "Available",
-            MetricAvailability.Partial => "Partial (lower bound)",
-            MetricAvailability.WarmingUp => "Warming up",
-            MetricAvailability.AccessDenied => "Access denied",
-            MetricAvailability.Unsupported => "Unsupported",
-            MetricAvailability.Unavailable => "Unavailable",
-            _ => "Error"
+            MetricAvailability.Available => _localization.Get(LocalizationKeys.Available),
+            MetricAvailability.Partial => _localization.Get(LocalizationKeys.PartialLowerBound),
+            MetricAvailability.WarmingUp => _localization.Get(LocalizationKeys.WarmingUp),
+            MetricAvailability.AccessDenied => _localization.Get(LocalizationKeys.AccessDenied),
+            MetricAvailability.Unsupported => _localization.Get(LocalizationKeys.Unsupported),
+            MetricAvailability.Unavailable => _localization.Get(LocalizationKeys.Unavailable),
+            _ => _localization.Get(LocalizationKeys.Error)
         };
 
     private static string PartialPrefix<T>(MetricValue<T> metric) where T : struct =>

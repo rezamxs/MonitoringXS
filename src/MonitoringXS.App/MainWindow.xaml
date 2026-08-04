@@ -31,15 +31,15 @@
                         DataContext="{Binding ProcessActions}">
                         <StackPanel Spacing="12">
                             <StackPanel Spacing="4">
-                                <TextBlock
+                                <TextBlock x:Uid="ProcessDetailsTitle"
                                     Style="{StaticResource SectionTitleStyle}"
                                     Text="Process details and actions" />
-                                <TextBlock
+                                <TextBlock x:Uid="ProcessDetailsDescription"
                                     Foreground="{StaticResource SecondaryTextBrush}"
                                     Text="Actions remain non-elevated and revalidate PID, start time, and executable identity."
                                     TextWrapping="Wrap" />
                             </StackPanel>
-                            <ComboBox
+                            <ComboBox x:Uid="ProcessSelector"
                                 MaxWidth="420"
                                 HorizontalAlignment="Stretch"
                                 AutomationProperties.Name="Process for application actions"
@@ -50,12 +50,15 @@
                             <StackPanel Spacing="4">
                                 <TextBlock
                                     FontWeight="SemiBold"
+                                    FlowDirection="LeftToRight"
                                     Text="{Binding IdentityText, Mode=OneWay}" />
                                 <TextBlock
                                     Foreground="{StaticResource SecondaryTextBrush}"
+                                    FlowDirection="LeftToRight"
                                     Text="{Binding StartTimeText, Mode=OneWay}" />
-                                <TextBlock
+                                <TextBlock x:Uid="ProcessPath"
                                     AutomationProperties.Name="Selected process executable path"
+                                    FlowDirection="LeftToRight"
                                     Foreground="{StaticResource SecondaryTextBrush}"
                                     Text="{Binding ExecutablePathText, Mode=OneWay}"
                                     TextWrapping="Wrap"
@@ -70,7 +73,7 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <Button
+                                <Button x:Uid="EndTaskButton"
                                     HorizontalAlignment="Stretch"
                                     AutomationProperties.HelpText="Ends only the selected process after confirmation and identity revalidation."
                                     AutomationProperties.Name="End selected task"
@@ -78,7 +81,7 @@
                                     Content="End Task"
                                     Foreground="{ThemeResource SystemFillColorCriticalBrush}"
                                     UseSystemFocusVisuals="True" />
-                                <Button
+                                <Button x:Uid="EndTreeButton"
                                     Grid.Column="1"
                                     HorizontalAlignment="Stretch"
                                     AutomationProperties.HelpText="Ends verified descendants from leaves to root after stronger confirmation."
@@ -87,7 +90,7 @@
                                     Content="End Process Tree"
                                     Foreground="{ThemeResource SystemFillColorCriticalBrush}"
                                     UseSystemFocusVisuals="True" />
-                                <Button
+                                <Button x:Uid="OpenLocationButton"
                                     Grid.Row="1"
                                     HorizontalAlignment="Stretch"
                                     AutomationProperties.HelpText="Opens Explorer and selects the verified executable."
@@ -95,7 +98,7 @@
                                     Command="{Binding OpenFileLocationCommand}"
                                     Content="Open File Location"
                                     UseSystemFocusVisuals="True" />
-                                <Button
+                                <Button x:Uid="CopyDetailsButton"
                                     Grid.Row="1"
                                     Grid.Column="1"
                                     HorizontalAlignment="Stretch"
@@ -126,7 +129,7 @@
                             BorderThickness="1"
                             CornerRadius="12">
                             <StackPanel Spacing="6">
-                                <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="CPU" />
+                                <TextBlock x:Uid="MetricCpuLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="CPU" />
                                 <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding CpuText}" />
                             </StackPanel>
                         </Border>
@@ -138,7 +141,7 @@
                             BorderThickness="1"
                             CornerRadius="12">
                             <StackPanel Spacing="6">
-                                <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Working set" />
+                                <TextBlock x:Uid="MetricMemoryLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Working set" />
                                 <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding MemoryText}" />
                             </StackPanel>
                         </Border>
@@ -150,7 +153,7 @@
                             BorderThickness="1"
                             CornerRadius="12">
                             <StackPanel Spacing="6">
-                                <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Process I/O read" />
+                                <TextBlock x:Uid="MetricIoReadLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Process I/O read" />
                                 <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding IoReadText}" />
                             </StackPanel>
                         </Border>
@@ -162,13 +165,13 @@
                             BorderThickness="1"
                             CornerRadius="12">
                             <StackPanel Spacing="6">
-                                <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Process I/O write" />
+                                <TextBlock x:Uid="MetricIoWriteLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Process I/O write" />
                                 <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding IoWriteText}" />
                             </StackPanel>
                         </Border>
                     </Grid>
                     <StackPanel Spacing="10">
-                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Physical disk (ETW)" />
+                        <TextBlock x:Uid="MetricDiskTitle" Style="{StaticResource SectionTitleStyle}" Text="Physical disk" />
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -182,7 +185,7 @@
                                 BorderThickness="1"
                                 CornerRadius="12">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Read" />
+                                    <TextBlock x:Uid="MetricReadLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Read" />
                                     <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding PhysicalDiskReadText}" />
                                 </StackPanel>
                             </Border>
@@ -195,7 +198,7 @@
                                 BorderThickness="1"
                                 CornerRadius="12">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Write" />
+                                    <TextBlock x:Uid="MetricWriteLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Write" />
                                     <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding PhysicalDiskWriteText}" />
                                 </StackPanel>
                             </Border>
@@ -206,7 +209,7 @@
                             Text="{Binding PhysicalDiskStatusText}" />
                     </StackPanel>
                     <StackPanel Spacing="10">
-                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Network (ETW)" />
+                        <TextBlock x:Uid="MetricNetworkTitle" Style="{StaticResource SectionTitleStyle}" Text="Network" />
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -220,7 +223,7 @@
                                 BorderThickness="1"
                                 CornerRadius="12">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Download / Receive" />
+                                    <TextBlock x:Uid="MetricReceiveLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Download / Receive" />
                                     <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding NetworkDownloadText}" />
                                 </StackPanel>
                             </Border>
@@ -233,7 +236,7 @@
                                 BorderThickness="1"
                                 CornerRadius="12">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Upload / Send" />
+                                    <TextBlock x:Uid="MetricSendLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Upload / Send" />
                                     <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding NetworkUploadText}" />
                                 </StackPanel>
                             </Border>
@@ -244,7 +247,7 @@
                             Text="{Binding NetworkStatusText}" />
                     </StackPanel>
                     <StackPanel Spacing="10">
-                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="GPU (Windows performance counters)" />
+                        <TextBlock x:Uid="MetricGpuTitle" Style="{StaticResource SectionTitleStyle}" Text="GPU" />
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -259,7 +262,7 @@
                                 BorderThickness="1"
                                 CornerRadius="12">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Busiest engine" />
+                                    <TextBlock x:Uid="MetricBusiestEngineLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Busiest engine" />
                                     <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding GpuUsageText}" />
                                 </StackPanel>
                             </Border>
@@ -272,7 +275,7 @@
                                 BorderThickness="1"
                                 CornerRadius="12">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Dedicated memory" />
+                                    <TextBlock x:Uid="MetricDedicatedLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Dedicated memory" />
                                     <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding DedicatedGpuMemoryText}" />
                                 </StackPanel>
                             </Border>
@@ -285,7 +288,7 @@
                                 BorderThickness="1"
                                 CornerRadius="12">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}" Text="Shared memory" />
+                                    <TextBlock x:Uid="MetricSharedLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Shared memory" />
                                     <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding SharedGpuMemoryText}" />
                                 </StackPanel>
                             </Border>
@@ -296,14 +299,14 @@
                             Text="{Binding GpuStatusText}" />
                     </StackPanel>
                     <StackPanel Spacing="10">
-                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="CPU · last minute" />
+                        <TextBlock x:Uid="MetricCpuHistoryTitle" Style="{StaticResource SectionTitleStyle}" Text="CPU · last minute" />
                         <controls:MetricSparkline
                             AutomationProperties.Name="CPU history for the selected application"
                             Samples="{Binding CpuSamples}" />
                     </StackPanel>
-                    <Expander Header="Advanced application information">
+                    <Expander x:Uid="AdvancedInfo" Header="Advanced application information">
                         <StackPanel Padding="0,12,0,0" Spacing="8">
-                            <TextBlock FontWeight="SemiBold" Text="Classification evidence" />
+                            <TextBlock x:Uid="ClassificationEvidence" FontWeight="SemiBold" Text="Classification evidence" />
                             <TextBlock
                                 Foreground="{StaticResource SecondaryTextBrush}"
                                 Text="{Binding ClassificationConfidence}" />
@@ -311,7 +314,7 @@
                                 Foreground="{StaticResource SecondaryTextBrush}"
                                 Text="{Binding ClassificationReason}"
                                 TextWrapping="Wrap" />
-                            <TextBlock FontWeight="SemiBold" Text="Physical-disk session totals" />
+                                <TextBlock x:Uid="DiskTotals" FontWeight="SemiBold" Text="Physical-disk session totals" />
                             <TextBlock
                                 Foreground="{StaticResource SecondaryTextBrush}"
                                 Text="{Binding PhysicalDiskTotalsText}"
@@ -324,7 +327,7 @@
                                 Foreground="{StaticResource SecondaryTextBrush}"
                                 Text="{Binding PhysicalDiskDiagnosticsText}"
                                 TextWrapping="Wrap" />
-                            <TextBlock FontWeight="SemiBold" Text="Network session details" />
+                            <TextBlock x:Uid="NetworkDetails" FontWeight="SemiBold" Text="Network session details" />
                             <TextBlock
                                 Foreground="{StaticResource SecondaryTextBrush}"
                                 Text="{Binding NetworkTotalsText}"
@@ -337,8 +340,8 @@
                                 Foreground="{StaticResource SecondaryTextBrush}"
                                 Text="{Binding NetworkDiagnosticsText}"
                                 TextWrapping="Wrap" />
-                            <TextBlock FontWeight="SemiBold" Text="GPU counter details" />
-                            <TextBlock
+                            <TextBlock x:Uid="GpuDetails" FontWeight="SemiBold" Text="GPU counter details" />
+                            <TextBlock x:Uid="UnavailableImplementation"
                                 Foreground="{StaticResource SecondaryTextBrush}"
                                 Text="{Binding GpuDiagnosticsText}"
                                 TextWrapping="Wrap" />
@@ -397,7 +400,7 @@
                                 Style="{StaticResource CardPrimaryMetricPanelStyle}"
                                 ToolTipService.ToolTip="{x:Bind CpuStatusText, Mode=OneWay}">
                                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                                    <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="CPU" />
+                                    <TextBlock x:Uid="CardCpuLabel" Style="{StaticResource CardMetricLabelStyle}" Text="CPU" />
                                     <TextBlock Style="{StaticResource CardPrimaryMetricValueStyle}" Text="{x:Bind CpuText, Mode=OneWay}" />
                                     <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind CpuStatusText, Mode=OneWay}" />
                                 </StackPanel>
@@ -413,7 +416,7 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Memory" />
+                                        <TextBlock x:Uid="CardMemoryLabel" Style="{StaticResource CardMetricLabelStyle}" Text="Memory" />
                                         <TextBlock
                                             Grid.Column="1"
                                             HorizontalAlignment="Right"
@@ -442,7 +445,7 @@
                                 Margin="0,0,16,0"
                                 Spacing="4"
                                 ToolTipService.ToolTip="{x:Bind IoStatusText, Mode=OneWay}">
-                                <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Process I/O" />
+                                <TextBlock x:Uid="CardIoLabel" Style="{StaticResource CardMetricLabelStyle}" Text="Process I/O" />
                                 <TextBlock
                                     Style="{StaticResource CardMetricValueStyle}"
                                     Text="{x:Bind IoText, Mode=OneWay}"
@@ -457,7 +460,7 @@
                                 <StackPanel
                                     Spacing="4"
                                     ToolTipService.ToolTip="{x:Bind PhysicalDiskStatusText, Mode=OneWay}">
-                                    <TextBlock Style="{StaticResource CardMetricLabelStyle}" Text="Physical disk" />
+                                    <TextBlock x:Uid="CardDiskLabel" Style="{StaticResource CardMetricLabelStyle}" Text="Physical disk" />
                                     <TextBlock
                                         Style="{StaticResource CardMetricValueStyle}"
                                         Text="{x:Bind PhysicalDiskText, Mode=OneWay}"
@@ -473,7 +476,7 @@
                                 <StackPanel
                                     Spacing="4"
                                     ToolTipService.ToolTip="{x:Bind NetworkStatusText, Mode=OneWay}">
-                                    <TextBlock
+                                    <TextBlock x:Uid="CardNetworkLabel"
                                         Style="{StaticResource CardMetricLabelStyle}"
                                         Text="Network"
                                         ToolTipService.ToolTip="Send and receive packet bytes observed through kernel Network ETW. No payloads or destinations are collected." />
@@ -492,7 +495,7 @@
                                 <StackPanel
                                     Spacing="4"
                                     ToolTipService.ToolTip="{x:Bind GpuStatusText, Mode=OneWay}">
-                                    <TextBlock
+                                    <TextBlock x:Uid="CardGpuLabel"
                                         Style="{StaticResource CardMetricLabelStyle}"
                                         Text="GPU"
                                         ToolTipService.ToolTip="Busiest GPU engine across the application. Dedicated and shared memory are sums of Windows per-process GPU counters." />
@@ -583,8 +586,8 @@
                 <x:Double x:Key="NavigationViewSelectionIndicatorWidth">4</x:Double>
             </NavigationView.Resources>
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Dashboard" Icon="Home" IsEnabled="False" Tag="dashboard" ToolTipService.ToolTip="Dashboard" />
-                <NavigationViewItem
+                <NavigationViewItem x:Uid="NavDashboard" Content="Dashboard" Icon="Home" IsEnabled="False" Tag="dashboard" ToolTipService.ToolTip="Dashboard" />
+                <NavigationViewItem x:Uid="NavRunning"
                     x:Name="RunningNavigationItem"
                     Content="Running Apps"
                     FontWeight="SemiBold"
@@ -593,22 +596,22 @@
                     Tag="running"
                     ToolTipService.ToolTip="Running Apps"
                     UseSystemFocusVisuals="True" />
-                <NavigationViewItem Content="Portable Apps" Icon="OpenFile" IsEnabled="False" Tag="portable" ToolTipService.ToolTip="Portable Apps" />
-                <NavigationViewItem
+                <NavigationViewItem x:Uid="NavPortable" Content="Portable Apps" Icon="OpenFile" IsEnabled="False" Tag="portable" ToolTipService.ToolTip="Portable Apps" />
+                <NavigationViewItem x:Uid="NavHistory"
                     x:Name="HistoryNavigationItem"
                     Content="History"
                     Icon="Clock"
                     Tag="history"
                     ToolTipService.ToolTip="History"
                     UseSystemFocusVisuals="True" />
-                <NavigationViewItem
+                <NavigationViewItem x:Uid="NavSettings"
                     x:Name="SettingsNavigationItem"
                     Content="Settings"
                     Icon="Setting"
                     Tag="settings"
                     ToolTipService.ToolTip="Settings"
                     UseSystemFocusVisuals="True" />
-                <NavigationViewItem Content="About" Icon="Help" IsEnabled="False" Tag="about" ToolTipService.ToolTip="About" />
+                <NavigationViewItem x:Uid="NavAbout" Content="About" Icon="Help" IsEnabled="False" Tag="about" ToolTipService.ToolTip="About" />
             </NavigationView.MenuItems>
             <Grid>
             <TabView
@@ -616,7 +619,7 @@
                 Background="{StaticResource PageBrush}"
                 IsAddTabButtonVisible="False"
                 TabCloseRequested="WorkspaceTabs_TabCloseRequested">
-                <TabViewItem Header="Running Apps" IsClosable="False">
+                <TabViewItem x:Uid="RunningAppsTab" Header="Running Apps" IsClosable="False">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -636,6 +639,7 @@
                                     FontSize="28"
                                     FontWeight="SemiBold"
                                     Foreground="{StaticResource PrimaryTextBrush}"
+                                    x:Uid="RunningAppsTitle"
                                     Text="Running applications" />
                                 <TextBlock
                                     AutomationProperties.LiveSetting="Polite"
@@ -679,8 +683,9 @@
                                             FontFamily="Segoe UI Variable"
                                             FontWeight="SemiBold"
                                             Foreground="{StaticResource SecondaryTextBrush}"
+                                            x:Uid="SortBy"
                                             Text="Sort by" />
-                                        <ComboBox
+                                        <ComboBox x:Uid="SortSelector"
                                             Grid.Column="1"
                                             Width="180"
                                             Height="36"
@@ -700,7 +705,7 @@
                                             CornerRadius="6"
                                             ToolTipService.ToolTip="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}" />
                                     </Grid>
-                                    <TextBlock
+                        <TextBlock x:Uid="NoComparableData"
                                         x:Name="NoComparableDataText"
                                         Grid.Row="0"
                                         Grid.Column="1"
@@ -726,8 +731,9 @@
                                             FontFamily="Segoe UI Variable"
                                             FontWeight="SemiBold"
                                             Foreground="{StaticResource PrimaryTextBrush}"
+                                            x:Uid="AdvancedToggle"
                                             Text="Advanced" />
-                                        <ToggleSwitch
+                                        <ToggleSwitch x:Uid="AdvancedSwitch"
                                             Height="36"
                                             AutomationProperties.Name="Show advanced application information"
                                             IsOn="{x:Bind ViewModel.IsAdvancedMode, Mode=TwoWay}"
@@ -738,7 +744,7 @@
                                 </Grid>
                             </Border>
                         </Grid>
-                        <ListView
+                        <ListView x:Uid="RunningApplicationsList"
                             Grid.Row="1"
                             MaxWidth="1320"
                             Margin="24,0,24,24"
@@ -764,7 +770,7 @@
                                     BorderThickness="1"
                                     CornerRadius="8"
                                     Visibility="Collapsed">
-                                    <TextBlock
+                        <TextBlock x:Uid="AdvancedNotice"
                                         Foreground="{StaticResource PrimaryTextBrush}"
                                         Text="Advanced mode is on. Open an application tab and expand Advanced application information for attribution evidence and implementation availability."
                                         TextWrapping="Wrap" />

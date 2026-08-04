@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
 using MonitoringXS.App.ViewModels;
+using MonitoringXS.App.Localization;
 using MonitoringXS.Application;
 using MonitoringXS.Collectors;
 using MonitoringXS.Core.Abstractions;
@@ -18,6 +19,7 @@ using MonitoringXS.Platform.Windows.Security;
 using MonitoringXS.Storage.Attribution;
 using MonitoringXS.Storage.History;
 using MonitoringXS.Storage.Settings;
+using Microsoft.Windows.Globalization;
 
 namespace MonitoringXS.App;
 
@@ -30,6 +32,7 @@ public partial class App : Microsoft.UI.Xaml.Application
     {
         InitializeComponent();
         _services = ConfigureServices();
+        Localization.LanguageChanged += Localization_LanguageChanged;
     }
 
     public IServiceProvider Services => _services;
@@ -53,6 +56,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         LiveRefreshCadence cadence = _services.GetRequiredService<LiveRefreshCadence>();
+        Localization.SetLanguage(load.Settings.Language);
         cadence.Update(load.Settings.LiveSamplingInterval);
         SettingsPageViewModel settingsViewModel =
             _services.GetRequiredService<SettingsPageViewModel>();
@@ -62,7 +66,8 @@ public partial class App : Microsoft.UI.Xaml.Application
             load.Settings,
             _services.GetRequiredService<HistoryPageViewModel>(),
             settingsViewModel,
-            cadence);
+            cadence,
+            Localization);
         _window = mainWindow;
         _window.Closed += Window_Closed;
         _window.Activate();
@@ -71,7 +76,38 @@ public partial class App : Microsoft.UI.Xaml.Application
 
     private void Window_Closed(object sender, WindowEventArgs args)
     {
-        _services.Dispose();
+        if (ReferenceEquals(sender, _window))
+        {
+            Localization.LanguageChanged -= Localization_LanguageChanged;
+            _services.Dispose();
+        }
+    }
+
+    public LocalizationService Localization => _services.GetRequiredService<LocalizationService>();
+
+    private void Localization_LanguageChanged(object? sender, LanguageChangedEventArgs args)
+    {
+        ApplicationLanguages.PrimaryLanguageOverride = args.Culture.Name;
+
+        if (_window is not MainWindow oldWindow)
+        {
+            return;
+        }
+
+        string selectedNavigation = oldWindow.SelectedNavigationTag;
+        MainWindow replacement = new(
+            _services.GetRequiredService<MainWindowViewModel>(),
+            _services.GetRequiredService<SettingsPageViewModel>().CurrentSettings,
+            _services.GetRequiredService<HistoryPageViewModel>(),
+            _services.GetRequiredService<SettingsPageViewModel>(),
+            _services.GetRequiredService<LiveRefreshCadence>(),
+            Localization,
+            selectedNavigation);
+        _window = replacement;
+        replacement.Closed += Window_Closed;
+        replacement.Activate();
+        replacement.EnableResponsiveToolbar();
+        oldWindow.Close();
     }
 
     private static ServiceProvider ConfigureServices()
@@ -130,6 +166,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<IGpuMetricCollector, GpuMetricCollector>();
         services.AddSingleton<IGpuMetricAggregationService, GpuMetricAggregationService>();
         services.AddSingleton<MonitoringCoordinator>();
+        services.AddSingleton<LocalizationService>();
         services.AddSingleton(_ => new LiveRefreshCadence(
             ApplicationSettings.Default.LiveSamplingInterval));
         services.AddSingleton<MainWindowViewModel>();

@@ -30,6 +30,7 @@ public sealed partial class SettingsPage : UserControl
         SamplingSelector.SelectionChanged += SamplingSelector_SelectionChanged;
         RetentionSelector.SelectionChanged += RetentionSelector_SelectionChanged;
         ThemeSelector.SelectionChanged += ThemeSelector_SelectionChanged;
+        LanguageSelector.SelectionChanged += LanguageSelector_SelectionChanged;
         _initialized = true;
     }
 
@@ -80,6 +81,19 @@ public sealed partial class SettingsPage : UserControl
         {
             await IgnoreShutdownCancellationAsync(
                 viewModel.SetThemeAsync(option, _lifetimeToken));
+        }
+    }
+
+    private async void LanguageSelector_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs args)
+    {
+        if (_initialized
+            && DataContext is SettingsPageViewModel viewModel
+            && LanguageSelector.SelectedItem is SettingsOption<ApplicationLanguage> option)
+        {
+            await IgnoreShutdownCancellationAsync(
+                viewModel.SetLanguageAsync(option, _lifetimeToken));
         }
     }
 

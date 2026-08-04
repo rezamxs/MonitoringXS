@@ -65,6 +65,47 @@ public sealed class JsonApplicationSettingsStoreTests
     }
 
     [Fact]
+    public async Task LanguagePersistsAndRestoresAcrossRestart()
+    {
+        using TestDirectory directory = new();
+        ApplicationSettings expected = new(
+            1,
+            2,
+            72,
+            ApplicationTheme.Dark,
+            ApplicationLanguage.Persian);
+        await using (JsonApplicationSettingsStore first = new(directory.SettingsPath))
+        {
+            Assert.True((await first.SaveAsync(expected, TestCancellation)).Succeeded);
+        }
+
+        await using JsonApplicationSettingsStore restarted = new(directory.SettingsPath);
+        ApplicationSettingsLoadResult result = await restarted.LoadAsync(TestCancellation);
+
+        Assert.Equal(expected, result.Settings);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("Klingon")]
+    public async Task MissingOrUnknownLanguageSafelyUsesSystem(string? language)
+    {
+        using TestDirectory directory = new();
+        string languageProperty = language is null ? string.Empty : $", \"Language\": \"{language}\"";
+        await File.WriteAllTextAsync(
+            directory.SettingsPath,
+            $"{{\"Version\":1,\"LiveSamplingSeconds\":2,\"HistoryRetentionHours\":72,\"Theme\":\"Light\"{languageProperty}}}",
+            TestCancellation);
+        await using JsonApplicationSettingsStore store = new(directory.SettingsPath);
+
+        ApplicationSettingsLoadResult result = await store.LoadAsync(TestCancellation);
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(ApplicationLanguage.System, result.Settings.Language);
+        Assert.Equal(2, result.Settings.LiveSamplingSeconds);
+    }
+
+    [Fact]
     public async Task FutureVersionFailsClosedWithoutChangingItsFile()
     {
         using TestDirectory directory = new();

@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="Available" xml:space="preserve"><value>Available</value></data>
+  <data name="PartialLowerBound" xml:space="preserve"><value>Partial · lower bound</value></data>
+  <data name="WarmingUp" xml:space="preserve"><value>Warming up</value></data>
+  <data name="AccessDenied" xml:space="preserve"><value>Access denied</value></data>
+  <data name="Unsupported" xml:space="preserve"><value>Unsupported</value></data>
+  <data name="Unavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="Error" xml:space="preserve"><value>Error</value></data>
+  <data name="Running" xml:space="preserve"><value>Running</value></data>
+  <data name="PublisherUnavailable" xml:space="preserve"><value>Publisher unavailable</value></data>
+  <data name="NoAttributedActivity" xml:space="preserve"><value>No attributed activity yet.</value></data>
+  <data name="DatabaseUnavailable" xml:space="preserve"><value>Database unavailable</value></data>
+  <data name="SettingsStorageUnavailable" xml:space="preserve"><value>Settings storage is unavailable.</value></data>
+  <data name="SamplingOneLabel" xml:space="preserve"><value>1 second</value></data>
+  <data name="SamplingOneDescription" xml:space="preserve"><value>Most responsive; highest sampling overhead.</value></data>
+  <data name="SamplingTwoLabel" xml:space="preserve"><value>2 seconds</value></data>
+  <data name="SamplingTwoDescription" xml:space="preserve"><value>Balanced lower-frequency sampling.</value></data>
+  <data name="SamplingFiveLabel" xml:space="preserve"><value>5 seconds</value></data>
+  <data name="SamplingFiveDescription" xml:space="preserve"><value>Lowest sampling overhead.</value></data>
+  <data name="RetentionSixLabel" xml:space="preserve"><value>6 hours</value></data>
+  <data name="RetentionSixDescription" xml:space="preserve"><value>Older history is removed during asynchronous maintenance.</value></data>
+  <data name="RetentionDayLabel" xml:space="preserve"><value>24 hours</value></data>
+  <data name="RetentionDayDescription" xml:space="preserve"><value>Default retention.</value></data>
+  <data name="RetentionThreeDaysLabel" xml:space="preserve"><value>3 days</value></data>
+  <data name="RetentionThreeDaysDescription" xml:space="preserve"><value>Keeps three days of bounded local history.</value></data>
+  <data name="RetentionSevenDaysLabel" xml:space="preserve"><value>7 days</value></data>
+  <data name="RetentionSevenDaysDescription" xml:space="preserve"><value>Keeps seven days within the database-size limit.</value></data>
+  <data name="ThemeSystemLabel" xml:space="preserve"><value>System</value></data>
+  <data name="ThemeSystemDescription" xml:space="preserve"><value>Follow Windows theme.</value></data>
+  <data name="ThemeLightLabel" xml:space="preserve"><value>Light</value></data>
+  <data name="ThemeLightDescription" xml:space="preserve"><value>Use the light application theme.</value></data>
+  <data name="ThemeDarkLabel" xml:space="preserve"><value>Dark</value></data>
+  <data name="ThemeDarkDescription" xml:space="preserve"><value>Use the dark application theme.</value></data>
+  <data name="LanguageSystemLabel" xml:space="preserve"><value>System default</value></data>
+  <data name="LanguageSystemDescription" xml:space="preserve"><value>Follow the Windows display language.</value></data>
+  <data name="LanguageEnglishLabel" xml:space="preserve"><value>English</value></data>
+  <data name="LanguageEnglishDescription" xml:space="preserve"><value>Use English throughout Monitoring XS.</value></data>
+  <data name="LanguagePersianLabel" xml:space="preserve"><value>فارسی</value></data>
+  <data name="LanguagePersianDescription" xml:space="preserve"><value>Use Persian with a right-to-left layout.</value></data>
+  <data name="LoadingSettings" xml:space="preserve"><value>Loading settings…</value></data>
+  <data name="SettingsNotChecked" xml:space="preserve"><value>Not checked</value></data>
+  <data name="BrokerRefreshPrompt" xml:space="preserve"><value>Refresh to check privileged metric availability.</value></data>
+  <data name="SettingsAccessibilitySummary" xml:space="preserve"><value>Sampling {0}; history retention {1}; theme {2}; language {3}; Privileged Metrics Service {4}.</value></data>
+  <data name="SettingsNotLoaded" xml:space="preserve"><value>not loaded</value></data>
+  <data name="SettingsRecovered" xml:space="preserve"><value>Settings recovered with safe defaults.</value></data>
+  <data name="SettingsLoaded" xml:space="preserve"><value>Settings loaded.</value></data>
+  <data name="Checking" xml:space="preserve"><value>Checking…</value></data>
+  <data name="BrokerCheckFailed" xml:space="preserve"><value>Privileged Metrics Service status could not be checked.</value></data>
+  <data name="SelectedSettingUnsupported" xml:space="preserve"><value>The selected setting is not supported.</value></data>
+  <data name="SettingApplyFailed" xml:space="preserve"><value>The setting could not be applied.</value></data>
+  <data name="SavingSettings" xml:space="preserve"><value>Saving settings…</value></data>
+  <data name="SettingsSaved" xml:space="preserve"><value>Settings saved.</value></data>
+  <data name="BrokerNotInstalledLabel" xml:space="preserve"><value>Not installed</value></data>
+  <data name="BrokerNotInstalledDetail" xml:space="preserve"><value>Network and Physical Disk metrics require the Privileged Metrics Service.</value></data>
+  <data name="BrokerStoppedLabel" xml:space="preserve"><value>Stopped</value></data>
+  <data name="BrokerStoppedDetail" xml:space="preserve"><value>The installed Privileged Metrics Service is stopped.</value></data>
+  <data name="BrokerRunningLabel" xml:space="preserve"><value>Running</value></data>
+  <data name="BrokerRunningDetail" xml:space="preserve"><value>The service is running; connection health has not been confirmed.</value></data>
+  <data name="BrokerBinaryMissingLabel" xml:space="preserve"><value>Binary missing</value></data>
+  <data name="BrokerBinaryMissingDetail" xml:space="preserve"><value>The service is registered, but its executable is unavailable.</value></data>
+  <data name="BrokerProtocolMismatchLabel" xml:space="preserve"><value>Protocol mismatch</value></data>
+  <data name="BrokerProtocolMismatchDetail" xml:space="preserve"><value>The app and service protocol versions do not match.</value></data>
+  <data name="BrokerConnectionUnavailableLabel" xml:space="preserve"><value>Connection unavailable</value></data>
+  <data name="BrokerConnectionUnavailableDetail" xml:space="preserve"><value>The app could not establish a healthy local service connection.</value></data>
+  <data name="BrokerHealthyLabel" xml:space="preserve"><value>Healthy</value></data>
+  <data name="BrokerHealthyDetail" xml:space="preserve"><value>Network and Physical Disk privileged metrics are available.</value></data>
+  <data name="SettingsPageTitle.Text" xml:space="preserve"><value>Settings</value></data>
+  <data name="SettingsPageTitle.AutomationProperties.Name" xml:space="preserve"><value>Application settings page</value></data>
+  <data name="SettingsPageRoot.AutomationProperties.Name" xml:space="preserve"><value>Application settings page</value></data>
+  <data name="SettingsSavingProgress.AutomationProperties.Name" xml:space="preserve"><value>Saving settings</value></data>
+  <data name="SettingsPageSubtitle.Text" xml:space="preserve"><value>Per-user monitoring preferences</value></data>
+  <data name="SettingsMonitoringTitle.Text" xml:space="preserve"><value>Monitoring</value></data>
+  <data name="SettingsMonitoringDescription.Text" xml:space="preserve"><value>Choose a safe live sampling interval. Changes apply without restarting and captures never overlap.</value></data>
+  <data name="SettingsSamplingSelector.AutomationProperties.Name" xml:space="preserve"><value>Live sampling interval</value></data>
+  <data name="SettingsSamplingSelector.AutomationProperties.HelpText" xml:space="preserve"><value>Choose 1, 2, or 5 seconds.</value></data>
+  <data name="SettingsHistoryTitle.Text" xml:space="preserve"><value>History</value></data>
+  <data name="SettingsHistoryDescription.Text" xml:space="preserve"><value>Retention changes apply during future asynchronous maintenance. Reducing retention may remove older history.</value></data>
+  <data name="SettingsRetentionSelector.AutomationProperties.Name" xml:space="preserve"><value>History retention</value></data>
+  <data name="SettingsRetentionSelector.AutomationProperties.HelpText" xml:space="preserve"><value>Choose 6 hours, 24 hours, 3 days, or 7 days.</value></data>
+  <data name="SettingsAppearanceTitle.Text" xml:space="preserve"><value>Appearance</value></data>
+  <data name="SettingsAppearanceDescription.Text" xml:space="preserve"><value>Theme changes apply immediately. System follows Windows and High Contrast.</value></data>
+  <data name="SettingsThemeSelector.AutomationProperties.Name" xml:space="preserve"><value>Application theme</value></data>
+  <data name="SettingsPrivilegedTitle.Text" xml:space="preserve"><value>Privileged metrics</value></data>
+  <data name="SettingsPrivilegedDescription.Text" xml:space="preserve"><value>Network and Physical Disk require the Privileged Metrics Service. Settings never install, remove, restart, or elevate it.</value></data>
+  <data name="SettingsBrokerRefreshButton.Content" xml:space="preserve"><value>Refresh status</value></data>
+  <data name="SettingsBrokerRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>Refresh Privileged Metrics Service status</value></data>
+  <data name="SettingsBrokerProgress.AutomationProperties.Name" xml:space="preserve"><value>Checking Privileged Metrics Service status</value></data>
+  <data name="SettingsOperatorCommand.Text" xml:space="preserve"><value>Operator command: scripts/privileged-broker/Manage-PrivilegedBroker.ps1</value></data>
+  <data name="SettingsElevationNote.Text" xml:space="preserve"><value>Install and Remove require an elevated PowerShell. Normal app launch remains unelevated.</value></data>
+  <data name="SettingsLanguageTitle.Text" xml:space="preserve"><value>Language</value></data>
+  <data name="SettingsLanguageDescription.Text" xml:space="preserve"><value>Switch between the system language, English and Persian immediately. The current page and live monitoring are preserved.</value></data>
+  <data name="SettingsLanguageSelector.AutomationProperties.Name" xml:space="preserve"><value>Application language</value></data>
+  <data name="ProcessDetailsTitle.Text" xml:space="preserve"><value>Process details and actions</value></data>
+  <data name="ProcessDetailsDescription.Text" xml:space="preserve"><value>Actions remain non-elevated and revalidate PID, start time, and executable identity.</value></data>
+  <data name="EndTaskButton.Content" xml:space="preserve"><value>End Task</value></data>
+  <data name="EndTaskButton.AutomationProperties.Name" xml:space="preserve"><value>End selected task</value></data>
+  <data name="EndTaskButton.AutomationProperties.HelpText" xml:space="preserve"><value>Ends only the selected process after confirmation and identity revalidation.</value></data>
+  <data name="EndTreeButton.Content" xml:space="preserve"><value>End Process Tree</value></data>
+  <data name="EndTreeButton.AutomationProperties.Name" xml:space="preserve"><value>End selected process tree</value></data>
+  <data name="EndTreeButton.AutomationProperties.HelpText" xml:space="preserve"><value>Ends verified descendants from leaves to root after stronger confirmation.</value></data>
+  <data name="OpenLocationButton.Content" xml:space="preserve"><value>Open File Location</value></data>
+  <data name="OpenLocationButton.AutomationProperties.Name" xml:space="preserve"><value>Open selected process file location</value></data>
+  <data name="OpenLocationButton.AutomationProperties.HelpText" xml:space="preserve"><value>Opens Explorer and selects the verified executable.</value></data>
+  <data name="CopyDetailsButton.Content" xml:space="preserve"><value>Copy Process Details</value></data>
+  <data name="CopyDetailsButton.AutomationProperties.Name" xml:space="preserve"><value>Copy selected process details</value></data>
+  <data name="CopyDetailsButton.AutomationProperties.HelpText" xml:space="preserve"><value>Copies safe process identity and current application metrics without command lines or secrets.</value></data>
+  <data name="MetricCpuLabel.Text" xml:space="preserve"><value>CPU</value></data>
+  <data name="MetricMemoryLabel.Text" xml:space="preserve"><value>Working set</value></data>
+  <data name="MetricIoReadLabel.Text" xml:space="preserve"><value>Process I/O read</value></data>
+  <data name="MetricIoWriteLabel.Text" xml:space="preserve"><value>Process I/O write</value></data>
+  <data name="MetricDiskTitle.Text" xml:space="preserve"><value>Physical disk</value></data>
+  <data name="MetricReadLabel.Text" xml:space="preserve"><value>Read</value></data>
+  <data name="MetricWriteLabel.Text" xml:space="preserve"><value>Write</value></data>
+  <data name="MetricNetworkTitle.Text" xml:space="preserve"><value>Network</value></data>
+  <data name="MetricReceiveLabel.Text" xml:space="preserve"><value>Download / Receive</value></data>
+  <data name="MetricSendLabel.Text" xml:space="preserve"><value>Upload / Send</value></data>
+  <data name="MetricGpuTitle.Text" xml:space="preserve"><value>GPU</value></data>
+  <data name="MetricBusiestEngineLabel.Text" xml:space="preserve"><value>Busiest engine</value></data>
+  <data name="MetricDedicatedLabel.Text" xml:space="preserve"><value>Dedicated memory</value></data>
+  <data name="MetricSharedLabel.Text" xml:space="preserve"><value>Shared memory</value></data>
+  <data name="MetricCpuHistoryTitle.Text" xml:space="preserve"><value>CPU · last minute</value></data>
+  <data name="AdvancedInfo.Header" xml:space="preserve"><value>Advanced application information</value></data>
+  <data name="ClassificationEvidence.Text" xml:space="preserve"><value>Classification evidence</value></data>
+  <data name="DiskTotals.Text" xml:space="preserve"><value>Physical-disk session totals</value></data>
+  <data name="NetworkDetails.Text" xml:space="preserve"><value>Network session details</value></data>
+  <data name="GpuDetails.Text" xml:space="preserve"><value>GPU counter details</value></data>
+  <data name="UnavailableImplementation.Text" xml:space="preserve"><value>Process-level tables, command lines, and security fields are not implemented in this vertical slice.</value></data>
+  <data name="NavDashboard.Content" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="NavRunning.Content" xml:space="preserve"><value>Running Apps</value></data>
+  <data name="NavPortable.Content" xml:space="preserve"><value>Portable Apps</value></data>
+  <data name="NavHistory.Content" xml:space="preserve"><value>History</value></data>
+  <data name="NavSettings.Content" xml:space="preserve"><value>Settings</value></data>
+  <data name="NavAbout.Content" xml:space="preserve"><value>About</value></data>
+  <data name="RunningAppsTab.Header" xml:space="preserve"><value>Running Apps</value></data>
+  <data name="RunningAppsTitle.Text" xml:space="preserve"><value>Running applications</value></data>
+  <data name="SortBy.Text" xml:space="preserve"><value>Sort by</value></data>
+  <data name="NoComparableData.Text" xml:space="preserve"><value>No comparable data</value></data>
+  <data name="AdvancedToggle.Text" xml:space="preserve"><value>Advanced</value></data>
+  <data name="AdvancedToggle.AutomationProperties.Name" xml:space="preserve"><value>Show advanced application information</value></data>
+  <data name="AdvancedNotice.Text" xml:space="preserve"><value>Advanced mode is on. Open an application tab and expand Advanced application information for attribution evidence and implementation availability.</value></data>
+  <data name="CardCpuLabel.Text" xml:space="preserve"><value>CPU</value></data>
+  <data name="CardMemoryLabel.Text" xml:space="preserve"><value>Memory</value></data>
+  <data name="CardIoLabel.Text" xml:space="preserve"><value>Process I/O</value></data>
+  <data name="CardDiskLabel.Text" xml:space="preserve"><value>Physical disk</value></data>
+  <data name="CardNetworkLabel.Text" xml:space="preserve"><value>Network</value></data>
+  <data name="CardGpuLabel.Text" xml:space="preserve"><value>GPU</value></data>
+  <data name="ProcessSelector.AutomationProperties.Name" xml:space="preserve"><value>Process for application actions</value></data>
+  <data name="ProcessPath.AutomationProperties.Name" xml:space="preserve"><value>Selected process executable path</value></data>
+  <data name="SortSelector.AutomationProperties.Name" xml:space="preserve"><value>Sort applications by</value></data>
+  <data name="AdvancedSwitch.AutomationProperties.Name" xml:space="preserve"><value>Show advanced application information</value></data>
+  <data name="RunningApplicationsList.AutomationProperties.Name" xml:space="preserve"><value>Running applications</value></data>
+  <data name="HistoryPageRoot.AutomationProperties.Name" xml:space="preserve"><value>Application metric history page</value></data>
+  <data name="HistoryLoadingProgress.AutomationProperties.Name" xml:space="preserve"><value>Loading application history</value></data>
+  <data name="HistoryApplicationSelector.AutomationProperties.Name" xml:space="preserve"><value>History application</value></data>
+  <data name="HistoryRangeSelector.AutomationProperties.Name" xml:space="preserve"><value>History time range</value></data>
+  <data name="HistoryCharts.AutomationProperties.Name" xml:space="preserve"><value>History metric charts</value></data>
+  <data name="HistoryPageTitle.Text" xml:space="preserve"><value>History</value></data>
+  <data name="HistoryPageSubtitle.Text" xml:space="preserve"><value>Saved application metrics · local SQLite history</value></data>
+  <data name="HistoryRefreshButton.Content" xml:space="preserve"><value>Refresh</value></data>
+  <data name="HistoryRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>Refresh application history</value></data>
+  <data name="HistoryChartLegend.Text" xml:space="preserve"><value>Line = measured; gap = unavailable/partial</value></data>
+  <data name="SparklineEmpty.Text" xml:space="preserve"><value>Waiting for real samples…</value></data>
+  <data name="SparklineSummary.Text" xml:space="preserve"><value>CPU history is warming up.</value></data>
+  <data name="DiscoveringApplications" xml:space="preserve"><value>Discovering running applications…</value></data>
+  <data name="RefreshRetry" xml:space="preserve"><value>Some monitoring data is temporarily unavailable. Retrying…</value></data>
+  <data name="InstalledApplications" xml:space="preserve"><value>Installed applications</value></data>
+  <data name="InstalledApplicationsDescription" xml:space="preserve"><value>Select an application to open its live tab. Windows infrastructure and services are excluded.</value></data>
+  <data name="PortableApplications" xml:space="preserve"><value>Portable &amp; unregistered apps</value></data>
+  <data name="PortableApplicationsDescription" xml:space="preserve"><value>Executables without catalog-backed installation evidence remain separate.</value></data>
+  <data name="SortApplicationName" xml:space="preserve"><value>Application name</value></data>
+  <data name="SortCpu" xml:space="preserve"><value>CPU usage</value></data>
+  <data name="SortMemory" xml:space="preserve"><value>Memory usage</value></data>
+  <data name="SortProcessIo" xml:space="preserve"><value>Process I/O rate</value></data>
+  <data name="SortDisk" xml:space="preserve"><value>Physical Disk rate</value></data>
+  <data name="SortNetwork" xml:space="preserve"><value>Network rate</value></data>
+  <data name="SortGpu" xml:space="preserve"><value>GPU usage</value></data>
+  <data name="SortProcessCount" xml:space="preserve"><value>Process count</value></data>
+  <data name="SortAToZ" xml:space="preserve"><value>A to Z</value></data>
+  <data name="SortZToA" xml:space="preserve"><value>Z to A</value></data>
+  <data name="SortHighestToLowest" xml:space="preserve"><value>Highest to lowest</value></data>
+  <data name="SortLowestToHighest" xml:space="preserve"><value>Lowest to highest</value></data>
+  <data name="SortDirectionAutomation" xml:space="preserve"><value>Sort direction: {0}. Activate to change to {1}.</value></data>
+  <data name="NoComparableDataText" xml:space="preserve"><value>No comparable data</value></data>
+  <data name="RunningLive" xml:space="preserve"><value>Running · live</value></data>
+  <data name="RunningPartial" xml:space="preserve"><value>Running · partial metrics</value></data>
+  <data name="RunningWarming" xml:space="preserve"><value>Running · metrics warming up</value></data>
+  <data name="ProcessCountSingular" xml:space="preserve"><value>{0} process</value></data>
+  <data name="ProcessCountPlural" xml:space="preserve"><value>{0} processes</value></data>
+  <data name="HistoryLoading" xml:space="preserve"><value>Loading saved applications…</value></data>
+  <data name="HistoryOpenPrompt" xml:space="preserve"><value>Open History to load saved metrics.</value></data>
+  <data name="HistoryNotLoaded" xml:space="preserve"><value>Not loaded</value></data>
+  <data name="HistoryDatabaseUnavailable" xml:space="preserve"><value>History database unavailable.</value></data>
+  <data name="HistoryNoSaved" xml:space="preserve"><value>No saved application history yet.</value></data>
+  <data name="HistoryLoaded" xml:space="preserve"><value>History loaded.</value></data>
+  <data name="HistoryLoadedPartial" xml:space="preserve"><value>History loaded with partial or unavailable metric gaps.</value></data>
+  <data name="HistoryNoRange" xml:space="preserve"><value>No history in the selected range.</value></data>
+  <data name="HistoryCancelled" xml:space="preserve"><value>History request cancelled.</value></data>
+  <data name="HistoryQueryFailed" xml:space="preserve"><value>History query failed.</value></data>
+  <data name="HistoryApplicationNotFound" xml:space="preserve"><value>Application not found.</value></data>
+  <data name="Range15Minutes" xml:space="preserve"><value>15 minutes</value></data>
+  <data name="Range1Hour" xml:space="preserve"><value>1 hour</value></data>
+  <data name="Range6Hours" xml:space="preserve"><value>6 hours</value></data>
+  <data name="Range24Hours" xml:space="preserve"><value>24 hours</value></data>
+  <data name="MetricCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="MetricWorkingSet" xml:space="preserve"><value>Working Set memory</value></data>
+  <data name="MetricIoRead" xml:space="preserve"><value>Process I/O read</value></data>
+  <data name="MetricIoWrite" xml:space="preserve"><value>Process I/O write</value></data>
+  <data name="MetricDiskRead" xml:space="preserve"><value>Physical Disk read</value></data>
+  <data name="MetricDiskWrite" xml:space="preserve"><value>Physical Disk write</value></data>
+  <data name="MetricNetworkReceive" xml:space="preserve"><value>Network receive</value></data>
+  <data name="MetricNetworkSend" xml:space="preserve"><value>Network send</value></data>
+  <data name="MetricGpuUtilization" xml:space="preserve"><value>GPU utilization</value></data>
+  <data name="MetricGpuDedicated" xml:space="preserve"><value>Dedicated GPU memory</value></data>
+  <data name="MetricGpuShared" xml:space="preserve"><value>Shared GPU memory</value></data>
+  <data name="UnitPercent" xml:space="preserve"><value>%</value></data>
+  <data name="UnitBytes" xml:space="preserve"><value>bytes</value></data>
+  <data name="UnitBytesPerSecond" xml:space="preserve"><value>bytes/s</value></data>
+  <data name="SelectedRangeFormat" xml:space="preserve"><value>Selected range: {0}</value></data>
+  <data name="SelectProcess" xml:space="preserve"><value>Select a process.</value></data>
+  <data name="NoProcessSelected" xml:space="preserve"><value>No process selected</value></data>
+  <data name="Ready" xml:space="preserve"><value>Ready.</value></data>
+  <data name="ReadyLastAction" xml:space="preserve"><value>Ready. Last action: {0}</value></data>
+  <data name="EndTaskTitle" xml:space="preserve"><value>End task?</value></data>
+  <data name="EndTaskMessage" xml:space="preserve"><value>End {0} ({1}, PID {2})? Unsaved work may be lost.</value></data>
+  <data name="EndTaskConfirm" xml:space="preserve"><value>End task</value></data>
+  <data name="EndTaskCancelled" xml:space="preserve"><value>End Task cancelled.</value></data>
+  <data name="EndingTask" xml:space="preserve"><value>Ending task…</value></data>
+  <data name="EndTreeTitle" xml:space="preserve"><value>End process tree?</value></data>
+  <data name="EndTreeMessage" xml:space="preserve"><value>End {0} ({1}, PID {2}) and {3} currently identified descendants? Unsaved work in every process may be lost.</value></data>
+  <data name="EndTreeConfirm" xml:space="preserve"><value>End process tree</value></data>
+  <data name="EndTreeCancelled" xml:space="preserve"><value>End Process Tree cancelled.</value></data>
+  <data name="VerifyingTree" xml:space="preserve"><value>Verifying process tree…</value></data>
+  <data name="EndingTree" xml:space="preserve"><value>Ending process tree…</value></data>
+  <data name="OpeningLocation" xml:space="preserve"><value>Opening file location…</value></data>
+  <data name="VerifyingDetails" xml:space="preserve"><value>Verifying process details…</value></data>
+  <data name="DetailsCopied" xml:space="preserve"><value>Process details copied.</value></data>
+  <data name="ClipboardUnavailable" xml:space="preserve"><value>Clipboard is unavailable; process details were not copied.</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="DashboardStatus" xml:space="preserve"><value>{0} installed · {1} portable · updated {2}</value></data>
+  <data name="MemoryLabel" xml:space="preserve"><value>Memory</value></data>
+  <data name="DedicatedLabel" xml:space="preserve"><value>dedicated</value></data>
+  <data name="SharedLabel" xml:space="preserve"><value>shared</value></data>
+  <data name="AtLeast" xml:space="preserve"><value>at least</value></data>
+</root>

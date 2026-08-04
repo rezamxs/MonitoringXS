@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MonitoringXS.App.Localization;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
 using MonitoringXS.Platform.Windows.Broker;
@@ -39,7 +40,9 @@ internal interface IBrokerSettingsStatusProvider
     ValueTask<BrokerOperationalStatus> QueryAsync(CancellationToken cancellationToken);
 }
 
-internal sealed class BrokerSettingsStatusProvider(PrivilegedEtwBrokerClient client)
+internal sealed class BrokerSettingsStatusProvider(
+    PrivilegedEtwBrokerClient client,
+    LocalizationService localization)
     : IBrokerSettingsStatusProvider
 {
     public async ValueTask<BrokerOperationalStatus> QueryAsync(
@@ -48,71 +51,77 @@ internal sealed class BrokerSettingsStatusProvider(PrivilegedEtwBrokerClient cli
         BrokerServiceSnapshot service = await BrokerServiceProbe.QueryAsync(cancellationToken);
         if (service.State == BrokerServiceState.NotInstalled)
         {
-            return BrokerStatusPresentation.Create(BrokerOperationalState.NotInstalled);
+            return BrokerStatusPresentation.Create(BrokerOperationalState.NotInstalled, localization);
         }
 
         if (service.BinaryPresent == false)
         {
-            return BrokerStatusPresentation.Create(BrokerOperationalState.BinaryMissing);
+            return BrokerStatusPresentation.Create(BrokerOperationalState.BinaryMissing, localization);
         }
 
         if (service.State == BrokerServiceState.Stopped)
         {
-            return BrokerStatusPresentation.Create(BrokerOperationalState.Stopped);
+            return BrokerStatusPresentation.Create(BrokerOperationalState.Stopped, localization);
         }
 
         if (service.State != BrokerServiceState.Running)
         {
-            return BrokerStatusPresentation.Create(BrokerOperationalState.ConnectionUnavailable);
+            return BrokerStatusPresentation.Create(BrokerOperationalState.ConnectionUnavailable, localization);
         }
 
         NetworkEventBatch network = await client.ReadNetworkBatchAsync([], cancellationToken);
         if (network.Availability == MetricAvailability.Unsupported)
         {
-            return BrokerStatusPresentation.Create(BrokerOperationalState.ProtocolMismatch);
+            return BrokerStatusPresentation.Create(BrokerOperationalState.ProtocolMismatch, localization);
         }
 
         return network.Availability is MetricAvailability.Available
             or MetricAvailability.Partial
             or MetricAvailability.WarmingUp
-            ? BrokerStatusPresentation.Create(BrokerOperationalState.Healthy)
-            : BrokerStatusPresentation.Create(BrokerOperationalState.ConnectionUnavailable);
+            ? BrokerStatusPresentation.Create(BrokerOperationalState.Healthy, localization)
+            : BrokerStatusPresentation.Create(BrokerOperationalState.ConnectionUnavailable, localization);
     }
 }
 
 internal static class BrokerStatusPresentation
 {
-    public static BrokerOperationalStatus Create(BrokerOperationalState state) => state switch
+    public static BrokerOperationalStatus Create(
+        BrokerOperationalState state,
+        LocalizationService? localization = null)
     {
+        localization ??= new LocalizationService();
+        return state switch
+        {
         BrokerOperationalState.NotInstalled => new(
             state,
-            "Not installed",
-            "Network and Physical Disk metrics require the Privileged Broker."),
+            localization.Get(LocalizationKeys.BrokerNotInstalledLabel),
+            localization.Get(LocalizationKeys.BrokerNotInstalledDetail)),
         BrokerOperationalState.Stopped => new(
             state,
-            "Stopped",
-            "The installed Privileged Broker service is stopped."),
+            localization.Get(LocalizationKeys.BrokerStoppedLabel),
+            localization.Get(LocalizationKeys.BrokerStoppedDetail)),
         BrokerOperationalState.Running => new(
             state,
-            "Running",
-            "The service is running; connection health has not been confirmed."),
+            localization.Get(LocalizationKeys.BrokerRunningLabel),
+            localization.Get(LocalizationKeys.BrokerRunningDetail)),
         BrokerOperationalState.BinaryMissing => new(
             state,
-            "Binary missing",
-            "The service is registered, but its Broker binary is unavailable."),
+            localization.Get(LocalizationKeys.BrokerBinaryMissingLabel),
+            localization.Get(LocalizationKeys.BrokerBinaryMissingDetail)),
         BrokerOperationalState.ProtocolMismatch => new(
             state,
-            "Protocol mismatch",
-            "The app and Broker protocol versions do not match."),
+            localization.Get(LocalizationKeys.BrokerProtocolMismatchLabel),
+            localization.Get(LocalizationKeys.BrokerProtocolMismatchDetail)),
         BrokerOperationalState.ConnectionUnavailable => new(
             state,
-            "Connection unavailable",
-            "The app could not establish a healthy local Broker connection."),
+            localization.Get(LocalizationKeys.BrokerConnectionUnavailableLabel),
+            localization.Get(LocalizationKeys.BrokerConnectionUnavailableDetail)),
         _ => new(
             state,
-            "Healthy",
-            "Network and Physical Disk privileged metrics are available.")
-    };
+            localization.Get(LocalizationKeys.BrokerHealthyLabel),
+            localization.Get(LocalizationKeys.BrokerHealthyDetail))
+        };
+    }
 }
 
 #pragma warning disable CA1001 // Save serialization gate lives for the app lifetime.
@@ -123,17 +132,25 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     private readonly IMetricHistoryRetentionController _retention;
     private readonly IBrokerSettingsStatusProvider _broker;
     private readonly LiveRefreshCadence _cadence;
+    private readonly LocalizationService _localization;
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private readonly object _settingsGate = new();
     private ApplicationSettings _settings = ApplicationSettings.Default;
     private int _saveVersion;
+    private BrokerOperationalState? _brokerState;
 
     public SettingsPageViewModel(
         IApplicationSettingsStore store,
         IMetricHistoryRetentionController retention,
         PrivilegedEtwBrokerClient brokerClient,
-        LiveRefreshCadence cadence)
-        : this(store, retention, new BrokerSettingsStatusProvider(brokerClient), cadence)
+        LiveRefreshCadence cadence,
+        LocalizationService? localization = null)
+        : this(
+            store,
+            retention,
+            new BrokerSettingsStatusProvider(brokerClient, localization ?? new LocalizationService()),
+            cadence,
+            localization)
     {
     }
 
@@ -141,12 +158,16 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         IApplicationSettingsStore store,
         IMetricHistoryRetentionController retention,
         IBrokerSettingsStatusProvider broker,
-        LiveRefreshCadence cadence)
+        LiveRefreshCadence cadence,
+        LocalizationService? localization = null)
     {
         _store = store;
         _retention = retention;
         _broker = broker;
         _cadence = cadence;
+        _localization = localization ?? new LocalizationService();
+        BuildOptions();
+        _localization.LanguageChanged += Localization_LanguageChanged;
         RefreshBrokerStatusCommand = new AsyncRelayCommand(RefreshBrokerStatusAsync);
     }
 
@@ -154,27 +175,24 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
     public IAsyncRelayCommand RefreshBrokerStatusCommand { get; }
 
-    public IReadOnlyList<SettingsOption<int>> SamplingOptions { get; } =
-    [
-        new(1, "1 second", "Most responsive; highest sampling overhead."),
-        new(2, "2 seconds", "Balanced lower-frequency sampling."),
-        new(5, "5 seconds", "Lowest sampling overhead.")
-    ];
+    public ApplicationSettings CurrentSettings
+    {
+        get
+        {
+            lock (_settingsGate)
+            {
+                return _settings;
+            }
+        }
+    }
 
-    public IReadOnlyList<SettingsOption<int>> RetentionOptions { get; } =
-    [
-        new(6, "6 hours", "Older history is removed during asynchronous maintenance."),
-        new(24, "24 hours", "Default retention."),
-        new(72, "3 days", "Keeps three days of bounded local history."),
-        new(168, "7 days", "Keeps seven days within the database-size limit.")
-    ];
+    public IReadOnlyList<SettingsOption<int>> SamplingOptions { get; private set; } = [];
 
-    public IReadOnlyList<SettingsOption<ApplicationTheme>> ThemeOptions { get; } =
-    [
-        new(ApplicationTheme.System, "System", "Follow Windows theme."),
-        new(ApplicationTheme.Light, "Light", "Use the light application theme."),
-        new(ApplicationTheme.Dark, "Dark", "Use the dark application theme.")
-    ];
+    public IReadOnlyList<SettingsOption<int>> RetentionOptions { get; private set; } = [];
+
+    public IReadOnlyList<SettingsOption<ApplicationTheme>> ThemeOptions { get; private set; } = [];
+
+    public IReadOnlyList<SettingsOption<ApplicationLanguage>> LanguageOptions { get; private set; } = [];
 
     [ObservableProperty]
     public partial SettingsOption<int>? SelectedSampling { get; set; }
@@ -186,10 +204,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public partial SettingsOption<ApplicationTheme>? SelectedTheme { get; set; }
 
     [ObservableProperty]
+    public partial SettingsOption<ApplicationLanguage>? SelectedLanguage { get; set; }
+
+    [ObservableProperty]
     public partial SettingsPageState State { get; set; } = SettingsPageState.Loading;
 
     [ObservableProperty]
-    public partial string StatusText { get; set; } = "Loading settings…";
+    public partial string StatusText { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial bool IsSaving { get; set; }
@@ -198,34 +219,54 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public partial bool IsBrokerRefreshing { get; set; }
 
     [ObservableProperty]
-    public partial string BrokerStateText { get; set; } = "Not checked";
+    public partial string BrokerStateText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string BrokerDetailText { get; set; } =
-        "Refresh to check privileged metric availability.";
+    public partial string BrokerDetailText { get; set; } = string.Empty;
 
-    public string AccessibilitySummary =>
-        $"Sampling {SelectedSampling?.Label ?? "not loaded"}; "
-        + $"history retention {SelectedRetention?.Label ?? "not loaded"}; "
-        + $"theme {SelectedTheme?.Label ?? "not loaded"}; "
-        + $"Privileged Broker {BrokerStateText}.";
+    public string AccessibilitySummary => _localization.Format(
+        LocalizationKeys.SettingsAccessibilitySummary,
+        SelectedSampling?.Label ?? _localization.Get(LocalizationKeys.SettingsNotLoaded),
+        SelectedRetention?.Label ?? _localization.Get(LocalizationKeys.SettingsNotLoaded),
+        SelectedTheme?.Label ?? _localization.Get(LocalizationKeys.SettingsNotLoaded),
+        SelectedLanguage?.Label ?? _localization.Get(LocalizationKeys.SettingsNotLoaded),
+        BrokerStateText);
 
     public void Initialize(ApplicationSettingsLoadResult load)
     {
+        BuildOptions();
         _settings = load.Settings.IsValid ? load.Settings : ApplicationSettings.Default;
         SelectedSampling = SamplingOptions.Single(option =>
             option.Value == _settings.LiveSamplingSeconds);
         SelectedRetention = RetentionOptions.Single(option =>
             option.Value == _settings.HistoryRetentionHours);
         SelectedTheme = ThemeOptions.Single(option => option.Value == _settings.Theme);
+        SelectedLanguage = LanguageOptions.Single(option => option.Value == _settings.Language);
         _cadence.Update(_settings.LiveSamplingInterval);
         State = load.IsAvailable ? SettingsPageState.Ready : SettingsPageState.StorageUnavailable;
         StatusText = load.Recovered
-            ? load.Error ?? "Settings recovered with safe defaults."
+            ? load.Error ?? _localization.Get(LocalizationKeys.SettingsRecovered)
             : load.IsAvailable
-                ? "Settings loaded."
-                : load.Error ?? "Settings storage is unavailable.";
+                ? _localization.Get(LocalizationKeys.SettingsLoaded)
+                : load.Error ?? _localization.Get(LocalizationKeys.SettingsStorageUnavailable);
+        BrokerStateText = _localization.Get(LocalizationKeys.SettingsNotChecked);
+        BrokerDetailText = _localization.Get(LocalizationKeys.BrokerRefreshPrompt);
         OnPropertyChanged(nameof(AccessibilitySummary));
+    }
+
+    public async Task SetLanguageAsync(
+        SettingsOption<ApplicationLanguage> option,
+        CancellationToken cancellationToken)
+    {
+        SelectedLanguage = option;
+        await ChangeAsync(
+            settings => settings with { Language = option.Value },
+            _ => ValueTask.FromResult(MetricHistoryRetentionResult.Success),
+            cancellationToken);
+        if (SelectedLanguage?.Value == option.Value)
+        {
+            _localization.SetLanguage(option.Value);
+        }
     }
 
     public Task SetSamplingAsync(
@@ -274,10 +315,11 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public async Task RefreshBrokerStatusAsync(CancellationToken cancellationToken)
     {
         IsBrokerRefreshing = true;
-        BrokerStateText = "Checking…";
+        BrokerStateText = _localization.Get(LocalizationKeys.Checking);
         try
         {
             BrokerOperationalStatus status = await _broker.QueryAsync(cancellationToken);
+            _brokerState = status.State;
             BrokerStateText = status.Label;
             BrokerDetailText = status.Detail;
         }
@@ -287,14 +329,76 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         }
         catch
         {
-            BrokerStateText = "Connection unavailable";
-            BrokerDetailText = "Broker status could not be checked.";
+            _brokerState = BrokerOperationalState.ConnectionUnavailable;
+            BrokerStateText = _localization.Get(LocalizationKeys.BrokerConnectionUnavailableLabel);
+            BrokerDetailText = _localization.Get(LocalizationKeys.BrokerCheckFailed);
         }
         finally
         {
             IsBrokerRefreshing = false;
             OnPropertyChanged(nameof(AccessibilitySummary));
         }
+    }
+
+    private void BuildOptions()
+    {
+        int? sampling = SelectedSampling?.Value;
+        int? retention = SelectedRetention?.Value;
+        ApplicationTheme? theme = SelectedTheme?.Value;
+        ApplicationLanguage? language = SelectedLanguage?.Value;
+        SamplingOptions =
+        [
+            new(1, _localization.Get(LocalizationKeys.SamplingOneLabel), _localization.Get(LocalizationKeys.SamplingOneDescription)),
+            new(2, _localization.Get(LocalizationKeys.SamplingTwoLabel), _localization.Get(LocalizationKeys.SamplingTwoDescription)),
+            new(5, _localization.Get(LocalizationKeys.SamplingFiveLabel), _localization.Get(LocalizationKeys.SamplingFiveDescription))
+        ];
+        RetentionOptions =
+        [
+            new(6, _localization.Get(LocalizationKeys.RetentionSixLabel), _localization.Get(LocalizationKeys.RetentionSixDescription)),
+            new(24, _localization.Get(LocalizationKeys.RetentionDayLabel), _localization.Get(LocalizationKeys.RetentionDayDescription)),
+            new(72, _localization.Get(LocalizationKeys.RetentionThreeDaysLabel), _localization.Get(LocalizationKeys.RetentionThreeDaysDescription)),
+            new(168, _localization.Get(LocalizationKeys.RetentionSevenDaysLabel), _localization.Get(LocalizationKeys.RetentionSevenDaysDescription))
+        ];
+        ThemeOptions =
+        [
+            new(ApplicationTheme.System, _localization.Get(LocalizationKeys.ThemeSystemLabel), _localization.Get(LocalizationKeys.ThemeSystemDescription)),
+            new(ApplicationTheme.Light, _localization.Get(LocalizationKeys.ThemeLightLabel), _localization.Get(LocalizationKeys.ThemeLightDescription)),
+            new(ApplicationTheme.Dark, _localization.Get(LocalizationKeys.ThemeDarkLabel), _localization.Get(LocalizationKeys.ThemeDarkDescription))
+        ];
+        LanguageOptions =
+        [
+            new(ApplicationLanguage.System, _localization.Get(LocalizationKeys.LanguageSystemLabel), _localization.Get(LocalizationKeys.LanguageSystemDescription)),
+            new(ApplicationLanguage.English, _localization.Get(LocalizationKeys.LanguageEnglishLabel), _localization.Get(LocalizationKeys.LanguageEnglishDescription)),
+            new(ApplicationLanguage.Persian, _localization.Get(LocalizationKeys.LanguagePersianLabel), _localization.Get(LocalizationKeys.LanguagePersianDescription))
+        ];
+        if (sampling is not null) SelectedSampling = SamplingOptions.Single(item => item.Value == sampling);
+        if (retention is not null) SelectedRetention = RetentionOptions.Single(item => item.Value == retention);
+        if (theme is not null) SelectedTheme = ThemeOptions.Single(item => item.Value == theme);
+        if (language is not null) SelectedLanguage = LanguageOptions.Single(item => item.Value == language);
+        OnPropertyChanged(nameof(AccessibilitySummary));
+    }
+
+    private void Localization_LanguageChanged(object? sender, LanguageChangedEventArgs args)
+    {
+        BuildOptions();
+        if (_brokerState is BrokerOperationalState state)
+        {
+            BrokerOperationalStatus status = BrokerStatusPresentation.Create(state, _localization);
+            BrokerStateText = status.Label;
+            BrokerDetailText = status.Detail;
+        }
+
+        OnPropertyChanged(nameof(AccessibilitySummary));
+        StatusText = State switch
+        {
+            SettingsPageState.Loading => _localization.Get(LocalizationKeys.LoadingSettings),
+            SettingsPageState.Ready => _localization.Get(LocalizationKeys.SettingsLoaded),
+            SettingsPageState.Saving => _localization.Get(LocalizationKeys.SavingSettings),
+            SettingsPageState.Saved => _localization.Get(LocalizationKeys.SettingsSaved),
+            SettingsPageState.ValidationError => _localization.Get(LocalizationKeys.SelectedSettingUnsupported),
+            SettingsPageState.StorageUnavailable => _localization.Get(LocalizationKeys.SettingsStorageUnavailable),
+            _ => StatusText
+        };
     }
 
     private async Task ChangeAsync(
@@ -315,7 +419,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             if (!settings.IsValid)
             {
                 State = SettingsPageState.ValidationError;
-                StatusText = "The selected setting is not supported.";
+                StatusText = _localization.Get(LocalizationKeys.SelectedSettingUnsupported);
                 return;
             }
 
@@ -323,7 +427,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             if (!applied.Succeeded)
             {
                 State = SettingsPageState.ValidationError;
-                StatusText = applied.Error ?? "The setting could not be applied.";
+                StatusText = _localization.Get(LocalizationKeys.SettingApplyFailed);
                 return;
             }
 
@@ -334,7 +438,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             version = Interlocked.Increment(ref _saveVersion);
             IsSaving = true;
             State = SettingsPageState.Saving;
-            StatusText = "Saving settings…";
+            StatusText = _localization.Get(LocalizationKeys.SavingSettings);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -343,7 +447,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         catch
         {
             State = SettingsPageState.StorageUnavailable;
-            StatusText = "Settings storage is unavailable.";
+            StatusText = _localization.Get(LocalizationKeys.SettingsStorageUnavailable);
         }
         finally
         {
@@ -385,8 +489,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
                     ? SettingsPageState.Saved
                     : SettingsPageState.StorageUnavailable;
                 StatusText = saved.Succeeded
-                    ? "Settings saved."
-                    : saved.Error ?? "Settings storage is unavailable.";
+                    ? _localization.Get(LocalizationKeys.SettingsSaved)
+                    : saved.Error ?? _localization.Get(LocalizationKeys.SettingsStorageUnavailable);
                 OnPropertyChanged(nameof(AccessibilitySummary));
             }
             finally
@@ -403,7 +507,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             if (version == Volatile.Read(ref _saveVersion))
             {
                 State = SettingsPageState.StorageUnavailable;
-                StatusText = "Settings storage is unavailable.";
+                StatusText = _localization.Get(LocalizationKeys.SettingsStorageUnavailable);
             }
         }
         finally

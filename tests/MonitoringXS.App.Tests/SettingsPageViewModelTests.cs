@@ -41,6 +41,9 @@ public sealed class SettingsPageViewModelTests
         Assert.Equal(
             [ApplicationTheme.System, ApplicationTheme.Light, ApplicationTheme.Dark],
             viewModel.ThemeOptions.Select(item => item.Value));
+        Assert.Equal(
+            [ApplicationLanguage.System, ApplicationLanguage.English, ApplicationLanguage.Persian],
+            viewModel.LanguageOptions.Select(item => item.Value));
     }
 
     [Theory]
@@ -273,6 +276,23 @@ public sealed class SettingsPageViewModelTests
     }
 
     [Fact]
+    public async Task RapidLanguageChangesApplyAndPersistLatestSelection()
+    {
+        TestHarness context = new();
+        SettingsPageViewModel viewModel = context.InitializedViewModel();
+        SettingsOption<ApplicationLanguage>[] options = viewModel.LanguageOptions.ToArray();
+
+        await Task.WhenAll(
+            viewModel.SetLanguageAsync(options.Single(item => item.Value == ApplicationLanguage.System), TestCancellation),
+            viewModel.SetLanguageAsync(options.Single(item => item.Value == ApplicationLanguage.English), TestCancellation),
+            viewModel.SetLanguageAsync(options.Single(item => item.Value == ApplicationLanguage.Persian), TestCancellation));
+
+        Assert.Equal(ApplicationLanguage.Persian, viewModel.SelectedLanguage?.Value);
+        Assert.Equal(ApplicationLanguage.Persian, viewModel.CurrentSettings.Language);
+        Assert.Equal(ApplicationLanguage.Persian, context.Store.Saved[^1].Language);
+    }
+
+    [Fact]
     public void SettingsLayoutIsScrollableAccessibleAndBoundedAtSupportedSizes()
     {
         string xaml = File.ReadAllText(Path.Combine(
@@ -284,7 +304,7 @@ public sealed class SettingsPageViewModelTests
         Assert.Contains("VerticalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
         Assert.Contains("HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
         Assert.Contains("MaxWidth=\"900\"", xaml, StringComparison.Ordinal);
-        Assert.Equal(3, Count(xaml, "<ComboBox"));
+        Assert.Equal(4, Count(xaml, "<ComboBox"));
         Assert.True(Count(xaml, "UseSystemFocusVisuals=\"True\"") >= 4);
         Assert.True(Count(xaml, "AutomationProperties.Name=") >= 8);
         string codeBehind = File.ReadAllText(Path.Combine(
@@ -301,8 +321,8 @@ public sealed class SettingsPageViewModelTests
             StringComparison.Ordinal);
         Assert.Contains("SettingsPage_Loaded", codeBehind, StringComparison.Ordinal);
         Assert.Contains("DataContext = viewModel", codeBehind, StringComparison.Ordinal);
-        Assert.Equal(3, Count(xaml, "SelectedItem=\"{Binding Selected"));
-        Assert.Equal(3, Count(xaml, "Mode=TwoWay"));
+        Assert.Equal(4, Count(xaml, "SelectedItem=\"{Binding Selected"));
+        Assert.Equal(4, Count(xaml, "Mode=TwoWay"));
         Assert.DoesNotContain("FocusState", codeBehind, StringComparison.Ordinal);
         Assert.Contains(
             "Command=\"{Binding RefreshBrokerStatusCommand}\"",
