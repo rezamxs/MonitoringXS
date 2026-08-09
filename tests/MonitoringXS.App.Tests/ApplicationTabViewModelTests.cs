@@ -1,10 +1,99 @@
+using System.Runtime.CompilerServices;
 using MonitoringXS.App.ViewModels;
+using MonitoringXS.Application;
+using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace MonitoringXS.App.Tests;
 
 public sealed class ApplicationTabViewModelTests
 {
+    [Fact]
+    public void RealAndFallbackIconStatesAreMutuallyExclusive()
+    {
+        ApplicationCardViewModel card = new()
+        {
+            LogicalApplicationId = "sample-app",
+            Disposition = ApplicationDisposition.Installed
+        };
+        ApplicationTabViewModel tab = new("sample-app", "Sample App");
+
+        Assert.False(card.HasAppIcon);
+        Assert.True(card.HasFallbackIcon);
+        Assert.False(tab.HasAppIcon);
+        Assert.True(tab.HasFallbackIcon);
+
+        BitmapImage icon = (BitmapImage)RuntimeHelpers.GetUninitializedObject(typeof(BitmapImage));
+        card.AppIconSource = icon;
+        tab.AppIconSource = icon;
+
+        Assert.True(card.HasAppIcon);
+        Assert.False(card.HasFallbackIcon);
+        Assert.True(tab.HasAppIcon);
+        Assert.False(tab.HasFallbackIcon);
+    }
+
+    [Fact]
+    public void CardAndTabPreferTheExecutableAndDoNotResolveAgainOnRefresh()
+    {
+        RecordingIconProvider provider = new();
+        ApplicationMetricSnapshot snapshot = Snapshot() with
+        {
+            Processes =
+            [
+                new(
+                    new ProcessInstanceId(42, DateTimeOffset.UtcNow),
+                    "sample.exe",
+                    @"C:\Apps\Sample\sample.exe",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false,
+                    true)
+            ]
+        };
+        ApplicationCardViewModel card = new(iconProvider: provider)
+        {
+            LogicalApplicationId = "sample-app",
+            Disposition = ApplicationDisposition.Installed
+        };
+        ApplicationTabViewModel tab = new("sample-app", "Sample App", iconProvider: provider);
+
+        card.Update(snapshot, []);
+        tab.Update(snapshot, []);
+        card.Update(snapshot, []);
+        tab.Update(snapshot, []);
+
+        Assert.Equal(2, provider.Paths.Count);
+        Assert.All(provider.Paths, path => Assert.Equal(@"C:\Apps\Sample\sample.exe", path));
+    }
+
+    [Fact]
+    public void CpuHistoryCollectionStaysStableBoundedAndPreservesGaps()
+    {
+        DateTimeOffset start = new(2026, 8, 9, 0, 0, 0, TimeSpan.Zero);
+        ApplicationTabViewModel tab = new("sample-app", "Sample App");
+        var samples = tab.CpuSamples;
+        ApplicationHistoryPoint[] first = Enumerable.Range(0, 60)
+            .Select(index => new ApplicationHistoryPoint(
+                start.AddSeconds(index),
+                index == 30 ? null : index,
+                null))
+            .ToArray();
+
+        tab.Update(Snapshot(), first);
+        tab.Update(Snapshot(), first.Append(new(start.AddSeconds(60), 60, null)).ToArray());
+
+        Assert.Same(samples, tab.CpuSamples);
+        Assert.Equal(60, samples.Count);
+        Assert.Equal(start.AddSeconds(1), samples[0].Timestamp);
+        Assert.Null(samples[29].Value);
+        Assert.Equal(60, samples[^1].Value);
+    }
+
     [Fact]
     public void PhysicalDiskDiagnosticsDoNotCallUnavailableCollectionComplete()
     {
@@ -135,4 +224,18 @@ public sealed class ApplicationTabViewModelTests
         MetricValue<ulong>.Available(2),
         1,
         []);
+
+    private sealed class RecordingIconProvider : IApplicationIconProvider
+    {
+        public List<string> Paths { get; } = [];
+
+        public ValueTask<ApplicationIconData?> GetIconAsync(
+            string sourcePath,
+            int pixelSize,
+            CancellationToken cancellationToken)
+        {
+            Paths.Add(sourcePath);
+            return ValueTask.FromResult<ApplicationIconData?>(null);
+        }
+    }
 }

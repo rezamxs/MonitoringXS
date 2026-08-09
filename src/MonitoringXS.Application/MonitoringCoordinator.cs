@@ -20,6 +20,7 @@ public sealed class MonitoringCoordinator
     private readonly IGpuMetricCollector? _gpuCollector;
     private readonly IGpuMetricAggregationService? _gpuAggregation;
     private readonly IMetricHistoryStore? _historyStore;
+    private readonly SystemOverviewService? _systemOverview;
     private readonly Dictionary<string, BoundedTimeSeries<ApplicationHistoryPoint>> _history = new(StringComparer.Ordinal);
 
     public MonitoringCoordinator(
@@ -33,7 +34,8 @@ public sealed class MonitoringCoordinator
         INetworkMetricAggregationService? networkAggregation = null,
         IGpuMetricCollector? gpuCollector = null,
         IGpuMetricAggregationService? gpuAggregation = null,
-        IMetricHistoryStore? historyStore = null)
+        IMetricHistoryStore? historyStore = null,
+        SystemOverviewService? systemOverview = null)
     {
         _discovery = discovery;
         _attribution = attribution;
@@ -46,6 +48,7 @@ public sealed class MonitoringCoordinator
         _gpuCollector = gpuCollector;
         _gpuAggregation = gpuAggregation;
         _historyStore = historyStore;
+        _systemOverview = systemOverview;
     }
 
     public async ValueTask<MonitoringDashboardSnapshot> CaptureAsync(CancellationToken cancellationToken)
@@ -81,12 +84,18 @@ public sealed class MonitoringCoordinator
                     token => _gpuCollector.CollectAsync(attributedProcesses, capturedAt, token),
                     cancellationToken);
 
+        PhysicalDiskCollectorDiagnostics? diskDiagnosticsForOverview = null;
+        NetworkCollectorDiagnostics? networkDiagnosticsForOverview = null;
+
         if (_physicalDiskCollector is not null && _physicalDiskAggregation is not null)
         {
             try
             {
                 IReadOnlyList<PhysicalDiskProcessSample> physicalDiskSamples =
                     await physicalDiskTask!;
+                diskDiagnosticsForOverview = physicalDiskSamples.Count > 0
+                    ? physicalDiskSamples[0].Diagnostics
+                    : null;
                 IReadOnlyDictionary<string, PhysicalDiskMetricSet> physicalDiskByApplication =
                     _physicalDiskAggregation.Aggregate(attribution, physicalDiskSamples);
                 applications = applications
@@ -118,6 +127,9 @@ public sealed class MonitoringCoordinator
             {
                 IReadOnlyList<NetworkProcessSample> networkSamples =
                     await networkTask!;
+                networkDiagnosticsForOverview = networkSamples.Count > 0
+                    ? networkSamples[0].Diagnostics
+                    : null;
                 IReadOnlyDictionary<string, NetworkMetricSet> networkByApplication =
                     _networkAggregation.Aggregate(attribution, networkSamples);
                 applications = applications
@@ -226,11 +238,36 @@ public sealed class MonitoringCoordinator
             pair => (IReadOnlyList<ApplicationHistoryPoint>)pair.Value.Snapshot().Select(item => item.Value).ToArray(),
             StringComparer.Ordinal);
 
+        SystemOverviewSnapshot? systemOverview = null;
+        IReadOnlyList<SystemOverviewHistoryPoint>? systemOverviewHistory = null;
+        if (_systemOverview is not null)
+        {
+            try
+            {
+                systemOverview = await _systemOverview.CaptureAsync(
+                    diskDiagnosticsForOverview,
+                    networkDiagnosticsForOverview,
+                    _gpuCollector?.LastBatch,
+                    cancellationToken);
+                systemOverviewHistory = _systemOverview.GetHistory();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                // System overview failure must never interrupt application metric collection.
+            }
+        }
+
         return new MonitoringDashboardSnapshot(
             capturedAt,
             applications.Where(item => item.Application.Disposition is ApplicationDisposition.Installed or ApplicationDisposition.Packaged).ToArray(),
             applications.Where(item => item.Application.Disposition is ApplicationDisposition.Portable or ApplicationDisposition.Unresolved).ToArray(),
-            historySnapshot);
+            historySnapshot,
+            systemOverview,
+            systemOverviewHistory);
     }
 
     private static async Task<T> CollectWithTimeoutAsync<T>(

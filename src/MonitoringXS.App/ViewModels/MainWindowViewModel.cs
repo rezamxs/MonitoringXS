@@ -9,7 +9,7 @@ using MonitoringXS.Core.Models;
 
 namespace MonitoringXS.App.ViewModels;
 
-public sealed partial class MainWindowViewModel : ObservableObject
+public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     private static readonly TimeSpan LiveSortInterval = TimeSpan.FromSeconds(5);
     private static readonly IReadOnlyList<ApplicationSortOption> AvailableSortOptions =
@@ -20,8 +20,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         new(ApplicationSortField.ProcessIoRate, "Process I/O rate"),
         new(ApplicationSortField.PhysicalDiskRate, "Physical Disk rate"),
         new(ApplicationSortField.NetworkRate, "Network rate"),
-        new(ApplicationSortField.GpuUsage, "GPU usage"),
-        new(ApplicationSortField.ProcessCount, "Process count")
+        new(ApplicationSortField.GpuUsage, "GPU usage")
     ];
 
     private readonly MonitoringCoordinator _coordinator;
@@ -31,11 +30,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly Dictionary<string, ApplicationCardViewModel> _cards = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ApplicationTabViewModel> _openTabs = new(StringComparer.Ordinal);
     private readonly LocalizationService _localization;
+    private readonly MetricExplanationService _metricExplanations;
+    private readonly IApplicationIconProvider? _iconProvider;
     private ApplicationSectionViewModel _installedSection = null!;
     private ApplicationSectionViewModel _portableSection = null!;
     private DateTimeOffset _lastLiveSortAt = DateTimeOffset.MinValue;
     private Func<ProcessActionConfirmation, CancellationToken, Task<bool>>? _confirmProcessAction;
+    private Func<ApplicationSortPreference, bool, CancellationToken, Task>? _persistSort;
     private CancellationToken _shutdownToken;
+    private bool _changingSortField;
+    private bool _suppressSortPersistence;
 
     [ObservableProperty]
     public partial bool IsAdvancedMode { get; set; }
@@ -55,11 +59,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     public partial ApplicationCardViewModel? SelectedApplication { get; set; }
 
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
+
     public MainWindowViewModel(
         MonitoringCoordinator coordinator,
         ILogger<MainWindowViewModel> logger,
-        LocalizationService? localization = null)
-        : this(coordinator, logger, null, null, localization)
+        LocalizationService? localization = null,
+        MetricExplanationService? metricExplanations = null)
+        : this(coordinator, logger, null, null, localization, metricExplanations, null)
     {
     }
 
@@ -68,13 +76,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ILogger<MainWindowViewModel> logger,
         IProcessActionService? processActions,
         IClipboardService? clipboard,
-        LocalizationService? localization = null)
+        LocalizationService? localization = null,
+        MetricExplanationService? metricExplanations = null,
+        IApplicationIconProvider? iconProvider = null)
     {
         _coordinator = coordinator;
         _logger = logger;
         _processActions = processActions;
         _clipboard = clipboard;
         _localization = localization ?? new LocalizationService();
+        _metricExplanations = metricExplanations ?? new MetricExplanationService(_localization);
+        _iconProvider = iconProvider;
+        SystemOverview = new SystemOverviewPageViewModel(_localization);
         BuildLocalizedPresentation();
         StatusMessage = _localization.Get(LocalizationKeys.DiscoveringApplications);
         _localization.LanguageChanged += Localization_LanguageChanged;
@@ -92,6 +105,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public IReadOnlyCollection<ApplicationTabViewModel> OpenTabs => _openTabs.Values;
 
+    public MonitoringDashboardSnapshot? LatestDashboardSnapshot { get; private set; }
+
+    public SystemOverviewPageViewModel SystemOverview { get; }
+
     public string SortDirectionLabel => ApplicationSortPresentation.DirectionLabel(
         SelectedSortOption.Field,
         IsSortDescending,
@@ -107,16 +124,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
         get
         {
             ApplicationSortField sortField = SelectedSortOption.Field;
-            if (sortField is ApplicationSortField.ApplicationName or ApplicationSortField.ProcessCount)
+            if (sortField == ApplicationSortField.ApplicationName)
             {
                 return false;
             }
 
-            IEnumerable<ApplicationCardViewModel> cards = InstalledApplications.Concat(PortableApplications);
-            return (InstalledApplications.Count > 0 || PortableApplications.Count > 0)
+            ApplicationCardViewModel[] cards = VisibleCards().ToArray();
+            return cards.Length > 0
                 && !ApplicationCardSorter.HasComparableData(cards, sortField);
         }
     }
+
+    public bool HasNoSearchResults =>
+        !string.IsNullOrWhiteSpace(SearchText) && !VisibleCards().Any();
 
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
@@ -125,6 +145,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             MonitoringDashboardSnapshot snapshot = await Task.Run(
                 async () => await _coordinator.CaptureAsync(cancellationToken),
                 cancellationToken);
+            LatestDashboardSnapshot = snapshot;
+            SystemOverview.Update(snapshot.SystemOverview, snapshot.SystemOverviewHistory ?? []);
 
             bool membershipChanged = UpdateCollection(
                 InstalledApplications,
@@ -136,6 +158,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 snapshot.OneMinuteHistory);
             ApplyCurrentSort(snapshot.CapturedAt, force: membershipChanged);
             OnPropertyChanged(nameof(HasNoComparableData));
+            OnPropertyChanged(nameof(HasNoSearchResults));
             UpdateOpenTabs(snapshot);
             LastUpdated = snapshot.CapturedAt.ToLocalTime();
             UpdateStatusMessage();
@@ -175,7 +198,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 card.LogicalApplicationId,
                 card.DisplayName,
                 actions,
-                _localization);
+                _localization,
+                _metricExplanations,
+                _iconProvider);
             _openTabs.Add(card.LogicalApplicationId, tab);
         }
 
@@ -195,9 +220,40 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _shutdownToken = shutdownToken;
     }
 
-    public void CloseTab(string logicalApplicationId) => _openTabs.Remove(logicalApplicationId);
+    public void CloseTab(string logicalApplicationId)
+    {
+        if (_openTabs.Remove(logicalApplicationId, out ApplicationTabViewModel? tab))
+        {
+            tab.Dispose();
+        }
+    }
 
     public void ToggleSortDirection() => IsSortDescending = !IsSortDescending;
+
+    public void ClearSearch() => SearchText = string.Empty;
+
+    internal void ConfigureApplicationSort(
+        ApplicationSettings settings,
+        Func<ApplicationSortPreference, bool, CancellationToken, Task> persistSort,
+        CancellationToken shutdownToken)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(persistSort);
+        _persistSort = persistSort;
+        _shutdownToken = shutdownToken;
+        _suppressSortPersistence = true;
+        try
+        {
+            ApplicationSortField field = FromPreference(settings.ApplicationSort);
+            SelectedSortOption = SortOptions.Single(option => option.Field == field);
+            IsSortDescending = settings.ApplicationSortDescending;
+            ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
+        }
+        finally
+        {
+            _suppressSortPersistence = false;
+        }
+    }
 
     private bool UpdateCollection(
         ObservableCollection<ApplicationCardViewModel> target,
@@ -222,7 +278,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             if (!_cards.TryGetValue(snapshot.Application.LogicalApplicationId, out ApplicationCardViewModel? card))
             {
-                card = new ApplicationCardViewModel(_localization)
+                card = new ApplicationCardViewModel(_localization, _metricExplanations, _iconProvider)
                 {
                     LogicalApplicationId = snapshot.Application.LogicalApplicationId,
                     Disposition = snapshot.Application.Disposition
@@ -254,22 +310,24 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 ApplicationCardSorter.Sort(
                     InstalledApplications,
                     SelectedSortOption.Field,
-                    IsSortDescending));
+                    IsSortDescending,
+                    _localization.Culture));
             ApplyOrder(
                 PortableApplications,
                 ApplicationCardSorter.Sort(
                     PortableApplications,
                     SelectedSortOption.Field,
-                    IsSortDescending));
+                    IsSortDescending,
+                    _localization.Culture));
             _lastLiveSortAt = capturedAt;
         }
 
         List<IApplicationListItemViewModel> desiredItems =
         [
             _installedSection,
-            .. InstalledApplications,
+            .. InstalledApplications.Where(MatchesSearch),
             _portableSection,
-            .. PortableApplications
+            .. PortableApplications.Where(MatchesSearch)
         ];
         ApplyOrder(ApplicationItems, desiredItems);
 
@@ -310,23 +368,43 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     partial void OnSelectedSortOptionChanged(ApplicationSortOption value)
     {
-        bool defaultDescending = ApplicationSortPresentation.DefaultDescending(value.Field);
-        if (IsSortDescending != defaultDescending)
+        _changingSortField = true;
+        try
         {
-            IsSortDescending = defaultDescending;
+            bool defaultDescending = ApplicationSortPresentation.DefaultDescending(value.Field);
+            if (IsSortDescending != defaultDescending)
+            {
+                IsSortDescending = defaultDescending;
+            }
+            else
+            {
+                ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
+            }
         }
-        else
+        finally
         {
-            ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
+            _changingSortField = false;
         }
 
         NotifySortPresentationChanged();
+        PersistSortPreference();
     }
 
     partial void OnIsSortDescendingChanged(bool value)
     {
         NotifySortPresentationChanged();
         ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
+        if (!_changingSortField)
+        {
+            PersistSortPreference();
+        }
+    }
+
+    partial void OnSearchTextChanged(string value)
+    {
+        ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
+        OnPropertyChanged(nameof(HasNoSearchResults));
+        OnPropertyChanged(nameof(HasNoComparableData));
     }
 
     private void NotifySortPresentationChanged()
@@ -355,7 +433,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 ApplicationSortField.PhysicalDiskRate => _localization.Get(LocalizationKeys.SortDisk),
                 ApplicationSortField.NetworkRate => _localization.Get(LocalizationKeys.SortNetwork),
                 ApplicationSortField.GpuUsage => _localization.Get(LocalizationKeys.SortGpu),
-                _ => _localization.Get(LocalizationKeys.SortProcessCount)
+                _ => throw new ArgumentOutOfRangeException(nameof(option.Field))
             }
         }).ToArray();
         ApplicationSortField selectedField = SelectedSortOption.Field;
@@ -364,12 +442,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             ApplicationItems.Clear();
             ApplicationItems.Add(_installedSection);
-            foreach (ApplicationCardViewModel card in InstalledApplications)
+            foreach (ApplicationCardViewModel card in InstalledApplications.Where(MatchesSearch))
             {
                 ApplicationItems.Add(card);
             }
             ApplicationItems.Add(_portableSection);
-            foreach (ApplicationCardViewModel card in PortableApplications)
+            foreach (ApplicationCardViewModel card in PortableApplications.Where(MatchesSearch))
             {
                 ApplicationItems.Add(card);
             }
@@ -380,6 +458,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void Localization_LanguageChanged(object? sender, LanguageChangedEventArgs args)
     {
         BuildLocalizedPresentation();
+        SystemOverview.Relocalize();
         foreach (ApplicationCardViewModel card in _cards.Values)
         {
             card.Relocalize();
@@ -394,11 +473,83 @@ public sealed partial class MainWindowViewModel : ObservableObject
         UpdateStatusMessage();
     }
 
+    private IEnumerable<ApplicationCardViewModel> VisibleCards() =>
+        InstalledApplications.Concat(PortableApplications).Where(MatchesSearch);
+
+    private bool MatchesSearch(ApplicationCardViewModel card) =>
+        ApplicationSearchMatcher.Matches(card, SearchText, _localization.Culture);
+
+    private void PersistSortPreference()
+    {
+        if (_suppressSortPersistence || _persistSort is null)
+        {
+            return;
+        }
+
+        _ = PersistSortPreferenceAsync(
+            ToPreference(SelectedSortOption.Field),
+            IsSortDescending,
+            _shutdownToken);
+    }
+
+    private async Task PersistSortPreferenceAsync(
+        ApplicationSortPreference field,
+        bool descending,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _persistSort!(field, descending, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            LogSortPreferenceSaveFailed(_logger, exception);
+        }
+    }
+
+    private static ApplicationSortPreference ToPreference(ApplicationSortField field) => field switch
+    {
+        ApplicationSortField.ApplicationName => ApplicationSortPreference.Name,
+        ApplicationSortField.CpuUsage => ApplicationSortPreference.Cpu,
+        ApplicationSortField.MemoryUsage => ApplicationSortPreference.Memory,
+        ApplicationSortField.ProcessIoRate => ApplicationSortPreference.ProcessIo,
+        ApplicationSortField.PhysicalDiskRate => ApplicationSortPreference.PhysicalDisk,
+        ApplicationSortField.NetworkRate => ApplicationSortPreference.Network,
+        ApplicationSortField.GpuUsage => ApplicationSortPreference.Gpu,
+        _ => throw new ArgumentOutOfRangeException(nameof(field))
+    };
+
+    private static ApplicationSortField FromPreference(ApplicationSortPreference preference) => preference switch
+    {
+        ApplicationSortPreference.Name => ApplicationSortField.ApplicationName,
+        ApplicationSortPreference.Cpu => ApplicationSortField.CpuUsage,
+        ApplicationSortPreference.Memory => ApplicationSortField.MemoryUsage,
+        ApplicationSortPreference.ProcessIo => ApplicationSortField.ProcessIoRate,
+        ApplicationSortPreference.PhysicalDisk => ApplicationSortField.PhysicalDiskRate,
+        ApplicationSortPreference.Network => ApplicationSortField.NetworkRate,
+        ApplicationSortPreference.Gpu => ApplicationSortField.GpuUsage,
+        _ => ApplicationSortField.ApplicationName
+    };
+
     private void UpdateStatusMessage() => StatusMessage = _localization.Format(
         LocalizationKeys.DashboardStatus,
         InstalledApplications.Count,
         PortableApplications.Count,
         LastUpdated.ToString("T", _localization.Culture));
+
+    public void Dispose()
+    {
+        _localization.LanguageChanged -= Localization_LanguageChanged;
+        foreach (ApplicationTabViewModel tab in _openTabs.Values)
+        {
+            tab.Dispose();
+        }
+
+        _openTabs.Clear();
+    }
 
     private void UpdateOpenTabs(MonitoringDashboardSnapshot dashboard)
     {
@@ -418,4 +569,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [LoggerMessage(EventId = 1, Level = LogLevel.Error, Message = "Monitoring refresh failed.")]
     private static partial void LogMonitoringRefreshFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Application sort preference could not be saved.")]
+    private static partial void LogSortPreferenceSaveFailed(ILogger logger, Exception exception);
 }

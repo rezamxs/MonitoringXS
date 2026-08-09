@@ -18,11 +18,21 @@ Application cards use two tiers. The upper tier keeps application identity and r
 
 Running Apps uses one compact toolbar for sorting and Advanced mode. The content column is fluid up to approximately 1120 px and must not introduce horizontal scrolling. The active navigation item combines the native selection marker, a background shape, and the standard keyboard focus indication instead of relying on color alone.
 
+The same toolbar contains localized logical-application search and a dedicated
+clear action. At narrow logical widths the search row and Advanced control wrap
+below sorting; cards remain fluid and are not recreated while search text
+changes.
+
 Running-application sorting stays inside the installed and portable sections. Application name starts at A to Z. A newly selected numeric metric starts at Highest to lowest, and the user can reverse either direction with a clearly labeled control. Measured values sort before unavailable states in both directions. If every visible value for a metric is unavailable, the toolbar reports `No comparable data` and uses application name as the deterministic order instead of treating missing values as zero. Equal measured values also use application name as a stable secondary key. Metric-driven reordering is limited to once every five seconds, while an explicit user change applies immediately. Reordering preserves the selected application, keyboard focus, and open tabs.
 
 The app title bar uses the native WinUI `TitleBar` and system caption buttons. The app does not draw replacement minimize, maximize, or close buttons. The title bar remains the drag and double-click region so Windows keeps its normal window behavior. Caption-button foreground, inactive, hover, and pressed colors follow the app's effective Light or Dark theme. High Contrast returns those colors to Windows.
 
 Charts use crisp strokes, readable units, a bounded point count, and an explicit unavailable state. CPU history retains UTC timestamps, orders samples, keeps the last duplicate timestamp, rejects invalid numeric values, and leaves unavailable intervals as visible gaps instead of connecting them or converting them to zero. Destructive operations use `ContentDialog` with a direct data-loss warning.
+
+Diagnostics uses scrollable Precision Glass sections with textual status,
+keyboard-focusable refresh/copy actions, a beginner summary, and a collapsed
+Advanced technical section. Paths and provider identifiers use left-to-right
+value presentation inside either UI direction.
 
 Appearance has exactly three modes: System, Light, and Dark. The UI describes System as `System — follows Windows` and reports the resolved state as `Currently Light` or `Currently Dark`; System is not a fourth palette. Light uses cool neutral surfaces rather than pure white throughout; Dark separates graphite window, navigation, toolbar, card, and chart surfaces. Electric Cyan remains the data accent, while Violet is limited to selection and priority. High Contrast resources map to the user's `SystemColor*` choices.
 

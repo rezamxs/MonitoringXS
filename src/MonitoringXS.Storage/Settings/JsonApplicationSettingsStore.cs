@@ -66,7 +66,9 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
                     document.LiveSamplingSeconds,
                     document.HistoryRetentionHours,
                     document.Theme,
-                    ParseLanguage(document.Language));
+                    ParseLanguage(document.Language),
+                    ParseApplicationSort(document.ApplicationSort),
+                    document.ApplicationSortDescending ?? false);
             if (settings?.IsValid == true)
             {
                 return new(settings, true, false);
@@ -133,7 +135,9 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
                         settings.LiveSamplingSeconds,
                         settings.HistoryRetentionHours,
                         settings.Theme,
-                        settings.Language.ToString()),
+                        settings.Language.ToString(),
+                        settings.ApplicationSort.ToString(),
+                        settings.ApplicationSortDescending),
                     SerializerOptions,
                     cancellationToken).ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -212,10 +216,18 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
             ? language
             : ApplicationLanguage.System;
 
+    private static ApplicationSortPreference ParseApplicationSort(string? value) =>
+        Enum.TryParse(value, ignoreCase: true, out ApplicationSortPreference sort)
+        && Enum.IsDefined(sort)
+            ? sort
+            : ApplicationSortPreference.Name;
+
     private sealed record SettingsDocument(
         int Version,
         int LiveSamplingSeconds,
         int HistoryRetentionHours,
         ApplicationTheme Theme,
-        string? Language = null);
+        string? Language = null,
+        string? ApplicationSort = null,
+        bool? ApplicationSortDescending = null);
 }

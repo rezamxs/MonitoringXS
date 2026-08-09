@@ -105,6 +105,23 @@ Broker. Live cadence changes apply immediately; retention changes apply during
 future asynchronous maintenance and can remove older history. The Settings
 page never installs or elevates the Broker.
 
+## Search or sort looks stale
+
+Search uses only metadata already collected for logical applications and updates
+on each live snapshot. Clearing search restores the complete current installed
+and portable sections. Metric-driven reordering is intentionally limited to
+once every five seconds to reduce visual jumping; an explicit sort change is
+immediate. Unavailable values remain after measured values and are never sorted
+as zero.
+
+## Diagnostics reports degraded health
+
+Open Diagnostics and refresh once. This tests the current local Broker
+connection without restarting or installing the service. Advanced details show
+tracked queue, loss, provider, and storage state. Safe copy excludes the local
+database path and sensitive process data. A degraded collector does not imply
+that independent available metrics have stopped.
+
 # Privileged ETW broker
 
 If Network or Physical disk (ETW) shows `Unavailable` or `Partial`, verify that `MonitoringXS.PrivilegedEtwBroker` is installed as `LocalSystem` and running. LocalService is unsupported because `TraceEventSession.EnableKernelProvider` returned Win32 5 in the validated path. Restarting the service is safe: the client reconnects, reports `Partial` for the first post-restart response, and never fabricates zero. CPU, Memory, Process I/O, and GPU should remain available when the broker is stopped.

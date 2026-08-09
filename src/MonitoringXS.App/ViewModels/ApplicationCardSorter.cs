@@ -1,3 +1,4 @@
+using System.Globalization;
 using MonitoringXS.Core.Models;
 
 namespace MonitoringXS.App.ViewModels;
@@ -7,11 +8,12 @@ public static class ApplicationCardSorter
     public static IReadOnlyList<ApplicationCardViewModel> Sort(
         IEnumerable<ApplicationCardViewModel> cards,
         ApplicationSortField field,
-        bool descending)
+        bool descending,
+        CultureInfo? culture = null)
     {
         ArgumentNullException.ThrowIfNull(cards);
         List<ApplicationCardViewModel> result = [.. cards];
-        result.Sort(new CardComparer(field, descending));
+        result.Sort(new CardComparer(field, descending, culture ?? CultureInfo.CurrentCulture));
         return result;
     }
 
@@ -25,7 +27,10 @@ public static class ApplicationCardSorter
             || GetMetricValue(card, field).HasValue);
     }
 
-    private sealed class CardComparer(ApplicationSortField field, bool descending)
+    private sealed class CardComparer(
+        ApplicationSortField field,
+        bool descending,
+        CultureInfo culture)
         : IComparer<ApplicationCardViewModel>
     {
         public int Compare(ApplicationCardViewModel? left, ApplicationCardViewModel? right)
@@ -47,7 +52,7 @@ public static class ApplicationCardSorter
 
             if (field == ApplicationSortField.ApplicationName)
             {
-                int nameResult = CompareName(left, right);
+                int nameResult = CompareName(left, right, culture);
                 return ApplyDirection(nameResult, descending);
             }
 
@@ -68,7 +73,24 @@ public static class ApplicationCardSorter
                 }
             }
 
-            int secondaryNameResult = CompareName(left, right);
+            // When both items lack metric values and both are truly unavailable
+            // (not merely warming up or partially measured), skip availability rank
+            // and use deterministic name order for predictability.
+            bool bothTrulyUnavailable = !leftValue.HasValue && !rightValue.HasValue
+                && !IsPotentiallyAvailable(leftValue.Availability)
+                && !IsPotentiallyAvailable(rightValue.Availability);
+
+            if (!bothTrulyUnavailable)
+            {
+                int availabilityResult = AvailabilityRank(leftValue.Availability)
+                    .CompareTo(AvailabilityRank(rightValue.Availability));
+                if (availabilityResult != 0)
+                {
+                    return availabilityResult;
+                }
+            }
+
+            int secondaryNameResult = CompareName(left, right, culture);
             if (secondaryNameResult != 0)
             {
                 return secondaryNameResult;
@@ -102,7 +124,6 @@ public static class ApplicationCardSorter
                 snapshot.Network.DownloadBytesPerSecond,
                 snapshot.Network.UploadBytesPerSecond),
             ApplicationSortField.GpuUsage => FromMetric(snapshot.Gpu.UtilizationPercent),
-            ApplicationSortField.ProcessCount => new MetricSortValue(true, snapshot.ProcessCount),
             _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unsupported application sort field.")
         };
     }
@@ -114,33 +135,65 @@ public static class ApplicationCardSorter
         MetricSortValue firstValue = FromMetric(first);
         MetricSortValue secondValue = FromMetric(second);
         return firstValue.HasValue && secondValue.HasValue
-            ? new MetricSortValue(true, firstValue.Value + secondValue.Value)
-            : default;
+            ? new MetricSortValue(
+                true,
+                firstValue.Value + secondValue.Value,
+                firstValue.Availability == MetricAvailability.Partial
+                    || secondValue.Availability == MetricAvailability.Partial
+                    ? MetricAvailability.Partial
+                    : MetricAvailability.Available)
+            : new(false, 0, WorstAvailability(first.Availability, second.Availability));
     }
 
     private static MetricSortValue FromMetric(MetricValue<double> metric)
     {
         if (!metric.IsAvailable || !metric.Value.HasValue || !double.IsFinite(metric.Value.Value))
         {
-            return default;
+            return new(false, 0, metric.Availability);
         }
 
         // Partial metrics keep their measured lower-bound value; their availability is never replaced with zero.
-        return new MetricSortValue(true, metric.Value.Value);
+        return new MetricSortValue(true, metric.Value.Value, metric.Availability);
     }
 
     private static MetricSortValue FromMetric(MetricValue<long> metric) =>
         metric.IsAvailable && metric.Value.HasValue
-            ? new MetricSortValue(true, metric.Value.Value)
-            : default;
+            ? new MetricSortValue(true, metric.Value.Value, metric.Availability)
+            : new(false, 0, metric.Availability);
 
-    private static int CompareName(ApplicationCardViewModel left, ApplicationCardViewModel right)
+    private static int CompareName(
+        ApplicationCardViewModel left,
+        ApplicationCardViewModel right,
+        CultureInfo culture)
     {
-        int insensitive = StringComparer.OrdinalIgnoreCase.Compare(left.DisplayName, right.DisplayName);
+        int insensitive = culture.CompareInfo.Compare(
+            left.DisplayName,
+            right.DisplayName,
+            CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace);
         return insensitive != 0
             ? insensitive
             : StringComparer.Ordinal.Compare(left.DisplayName, right.DisplayName);
     }
+
+    private static MetricAvailability WorstAvailability(
+        MetricAvailability first,
+        MetricAvailability second) => AvailabilityRank(first) >= AvailabilityRank(second)
+        ? first
+        : second;
+
+    private static bool IsPotentiallyAvailable(MetricAvailability availability) =>
+        availability is MetricAvailability.Available or MetricAvailability.Partial or MetricAvailability.WarmingUp;
+
+    private static int AvailabilityRank(MetricAvailability availability) => availability switch
+    {
+        MetricAvailability.Available => 0,
+        MetricAvailability.Partial => 1,
+        MetricAvailability.WarmingUp => 2,
+        MetricAvailability.Unavailable => 3,
+        MetricAvailability.AccessDenied => 4,
+        MetricAvailability.Unsupported => 5,
+        _ => 6
+    };
 
     private static int ApplyDirection(int result, bool descending) => descending
         ? result switch
@@ -151,5 +204,8 @@ public static class ApplicationCardSorter
         }
         : result;
 
-    private readonly record struct MetricSortValue(bool HasValue, double Value);
+    private readonly record struct MetricSortValue(
+        bool HasValue,
+        double Value,
+        MetricAvailability Availability);
 }

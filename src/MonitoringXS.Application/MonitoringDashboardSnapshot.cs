@@ -8,4 +8,6 @@ public sealed record MonitoringDashboardSnapshot(
     DateTimeOffset CapturedAt,
     IReadOnlyList<ApplicationMetricSnapshot> InstalledApplications,
     IReadOnlyList<ApplicationMetricSnapshot> PortableApplications,
-    IReadOnlyDictionary<string, IReadOnlyList<ApplicationHistoryPoint>> OneMinuteHistory);
+    IReadOnlyDictionary<string, IReadOnlyList<ApplicationHistoryPoint>> OneMinuteHistory,
+    SystemOverviewSnapshot? SystemOverview = null,
+    IReadOnlyList<SystemOverviewHistoryPoint>? SystemOverviewHistory = null);

@@ -54,7 +54,6 @@ public sealed class ApplicationCardSorterTests
     [InlineData(ApplicationSortField.PhysicalDiskRate)]
     [InlineData(ApplicationSortField.NetworkRate)]
     [InlineData(ApplicationSortField.GpuUsage)]
-    [InlineData(ApplicationSortField.ProcessCount)]
     public void SortsEveryNumericFieldInBothDirections(ApplicationSortField field)
     {
         ApplicationCardViewModel low = Card(
@@ -134,6 +133,36 @@ public sealed class ApplicationCardSorterTests
         Assert.Equal(["Partial", "Available", "Denied"], result.Select(card => card.DisplayName));
     }
 
+    [Fact]
+    public void EqualValuesOrderAvailableBeforePartialAndMissingStatesDeterministically()
+    {
+        ApplicationCardViewModel partial = Card(
+            "partial",
+            "Alpha",
+            cpu: MetricValue<double>.Partial(4, "Lower bound."));
+        ApplicationCardViewModel available = Card(
+            "available",
+            "Zulu",
+            cpu: MetricValue<double>.Available(4));
+        ApplicationCardViewModel error = Card(
+            "error",
+            "Error",
+            cpu: MetricValue<double>.Unavailable(MetricAvailability.Error));
+        ApplicationCardViewModel warming = Card(
+            "warming",
+            "Warming",
+            cpu: MetricValue<double>.Unavailable(MetricAvailability.WarmingUp));
+
+        IReadOnlyList<ApplicationCardViewModel> result = ApplicationCardSorter.Sort(
+            [error, partial, warming, available],
+            ApplicationSortField.CpuUsage,
+            descending: true);
+
+        Assert.Equal(
+            ["Zulu", "Alpha", "Warming", "Error"],
+            result.Select(card => card.DisplayName));
+    }
+
     [Theory]
     [InlineData(ApplicationSortField.ProcessIoRate)]
     [InlineData(ApplicationSortField.PhysicalDiskRate)]
@@ -167,21 +196,6 @@ public sealed class ApplicationCardSorterTests
         Assert.Equal(["Higher", "Lower"], result.Select(card => card.DisplayName));
     }
 
-    [Fact]
-    public void SortsProcessCountWithoutReplacingCardInstances()
-    {
-        ApplicationCardViewModel one = Card("one", "One", processCount: 1);
-        ApplicationCardViewModel four = Card("four", "Four", processCount: 4);
-
-        IReadOnlyList<ApplicationCardViewModel> result = ApplicationCardSorter.Sort(
-            [one, four],
-            ApplicationSortField.ProcessCount,
-            descending: true);
-
-        Assert.Same(four, result[0]);
-        Assert.Same(one, result[1]);
-    }
-
     [Theory]
     [InlineData(ApplicationSortField.CpuUsage)]
     [InlineData(ApplicationSortField.MemoryUsage)]
@@ -210,7 +224,6 @@ public sealed class ApplicationCardSorterTests
     [InlineData(ApplicationSortField.PhysicalDiskRate)]
     [InlineData(ApplicationSortField.NetworkRate)]
     [InlineData(ApplicationSortField.GpuUsage)]
-    [InlineData(ApplicationSortField.ProcessCount)]
     public void ReportsComparableDataWhenARealValueExists(ApplicationSortField field)
     {
         ApplicationCardViewModel denied = CardWithAvailability(

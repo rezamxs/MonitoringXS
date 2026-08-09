@@ -50,7 +50,8 @@ public sealed record MetricSparklineLayout(
         double availableHeight,
         MetricSparklineScale scale = MetricSparklineScale.Percent,
         DateTimeOffset? rangeStartUtc = null,
-        DateTimeOffset? rangeEndUtc = null)
+        DateTimeOffset? rangeEndUtc = null,
+        bool isEmbedded = false)
     {
         CpuHistorySample[] ordered = samples
             .Select((sample, index) => new { Sample = sample, Index = index })
@@ -86,11 +87,15 @@ public sealed record MetricSparklineLayout(
         }
 
         (double domainMinimum, double domainMaximum) = Domain(realValues, scale);
-        double plotRight = Math.Max(LeftInset + 1, availableWidth - RightInset);
-        double plotBottom = Math.Max(TopInset + 1, availableHeight - BottomInset);
+        double leftInset = isEmbedded ? 2 : LeftInset;
+        double rightInset = isEmbedded ? 2 : RightInset;
+        double topInset = isEmbedded ? 4 : TopInset;
+        double bottomInset = isEmbedded ? 4 : BottomInset;
+        double plotRight = Math.Max(leftInset + 1, availableWidth - rightInset);
+        double plotBottom = Math.Max(topInset + 1, availableHeight - bottomInset);
         if (realSampleCount == 0
-            || availableWidth <= LeftInset + RightInset
-            || availableHeight <= TopInset + BottomInset)
+            || availableWidth <= leftInset + rightInset
+            || availableHeight <= topInset + bottomInset)
         {
             return new(
                 [],
@@ -99,8 +104,8 @@ public sealed record MetricSparklineLayout(
                 peak,
                 domainMinimum,
                 domainMaximum,
-                LeftInset,
-                TopInset,
+                leftInset,
+                topInset,
                 plotRight,
                 plotBottom,
                 startUtc,
@@ -108,8 +113,8 @@ public sealed record MetricSparklineLayout(
                 summary);
         }
 
-        double width = plotRight - LeftInset;
-        double height = plotBottom - TopInset;
+        double width = plotRight - leftInset;
+        double height = plotBottom - topInset;
         double domainSize = Math.Max(double.Epsilon, domainMaximum - domainMinimum);
         long firstTicks = startUtc.UtcTicks;
         long durationTicks = Math.Max(1, endUtc.UtcTicks - firstTicks);
@@ -128,11 +133,11 @@ public sealed record MetricSparklineLayout(
                 continue;
             }
 
-            double x = LeftInset + width * (sample.Timestamp.ToUniversalTime().UtcTicks - firstTicks) / durationTicks;
-            double y = TopInset + height * (1 - (value - domainMinimum) / domainSize);
+            double x = leftInset + width * (sample.Timestamp.ToUniversalTime().UtcTicks - firstTicks) / durationTicks;
+            double y = topInset + height * (1 - (value - domainMinimum) / domainSize);
             MetricSparklinePoint projected = new(
-                Math.Clamp(x, LeftInset, plotRight),
-                Math.Clamp(y, TopInset, plotBottom));
+                Math.Clamp(x, leftInset, plotRight),
+                Math.Clamp(y, topInset, plotBottom));
             if (currentSegment.Count > 0
                 && Math.Abs(currentSegment[^1].X - projected.X) < 0.1)
             {
@@ -152,8 +157,8 @@ public sealed record MetricSparklineLayout(
             peak,
             domainMinimum,
             domainMaximum,
-            LeftInset,
-            TopInset,
+            leftInset,
+            topInset,
             plotRight,
             plotBottom,
             startUtc,
@@ -245,8 +250,25 @@ public static class CpuHistorySeries
             Sanitize(item.Point.CpuPercent)))
         .ToArray();
 
+    public static IReadOnlyList<CpuHistorySample> CreateMemory(
+        IReadOnlyList<ApplicationHistoryPoint> history) => history
+        .Select((point, index) => new IndexedHistoryPoint(point, index))
+        .GroupBy(item => item.Point.Timestamp)
+        .Select(group => group.MaxBy(item => item.Index)!)
+        .OrderBy(item => item.Point.Timestamp)
+        .TakeLast(Capacity)
+        .Select(item => new CpuHistorySample(
+            item.Point.Timestamp,
+            SanitizeBytes(item.Point.WorkingSetBytes)))
+        .ToArray();
+
     private static double? Sanitize(double? value) =>
         value.HasValue && double.IsFinite(value.Value) && value.Value >= 0
+            ? value.Value
+            : null;
+
+    private static double? SanitizeBytes(long? value) =>
+        value.HasValue && value.Value >= 0
             ? value.Value
             : null;
 

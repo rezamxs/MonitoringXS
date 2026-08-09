@@ -5,15 +5,35 @@
     x:Uid="SettingsPageRoot"
     AutomationProperties.Name="Application settings page"
     IsTabStop="False">
-    <Grid
+    <Grid x:Name="SettingsRoot"
         Padding="24,16,24,24"
         Background="{StaticResource PageBrush}">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState x:Name="Narrow" />
+                <VisualState x:Name="Wide">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="940" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="SettingsSecondaryColumn.Width" Value="*" />
+                        <Setter Target="HistorySettingsCard.(Grid.Row)" Value="0" />
+                        <Setter Target="HistorySettingsCard.(Grid.Column)" Value="1" />
+                        <Setter Target="LanguageSettingsCard.(Grid.Row)" Value="1" />
+                        <Setter Target="AppearanceSettingsCard.(Grid.Row)" Value="1" />
+                        <Setter Target="AppearanceSettingsCard.(Grid.Column)" Value="1" />
+                        <Setter Target="PrivilegedSettingsCard.(Grid.Row)" Value="2" />
+                        <Setter Target="PrivilegedSettingsCard.(Grid.ColumnSpan)" Value="2" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
         <ScrollViewer
             AutomationProperties.Name="Settings sections"
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Auto">
             <StackPanel
-                MaxWidth="900"
+                MaxWidth="1600"
                 HorizontalAlignment="Stretch"
                 Spacing="14">
                 <Grid ColumnSpacing="12">
@@ -22,13 +42,19 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="4">
-                        <TextBlock x:Uid="SettingsPageTitle"
-                            FontSize="28"
-                            FontWeight="SemiBold"
-                            Foreground="{StaticResource PrimaryTextBrush}"
-                            Text="Settings" />
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <SymbolIcon Symbol="Setting" />
+                            <TextBlock x:Uid="SettingsPageTitle"
+                                Grid.Column="1"
+                                Style="{StaticResource PageTitleStyle}"
+                                Text="Settings" />
+                        </Grid>
                         <TextBlock x:Uid="SettingsPageSubtitle"
-                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Style="{StaticResource PageSubtitleStyle}"
                             Text="Per-user monitoring preferences"
                             TextWrapping="Wrap" />
                     </StackPanel>
@@ -47,12 +73,22 @@
                     Text="{Binding StatusText, Mode=OneWay}"
                     TextWrapping="Wrap" />
 
-                <Border
-                    Padding="16"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource SubtleBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="12">
+                <Grid RowSpacing="12" ColumnSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition x:Name="SettingsSecondaryColumn" Width="0" />
+                    </Grid.ColumnDefinitions>
+
+                <Border x:Name="MonitoringSettingsCard"
+                    Grid.Row="0"
+                    Style="{StaticResource SectionSurfaceStyle}">
                     <StackPanel Spacing="10">
                         <TextBlock x:Uid="SettingsMonitoringTitle"
                             Style="{StaticResource SectionTitleStyle}"
@@ -78,12 +114,9 @@
                     </StackPanel>
                 </Border>
 
-                <Border
-                    Padding="16"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource SubtleBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="12">
+                <Border x:Name="LanguageSettingsCard"
+                    Grid.Row="1"
+                    Style="{StaticResource SectionSurfaceStyle}">
                     <StackPanel Spacing="10">
                         <TextBlock x:Uid="SettingsLanguageTitle" Style="{StaticResource SectionTitleStyle}" />
                         <TextBlock x:Uid="SettingsLanguageDescription"
@@ -103,12 +136,9 @@
                     </StackPanel>
                 </Border>
 
-                <Border
-                    Padding="16"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource SubtleBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="12">
+                <Border x:Name="HistorySettingsCard"
+                    Grid.Row="2"
+                    Style="{StaticResource SectionSurfaceStyle}">
                     <StackPanel Spacing="10">
                         <TextBlock x:Uid="SettingsHistoryTitle"
                             Style="{StaticResource SectionTitleStyle}"
@@ -134,12 +164,9 @@
                     </StackPanel>
                 </Border>
 
-                <Border
-                    Padding="16"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource SubtleBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="12">
+                <Border x:Name="AppearanceSettingsCard"
+                    Grid.Row="3"
+                    Style="{StaticResource SectionSurfaceStyle}">
                     <StackPanel Spacing="10">
                         <TextBlock x:Uid="SettingsAppearanceTitle"
                             Style="{StaticResource SectionTitleStyle}"
@@ -164,12 +191,9 @@
                     </StackPanel>
                 </Border>
 
-                <Border
-                    Padding="16"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource SubtleBorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="12">
+                <Border x:Name="PrivilegedSettingsCard"
+                    Grid.Row="4"
+                    Style="{StaticResource SectionSurfaceStyle}">
                     <StackPanel Spacing="10">
                         <TextBlock x:Uid="SettingsPrivilegedTitle"
                             Style="{StaticResource SectionTitleStyle}"
@@ -210,6 +234,7 @@
                             TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
+                </Grid>
 
                 <TextBlock
                     Margin="0,2,0,8"

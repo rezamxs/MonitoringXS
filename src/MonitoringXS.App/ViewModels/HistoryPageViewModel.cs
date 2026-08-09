@@ -321,6 +321,7 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
         }
 
         _disposed = true;
+        _localization.LanguageChanged -= Localization_LanguageChanged;
         CancellationTokenSource? active = Interlocked.Exchange(ref _activeRequest, null);
         active?.Cancel();
         active?.Dispose();

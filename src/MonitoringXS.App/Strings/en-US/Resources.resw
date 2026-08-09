@@ -97,16 +97,16 @@
   <data name="SettingsLanguageSelector.AutomationProperties.Name" xml:space="preserve"><value>Application language</value></data>
   <data name="ProcessDetailsTitle.Text" xml:space="preserve"><value>Process details and actions</value></data>
   <data name="ProcessDetailsDescription.Text" xml:space="preserve"><value>Actions remain non-elevated and revalidate PID, start time, and executable identity.</value></data>
-  <data name="EndTaskButton.Content" xml:space="preserve"><value>End Task</value></data>
+  <data name="EndTaskButtonLabel.Text" xml:space="preserve"><value>End Task</value></data>
   <data name="EndTaskButton.AutomationProperties.Name" xml:space="preserve"><value>End selected task</value></data>
   <data name="EndTaskButton.AutomationProperties.HelpText" xml:space="preserve"><value>Ends only the selected process after confirmation and identity revalidation.</value></data>
-  <data name="EndTreeButton.Content" xml:space="preserve"><value>End Process Tree</value></data>
+  <data name="EndTreeButtonLabel.Text" xml:space="preserve"><value>End Process Tree</value></data>
   <data name="EndTreeButton.AutomationProperties.Name" xml:space="preserve"><value>End selected process tree</value></data>
   <data name="EndTreeButton.AutomationProperties.HelpText" xml:space="preserve"><value>Ends verified descendants from leaves to root after stronger confirmation.</value></data>
-  <data name="OpenLocationButton.Content" xml:space="preserve"><value>Open File Location</value></data>
+  <data name="OpenLocationButtonLabel.Text" xml:space="preserve"><value>Open File Location</value></data>
   <data name="OpenLocationButton.AutomationProperties.Name" xml:space="preserve"><value>Open selected process file location</value></data>
   <data name="OpenLocationButton.AutomationProperties.HelpText" xml:space="preserve"><value>Opens Explorer and selects the verified executable.</value></data>
-  <data name="CopyDetailsButton.Content" xml:space="preserve"><value>Copy Process Details</value></data>
+  <data name="CopyDetailsButtonLabel.Text" xml:space="preserve"><value>Copy Process Details</value></data>
   <data name="CopyDetailsButton.AutomationProperties.Name" xml:space="preserve"><value>Copy selected process details</value></data>
   <data name="CopyDetailsButton.AutomationProperties.HelpText" xml:space="preserve"><value>Copies safe process identity and current application metrics without command lines or secrets.</value></data>
   <data name="MetricCpuLabel.Text" xml:space="preserve"><value>CPU</value></data>
@@ -114,11 +114,11 @@
   <data name="MetricIoReadLabel.Text" xml:space="preserve"><value>Process I/O read</value></data>
   <data name="MetricIoWriteLabel.Text" xml:space="preserve"><value>Process I/O write</value></data>
   <data name="MetricDiskTitle.Text" xml:space="preserve"><value>Physical disk</value></data>
-  <data name="MetricReadLabel.Text" xml:space="preserve"><value>Read</value></data>
-  <data name="MetricWriteLabel.Text" xml:space="preserve"><value>Write</value></data>
+  <data name="MetricReadLabel.Text" xml:space="preserve"><value>Disk read</value></data>
+  <data name="MetricWriteLabel.Text" xml:space="preserve"><value>Disk write</value></data>
   <data name="MetricNetworkTitle.Text" xml:space="preserve"><value>Network</value></data>
-  <data name="MetricReceiveLabel.Text" xml:space="preserve"><value>Download / Receive</value></data>
-  <data name="MetricSendLabel.Text" xml:space="preserve"><value>Upload / Send</value></data>
+  <data name="MetricReceiveLabel.Text" xml:space="preserve"><value>Network receive</value></data>
+  <data name="MetricSendLabel.Text" xml:space="preserve"><value>Network send</value></data>
   <data name="MetricGpuTitle.Text" xml:space="preserve"><value>GPU</value></data>
   <data name="MetricBusiestEngineLabel.Text" xml:space="preserve"><value>Busiest engine</value></data>
   <data name="MetricDedicatedLabel.Text" xml:space="preserve"><value>Dedicated memory</value></data>
@@ -246,4 +246,206 @@
   <data name="DedicatedLabel" xml:space="preserve"><value>dedicated</value></data>
   <data name="SharedLabel" xml:space="preserve"><value>shared</value></data>
   <data name="AtLeast" xml:space="preserve"><value>at least</value></data>
+  <data name="ApplicationSearchBox.PlaceholderText" xml:space="preserve"><value>Search applications</value></data>
+  <data name="ApplicationSearchBox.AutomationProperties.Name" xml:space="preserve"><value>Search running applications</value></data>
+  <data name="ApplicationSearchBox.AutomationProperties.HelpText" xml:space="preserve"><value>Searches application names, executable names, publishers, and package identities without reading command lines.</value></data>
+  <data name="ClearApplicationSearchButton.Content" xml:space="preserve"><value>Clear</value></data>
+  <data name="ClearApplicationSearchButton.AutomationProperties.Name" xml:space="preserve"><value>Clear application search</value></data>
+  <data name="ClearApplicationSearchButton.AutomationProperties.HelpText" xml:space="preserve"><value>Restores the complete current application list.</value></data>
+  <data name="NoSearchResults.Text" xml:space="preserve"><value>No applications match this search.</value></data>
+  <data name="MetricExplanations.Header" xml:space="preserve"><value>Metric explanations</value></data>
+  <data name="MetricAdvancedDetails.Header" xml:space="preserve"><value>Advanced details</value></data>
+  <data name="MetricProviderLabel.Text" xml:space="preserve"><value>Technical provider</value></data>
+  <data name="MetricExplanationCpu" xml:space="preserve"><value>Current share of total machine CPU capacity used by the logical application.</value></data>
+  <data name="MetricExplanationMemory" xml:space="preserve"><value>Current working-set memory summed across included application processes.</value></data>
+  <data name="MetricExplanationProcessIo" xml:space="preserve"><value>Current read and write rates from process I/O counters; this is not physical-disk activity.</value></data>
+  <data name="MetricExplanationPhysicalDisk" xml:space="preserve"><value>Current physical-disk rate attributed to this application by Advanced Monitoring.</value></data>
+  <data name="MetricExplanationNetwork" xml:space="preserve"><value>Current sent and received packet-byte rates attributed to this application; payloads and destinations are not collected.</value></data>
+  <data name="MetricExplanationGpu" xml:space="preserve"><value>Current utilization of the busiest valid GPU engine used by the application.</value></data>
+  <data name="MetricExplanationGpuDedicated" xml:space="preserve"><value>Dedicated GPU memory reported for the application processes by Windows.</value></data>
+  <data name="MetricExplanationGpuShared" xml:space="preserve"><value>Shared GPU memory reported for the application processes; shared allocations may be counted in more than one process.</value></data>
+  <data name="MetricExplanationHistory" xml:space="preserve"><value>Retained local metric samples. Missing or unavailable samples remain gaps, never fabricated zeroes.</value></data>
+  <data name="MetricAdvancedCpu" xml:space="preserve"><value>Utilization; process scope aggregated to the logical application; sampled every {0:0.##} s. First delta warms up. Status: {1}</value></data>
+  <data name="MetricAdvancedMemory" xml:space="preserve"><value>Working set in bytes; current process values summed for the logical application; sampled every {0:0.##} s. Status: {1}</value></data>
+  <data name="MetricAdvancedProcessIo" xml:space="preserve"><value>Read/write bytes per second from cumulative process counters; rates are sampled every {0:0.##} s and totals are session cumulative. Status: {1}</value></data>
+  <data name="MetricAdvancedPhysicalDisk" xml:space="preserve"><value>Attributed bytes per second plus cumulative session totals; sampled every {0:0.##} s. Loss makes retained totals lower bounds. Status: {1}</value></data>
+  <data name="MetricAdvancedNetwork" xml:space="preserve"><value>Attributed send/receive bytes per second plus cumulative session totals; sampled every {0:0.##} s. Loss makes totals lower bounds. Status: {1}</value></data>
+  <data name="MetricAdvancedGpu" xml:space="preserve"><value>Busiest-engine utilization from Windows performance data; sampled every {0:0.##} s and aggregated by adapter and engine identity. Status: {1}</value></data>
+  <data name="MetricAdvancedGpuDedicated" xml:space="preserve"><value>Current bytes summed from per-process dedicated-memory counters every {0:0.##} s. Counter availability is independent from GPU utilization. Status: {1}</value></data>
+  <data name="MetricAdvancedGpuShared" xml:space="preserve"><value>Current bytes summed from per-process shared-memory counters every {0:0.##} s; cross-process sharing can double-count allocations. Status: {1}</value></data>
+  <data name="MetricAdvancedHistory" xml:space="preserve"><value>Local retained history sampled from live snapshots every {0:0.##} s, then bounded and downsampled. Availability and lower-bound states are retained. Status: {1}</value></data>
+  <data name="ReasonAvailable" xml:space="preserve"><value>Available and complete.</value></data>
+  <data name="ReasonPartial" xml:space="preserve"><value>Partial: measured value is a lower bound because some attributable data is missing.</value></data>
+  <data name="ReasonWarmingUp" xml:space="preserve"><value>Warming up: another valid sample is required.</value></data>
+  <data name="ReasonPermissionRequired" xml:space="preserve"><value>Permission required for this provider or process.</value></data>
+  <data name="ReasonProviderUnsupported" xml:space="preserve"><value>This Windows monitoring provider is unsupported on the current system.</value></data>
+  <data name="ReasonServiceNotInstalled" xml:space="preserve"><value>The Privileged Metrics Service is not installed.</value></data>
+  <data name="ReasonServiceStopped" xml:space="preserve"><value>The Privileged Metrics Service is stopped.</value></data>
+  <data name="ReasonServiceConnection" xml:space="preserve"><value>The Privileged Metrics Service connection is unavailable.</value></data>
+  <data name="ReasonProtocolMismatch" xml:space="preserve"><value>The app and Privileged Metrics Service protocol versions do not match.</value></data>
+  <data name="ReasonSessionConflict" xml:space="preserve"><value>Another monitoring session conflicts with this provider.</value></data>
+  <data name="ReasonEventLoss" xml:space="preserve"><value>Some provider or queue samples were lost; values are lower bounds.</value></data>
+  <data name="ReasonProcessExited" xml:space="preserve"><value>The process exited before its counters could be read.</value></data>
+  <data name="ReasonDriverCounters" xml:space="preserve"><value>The graphics driver does not expose the required per-process counters.</value></data>
+  <data name="ReasonNoAttributedData" xml:space="preserve"><value>No attributable data has been observed for this workload yet.</value></data>
+  <data name="ReasonHistoryNotCollected" xml:space="preserve"><value>History has not been collected yet.</value></data>
+  <data name="ReasonTemporarilyUnavailable" xml:space="preserve"><value>Data is temporarily unavailable.</value></data>
+  <data name="ReasonCollectorError" xml:space="preserve"><value>The collector reported an error; other metrics remain independent.</value></data>
+  <data name="NavDiagnostics.Content" xml:space="preserve"><value>Diagnostics</value></data>
+  <data name="NavDiagnostics.ToolTipService.ToolTip" xml:space="preserve"><value>Diagnostics</value></data>
+  <data name="DiagnosticsPageRoot.AutomationProperties.Name" xml:space="preserve"><value>Monitoring XS diagnostics page</value></data>
+  <data name="DiagnosticsPageTitle.Text" xml:space="preserve"><value>Diagnostics</value></data>
+  <data name="DiagnosticsPageSubtitle.Text" xml:space="preserve"><value>Local application, collector, service, and history health</value></data>
+  <data name="DiagnosticsRefreshProgress.AutomationProperties.Name" xml:space="preserve"><value>Refreshing diagnostics</value></data>
+  <data name="DiagnosticsRefreshButton.Content" xml:space="preserve"><value>Refresh diagnostics</value></data>
+  <data name="DiagnosticsRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>Refresh diagnostics</value></data>
+  <data name="DiagnosticsRefreshButton.AutomationProperties.HelpText" xml:space="preserve"><value>Refreshes local health data and tests the current Privileged Metrics Service connection without restarting it.</value></data>
+  <data name="DiagnosticsCopyButton.Content" xml:space="preserve"><value>Copy safe summary</value></data>
+  <data name="DiagnosticsCopyButton.AutomationProperties.Name" xml:space="preserve"><value>Copy safe diagnostics summary</value></data>
+  <data name="DiagnosticsCopyButton.AutomationProperties.HelpText" xml:space="preserve"><value>Copies allowlisted health values without paths, command lines, tokens, or private user data.</value></data>
+  <data name="DiagnosticsApplicationSection.Header" xml:space="preserve"><value>Monitoring XS</value></data>
+  <data name="DiagnosticsCollectorsSection.Header" xml:space="preserve"><value>Resource monitoring</value></data>
+  <data name="DiagnosticsServiceSection.Header" xml:space="preserve"><value>Advanced monitoring service</value></data>
+  <data name="DiagnosticsStorageSection.Header" xml:space="preserve"><value>History storage</value></data>
+  <data name="DiagnosticsAdvancedSection.Header" xml:space="preserve"><value>Technical details for troubleshooting</value></data>
+  <data name="DiagnosticsWaitingForSnapshot" xml:space="preserve"><value>Waiting for the first live monitoring snapshot.</value></data>
+  <data name="DiagnosticsHealthySummary" xml:space="preserve"><value>Live collectors and local history report healthy operation.</value></data>
+  <data name="DiagnosticsDegradedSummary" xml:space="preserve"><value>Some collectors or local history need attention. Available metrics continue independently.</value></data>
+  <data name="DiagnosticsCopied" xml:space="preserve"><value>Safe diagnostics summary copied.</value></data>
+  <data name="DiagnosticsCopyFailed" xml:space="preserve"><value>The safe diagnostics summary could not be copied.</value></data>
+  <data name="DiagnosticsSafeSummaryTitle" xml:space="preserve"><value>Monitoring XS safe diagnostics</value></data>
+  <data name="DiagnosticsEnabled" xml:space="preserve"><value>Enabled</value></data>
+  <data name="DiagnosticsSeconds" xml:space="preserve"><value>{0:0.##} seconds</value></data>
+  <data name="DiagnosticsHours" xml:space="preserve"><value>{0:0.##} hours</value></data>
+  <data name="DiagnosticsDuration" xml:space="preserve"><value>{0} h {1} min {2} s</value></data>
+  <data name="DiagnosticsVersion" xml:space="preserve"><value>Display version</value></data>
+  <data name="DiagnosticsBuild" xml:space="preserve"><value>Build configuration</value></data>
+  <data name="DiagnosticsArchitecture" xml:space="preserve"><value>Process architecture</value></data>
+  <data name="DiagnosticsWindows" xml:space="preserve"><value>Windows version and build</value></data>
+  <data name="DiagnosticsWindowsAppSdk" xml:space="preserve"><value>Windows App SDK runtime</value></data>
+  <data name="DiagnosticsLanguage" xml:space="preserve"><value>UI language</value></data>
+  <data name="DiagnosticsFlowDirection" xml:space="preserve"><value>Flow direction</value></data>
+  <data name="DiagnosticsSampling" xml:space="preserve"><value>Live sampling interval</value></data>
+  <data name="DiagnosticsUptime" xml:space="preserve"><value>Application uptime</value></data>
+  <data name="DiagnosticsCpuMemory" xml:space="preserve"><value>CPU and memory</value></data>
+  <data name="DiagnosticsProcessIo" xml:space="preserve"><value>Process I/O</value></data>
+  <data name="DiagnosticsPhysicalDisk" xml:space="preserve"><value>Physical disk</value></data>
+  <data name="DiagnosticsNetwork" xml:space="preserve"><value>Network</value></data>
+  <data name="DiagnosticsGpu" xml:space="preserve"><value>GPU</value></data>
+  <data name="DiagnosticsHistoryStatus" xml:space="preserve"><value>History storage status</value></data>
+  <data name="DiagnosticsServiceState" xml:space="preserve"><value>Installation and running state</value></data>
+  <data name="DiagnosticsServiceConnection" xml:space="preserve"><value>Connection and handshake</value></data>
+  <data name="DiagnosticsHistoryEnabled" xml:space="preserve"><value>History collection</value></data>
+  <data name="DiagnosticsDatabasePath" xml:space="preserve"><value>Database path (sensitive; excluded from copied summary)</value></data>
+  <data name="DiagnosticsDatabaseSize" xml:space="preserve"><value>Approximate database size</value></data>
+  <data name="DiagnosticsRetention" xml:space="preserve"><value>Retention setting</value></data>
+  <data name="DiagnosticsStorageQueue" xml:space="preserve"><value>Write queue depth / capacity</value></data>
+  <data name="DiagnosticsStorageWrites" xml:space="preserve"><value>Written batches / samples</value></data>
+  <data name="DiagnosticsStorageDrops" xml:space="preserve"><value>Dropped history batches</value></data>
+  <data name="DiagnosticsStorageFailures" xml:space="preserve"><value>History write failures</value></data>
+  <data name="DiagnosticsServiceIdentity" xml:space="preserve"><value>Service identity</value></data>
+  <data name="DiagnosticsProtocol" xml:space="preserve"><value>Expected protocol</value></data>
+  <data name="DiagnosticsDiskProvider" xml:space="preserve"><value>Physical-disk provider</value></data>
+  <data name="DiagnosticsDiskQueue" xml:space="preserve"><value>Physical-disk queue depth / observed maximum</value></data>
+  <data name="DiagnosticsDiskLost" xml:space="preserve"><value>Physical-disk lost / dropped samples</value></data>
+  <data name="DiagnosticsDiskLastSuccess" xml:space="preserve"><value>Physical-disk last successful event</value></data>
+  <data name="DiagnosticsNetworkProvider" xml:space="preserve"><value>Network provider</value></data>
+  <data name="DiagnosticsNetworkQueue" xml:space="preserve"><value>Network queue depth / capacity</value></data>
+  <data name="DiagnosticsNetworkLost" xml:space="preserve"><value>Network lost / dropped samples</value></data>
+  <data name="DiagnosticsNetworkLastSuccess" xml:space="preserve"><value>Network last successful event</value></data>
+  <data name="DiagnosticsGpuProvider" xml:space="preserve"><value>GPU provider</value></data>
+  <data name="DiagnosticsGpuDuration" xml:space="preserve"><value>GPU collection duration</value></data>
+  <data name="DiagnosticsGpuPartial" xml:space="preserve"><value>GPU completeness</value></data>
+  <data name="DiagnosticsStorageRecovery" xml:space="preserve"><value>Corruption recovery status</value></data>
+  <data name="DiagnosticsRecoveredCorruption" xml:space="preserve"><value>A corrupt database was quarantined and a new database was created.</value></data>
+  <data name="DiagnosticsNoRecovery" xml:space="preserve"><value>No corruption recovery is currently reported.</value></data>
+  <data name="DiagnosticsComplete" xml:space="preserve"><value>Complete</value></data>
+  <data name="DiagnosticsDiskCompleteness" xml:space="preserve"><value>Physical-disk session completeness</value></data>
+  <data name="DiagnosticsDiskDuration" xml:space="preserve"><value>Physical-disk processing latency</value></data>
+  <data name="DiagnosticsNetworkCompleteness" xml:space="preserve"><value>Network session completeness</value></data>
+  <data name="DiagnosticsNetworkDuration" xml:space="preserve"><value>Network average / maximum processing latency</value></data>
+  <data name="ReasonHistoryDatabaseUnavailable" xml:space="preserve"><value>The local history database is unavailable.</value></data>
+  <data name="DiagnosticsIntroduction" xml:space="preserve"><value>This page checks whether Monitoring XS, resource monitoring, advanced monitoring, and local history are working correctly.</value></data>
+  <data name="DiagnosticsBeginnerAllHealthy" xml:space="preserve"><value>Everything is working correctly.</value></data>
+  <data name="DiagnosticsBeginnerAttentionNeeded" xml:space="preserve"><value>Some features need attention.</value></data>
+  <data name="DiagnosticsBeginnerMonitoringXS" xml:space="preserve"><value>Monitoring XS</value></data>
+  <data name="DiagnosticsBeginnerResourceMonitoring" xml:space="preserve"><value>Resource monitoring</value></data>
+  <data name="DiagnosticsBeginnerAdvancedService" xml:space="preserve"><value>Advanced monitoring service</value></data>
+  <data name="DiagnosticsBeginnerHistory" xml:space="preserve"><value>History storage</value></data>
+  <data name="DiagnosticsStatusWorking" xml:space="preserve"><value>Working</value></data>
+  <data name="DiagnosticsStatusAttention" xml:space="preserve"><value>Needs attention</value></data>
+  <data name="DiagnosticsStatusUnavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="DiagnosticsExplanationMonitoringXS" xml:space="preserve"><value>The application is running and collecting data.</value></data>
+  <data name="DiagnosticsExplanationResourceMonitoring" xml:space="preserve"><value>CPU, memory, and process I/O metrics are being collected.</value></data>
+  <data name="DiagnosticsExplanationAdvancedService" xml:space="preserve"><value>Network and disk metrics require the advanced monitoring service.</value></data>
+  <data name="DiagnosticsExplanationHistory" xml:space="preserve"><value>Historical metric data is being saved locally.</value></data>
+  <data name="MetricExplanationsAbout" xml:space="preserve"><value>About these metrics</value></data>
+  <data name="MetricExplanationsAboutDescription" xml:space="preserve"><value>Each metric shows how this application uses system resources. Expand any metric for technical details.</value></data>
+  <data name="SelectedProcessExited" xml:space="preserve"><value>Selected process has exited.</value></data>
+  <data name="NavAbout.ToolTipService.ToolTip" xml:space="preserve"><value>About Monitoring XS</value></data>
+  <data name="AboutPageTitle" xml:space="preserve"><value>About</value></data>
+  <data name="AboutDescription" xml:space="preserve"><value>A low-overhead Windows resource monitor that shows logical applications instead of raw process lists.</value></data>
+  <data name="AboutPlatform" xml:space="preserve"><value>Windows 10 (1809+) and Windows 11</value></data>
+  <data name="AboutOpenSource" xml:space="preserve"><value>Open-source under the MIT license. Community contributions are welcome.</value></data>
+  <data name="AboutPrivacySummary" xml:space="preserve"><value>Privacy-first diagnostics</value></data>
+  <data name="AboutPrivacyDetail" xml:space="preserve"><value>All data stays on your device. No telemetry, no cloud uploads, no tracking. Diagnostic exports never include command lines or secrets.</value></data>
+  <data name="AboutRepository" xml:space="preserve"><value>Repository</value></data>
+  <data name="AboutLicense" xml:space="preserve"><value>License</value></data>
+  <data name="AboutCopyright" xml:space="preserve"><value>Copyright</value></data>
+  <data name="AboutBetaBadge" xml:space="preserve"><value>Public Beta</value></data>
+  <data name="WhatsNewTitle" xml:space="preserve"><value>What's new</value></data>
+  <data name="WhatsNewLocalization" xml:space="preserve"><value>English and Persian runtime localization with automatic RTL layout</value></data>
+  <data name="WhatsNewSearch" xml:space="preserve"><value>Application search across installed and portable apps</value></data>
+  <data name="WhatsNewSorting" xml:space="preserve"><value>Sortable application list by name, CPU, memory, disk, network, and GPU</value></data>
+  <data name="WhatsNewDiagnostics" xml:space="preserve"><value>Diagnostics page showing monitoring health at a glance</value></data>
+  <data name="WhatsNewMetricExplanations" xml:space="preserve"><value>Metric explanations with beginner-friendly descriptions</value></data>
+  <data name="WhatsNewProcessSelection" xml:space="preserve"><value>Stable process selection with identity verification</value></data>
+  <data name="WhatsNewProcessSafety" xml:space="preserve"><value>Process safety improvements with confirmed attribution before actions</value></data>
+  <data name="WhatsNewCpuMonitoring" xml:space="preserve"><value>Real CPU monitoring with per-application usage</value></data>
+  <data name="WhatsNewMemoryMonitoring" xml:space="preserve"><value>Memory monitoring with working set tracking</value></data>
+  <data name="WhatsNewDiskMonitoring" xml:space="preserve"><value>Physical disk read and write monitoring</value></data>
+  <data name="WhatsNewNetworkMonitoring" xml:space="preserve"><value>Network send and receive monitoring</value></data>
+  <data name="WhatsNewGpuMonitoring" xml:space="preserve"><value>GPU monitoring where supported by Windows providers</value></data>
+  <data name="WhatsNewHistory" xml:space="preserve"><value>Local metric history with configurable retention</value></data>
+  <data name="WhatsNewChartGaps" xml:space="preserve"><value>Intentional chart gaps for missing samples — no fake data</value></data>
+  <data name="WhatsNewInstaller" xml:space="preserve"><value>Windows installer support for easy setup</value></data>
+  <data name="WhatsNewSystemOverviewFoundation" xml:space="preserve"><value>System Overview data foundation for future system-wide insights</value></data>
+  <data name="BetaLimitationsTitle" xml:space="preserve"><value>Beta limitations</value></data>
+  <data name="BetaLimitationProviders" xml:space="preserve"><value>Some metrics depend on Windows performance providers and may not be available on all systems</value></data>
+  <data name="BetaLimitationHardware" xml:space="preserve"><value>Hardware and driver support can vary; GPU metrics require compatible drivers</value></data>
+  <data name="BetaLimitationPermissions" xml:space="preserve"><value>Advanced metrics may require elevated permissions or the privileged monitoring service</value></data>
+  <data name="BetaLimitationMetricStates" xml:space="preserve"><value>Metrics may report Warming Up, Partial, Unsupported, Unavailable, or Error when data cannot be collected</value></data>
+  <data name="BetaLimitationChartGaps" xml:space="preserve"><value>Missing samples are shown as intentional gaps in charts rather than interpolated values</value></data>
+  <data name="BetaLimitationNoFakeData" xml:space="preserve"><value>Unavailable data is never replaced with fake zero or fabricated values</value></data>
+  <data name="BetaLimitationDefects" xml:space="preserve"><value>This is beta software. Some defects may remain. Thank you for helping improve Monitoring XS.</value></data>
+  <data name="NavSystemOverview.Content" xml:space="preserve"><value>System Overview</value></data>
+  <data name="NavSystemOverview.AutomationProperties.Name" xml:space="preserve"><value>System Overview</value></data>
+  <data name="NavSystemOverview.ToolTipService.ToolTip" xml:space="preserve"><value>System Overview</value></data>
+  <data name="SystemOverviewPageTitle" xml:space="preserve"><value>System Overview</value></data>
+  <data name="SystemOverviewSubtitle" xml:space="preserve"><value>Live machine-wide resource activity from Windows monitoring providers.</value></data>
+  <data name="SystemOverviewPrimaryMetrics" xml:space="preserve"><value>Primary metrics</value></data>
+  <data name="SystemOverviewSecondaryMetrics" xml:space="preserve"><value>Activity</value></data>
+  <data name="SystemOverviewCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="SystemOverviewMemory" xml:space="preserve"><value>Physical Memory</value></data>
+  <data name="SystemOverviewDisk" xml:space="preserve"><value>Physical Disk</value></data>
+  <data name="SystemOverviewNetwork" xml:space="preserve"><value>Network</value></data>
+  <data name="SystemOverviewGpu" xml:space="preserve"><value>GPU</value></data>
+  <data name="SystemOverviewUtilization" xml:space="preserve"><value>Utilization</value></data>
+  <data name="SystemOverviewUsed" xml:space="preserve"><value>Used / total</value></data>
+  <data name="SystemOverviewAvailableMemory" xml:space="preserve"><value>Available</value></data>
+  <data name="SystemOverviewRead" xml:space="preserve"><value>Disk read</value></data>
+  <data name="SystemOverviewWrite" xml:space="preserve"><value>Disk write</value></data>
+  <data name="SystemOverviewReceive" xml:space="preserve"><value>Network receive</value></data>
+  <data name="SystemOverviewSend" xml:space="preserve"><value>Network send</value></data>
+  <data name="SystemOverviewMemoryUsedFormat" xml:space="preserve"><value>{0} / {1}</value></data>
+  <data name="SystemOverviewStatusPartialLabel" xml:space="preserve"><value>Partial</value></data>
+  <data name="SystemOverviewStatusPartial" xml:space="preserve"><value>Some source data is incomplete; available values are shown honestly.</value></data>
+  <data name="SystemOverviewStatusWarmingUp" xml:space="preserve"><value>Waiting for enough real samples.</value></data>
+  <data name="SystemOverviewStatusUnavailable" xml:space="preserve"><value>This metric is temporarily unavailable.</value></data>
+  <data name="SystemOverviewStatusUnsupported" xml:space="preserve"><value>This metric is not supported by the available Windows provider.</value></data>
+  <data name="SystemOverviewStatusAccessDenied" xml:space="preserve"><value>Windows did not allow access to this metric.</value></data>
+  <data name="SystemOverviewStatusError" xml:space="preserve"><value>This metric could not be read safely.</value></data>
+  <data name="SystemOverviewChartSummary" xml:space="preserve"><value>Last minute; missing samples remain visible as gaps.</value></data>
+  <data name="SystemOverviewChartEmpty" xml:space="preserve"><value>Waiting for real samples…</value></data>
+  <data name="SystemOverviewChartAutomationName" xml:space="preserve"><value>{0} {1} live chart</value></data>
 </root>

@@ -8,8 +8,7 @@ public enum ApplicationSortField
     ProcessIoRate,
     PhysicalDiskRate,
     NetworkRate,
-    GpuUsage,
-    ProcessCount
+    GpuUsage
 }
 
 public sealed record ApplicationSortOption(ApplicationSortField Field, string Label);

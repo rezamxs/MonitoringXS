@@ -6,10 +6,28 @@
     x:Uid="HistoryPageRoot"
     AutomationProperties.Name="Application metric history page"
     IsTabStop="False">
-    <Grid
+    <Grid x:Name="HistoryRoot"
         Padding="24,16,24,24"
         Background="{StaticResource PageBrush}"
         RowSpacing="12">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState x:Name="Narrow" />
+                <VisualState x:Name="Wide">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="760" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="HistoryApplicationSelector.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="HistoryRangeSelector.(Grid.Row)" Value="0" />
+                        <Setter Target="HistoryRangeSelector.(Grid.Column)" Value="1" />
+                        <Setter Target="HistoryRangeSelector.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="HistoryRefreshButton.(Grid.Row)" Value="0" />
+                        <Setter Target="HistoryRefreshButton.(Grid.Column)" Value="2" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -23,14 +41,20 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Spacing="4">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <SymbolIcon Symbol="Clock" />
+                    <TextBlock
+                        Grid.Column="1"
+                        Style="{StaticResource PageTitleStyle}"
+                        x:Uid="HistoryPageTitle"
+                        Text="History" />
+                </Grid>
                 <TextBlock
-                    FontSize="28"
-                    FontWeight="SemiBold"
-                    Foreground="{StaticResource PrimaryTextBrush}"
-                    x:Uid="HistoryPageTitle"
-                    Text="History" />
-                <TextBlock
-                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Style="{StaticResource PageSubtitleStyle}"
                     x:Uid="HistoryPageSubtitle"
                     Text="Saved application metrics · local SQLite history" />
             </StackPanel>
@@ -50,10 +74,21 @@
             BorderBrush="{StaticResource SubtleBorderBrush}"
             BorderThickness="1"
             CornerRadius="10">
-            <StackPanel Orientation="Horizontal" Spacing="12">
+            <Grid RowSpacing="8" ColumnSpacing="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
                 <ComboBox x:Uid="HistoryApplicationSelector"
                     x:Name="ApplicationSelector"
-                    Width="280"
+                    Grid.ColumnSpan="3"
+                    MinWidth="220"
+                    HorizontalAlignment="Stretch"
                     AutomationProperties.Name="History application"
                     DisplayMemberPath="DisplayName"
                     ItemsSource="{Binding Applications}"
@@ -62,7 +97,10 @@
                     UseSystemFocusVisuals="True" />
                 <ComboBox x:Uid="HistoryRangeSelector"
                     x:Name="RangeSelector"
-                    Width="160"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    MinWidth="160"
+                    HorizontalAlignment="Stretch"
                     AutomationProperties.Name="History time range"
                     DisplayMemberPath="Label"
                     ItemsSource="{Binding Ranges}"
@@ -70,11 +108,13 @@
                     SelectionChanged="RangeSelector_SelectionChanged"
                     UseSystemFocusVisuals="True" />
                 <Button x:Uid="HistoryRefreshButton"
+                    Grid.Row="1"
+                    Grid.Column="2"
                     AutomationProperties.Name="Refresh application history"
                     Click="Refresh_Click"
                     Content="Refresh"
                     UseSystemFocusVisuals="True" />
-            </StackPanel>
+            </Grid>
         </Border>
 
         <StackPanel Grid.Row="2" Spacing="2">
@@ -94,6 +134,12 @@
                     Foreground="{StaticResource SecondaryTextBrush}"
                     Text="{Binding QueryPerformanceText, Mode=OneWay}" />
             </StackPanel>
+            <TextBlock
+                x:Uid="HistoryChartLegend"
+                Margin="0,2,0,0"
+                Style="{StaticResource CardSupportingTextStyle}"
+                Text="Line = measured; gap = unavailable/partial"
+                TextWrapping="Wrap" />
         </StackPanel>
 
         <ScrollViewer x:Uid="HistoryCharts"
@@ -104,8 +150,9 @@
             <ItemsRepeater ItemsSource="{Binding Charts}">
                 <ItemsRepeater.Layout>
                     <UniformGridLayout
+                        ItemsStretch="Fill"
                         MinColumnSpacing="12"
-                        MinItemHeight="230"
+                        MinItemHeight="208"
                         MinItemWidth="400"
                         MinRowSpacing="12"
                         Orientation="Horizontal" />
@@ -113,7 +160,6 @@
                 <ItemsRepeater.ItemTemplate>
                     <DataTemplate>
                         <Border
-                            Margin="0,0,12,12"
                             Padding="14"
                             AutomationProperties.Name="{Binding AccessibilityText, Mode=OneWay}"
                             Background="{StaticResource SurfaceBrush}"
@@ -138,11 +184,6 @@
                                             FontSize="11"
                                             Foreground="{StaticResource SecondaryTextBrush}"
                                             Text="{Binding UnitText, Mode=OneTime}" />
-                                        <TextBlock
-                                            FontSize="11"
-                                            Foreground="{StaticResource SecondaryTextBrush}"
-                                        x:Uid="HistoryChartLegend"
-                                        Text="Line = measured; gap = unavailable/partial" />
                                     </StackPanel>
                                     <TextBlock
                                         Grid.Column="1"
@@ -152,7 +193,7 @@
                                 </Grid>
                                 <controls:MetricSparkline
                                     Grid.Row="1"
-                                    Height="180"
+                                    Height="156"
                                     AutomationProperties.Name="{Binding AccessibilityText, Mode=OneWay}"
                                     EmptyText="{Binding StateText, Mode=OneWay}"
                                     IsTabStop="True"

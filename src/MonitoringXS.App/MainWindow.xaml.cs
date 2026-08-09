@@ -32,6 +32,7 @@ public sealed partial class MainWindow : Window, IDisposable
         MainWindowViewModel viewModel,
         ApplicationSettings settings,
         HistoryPageViewModel historyViewModel,
+        DiagnosticsPageViewModel diagnosticsViewModel,
         SettingsPageViewModel settingsViewModel,
         LiveRefreshCadence cadence,
         LocalizationService localization,
@@ -41,8 +42,13 @@ public sealed partial class MainWindow : Window, IDisposable
         _cadence = cadence;
         _settingsViewModel = settingsViewModel;
         InitializeComponent();
+        ViewModel.ConfigureApplicationSort(
+            settings,
+            settingsViewModel.SetApplicationSortAsync,
+            _shutdown.Token);
         ViewModel.ConfigureProcessActions(ConfirmProcessActionAsync, _shutdown.Token);
         HistoryWorkspace.Initialize(historyViewModel, _shutdown.Token);
+        DiagnosticsWorkspace.Initialize(diagnosticsViewModel, _shutdown.Token);
         SettingsWorkspace.Initialize(settingsViewModel, _shutdown.Token);
         Root.FlowDirection = localization.Direction == TextDirection.RightToLeft
             ? FlowDirection.RightToLeft
@@ -110,7 +116,11 @@ public sealed partial class MainWindow : Window, IDisposable
         }
 
         _toolbarUsesSingleRow = useSingleRow;
-        Grid.SetRow(ToolbarAdvancedGroup, useSingleRow ? 0 : 1);
+        Grid.SetRow(ToolbarAdvancedGroup, useSingleRow ? 0 : 2);
+        Grid.SetRow(ApplicationSearchGroup, useSingleRow ? 0 : 1);
+        Grid.SetColumn(ApplicationSearchGroup, useSingleRow ? 1 : 0);
+        Grid.SetColumnSpan(ApplicationSearchGroup, useSingleRow ? 1 : 3);
+        Grid.SetRow(NoComparableDataText, useSingleRow ? 1 : 2);
     }
 
     private void ConfigureTitleBar()
@@ -272,15 +282,11 @@ public sealed partial class MainWindow : Window, IDisposable
         {
             IsClosable = true,
             Tag = tabViewModel.LogicalApplicationId,
+            Header = tabViewModel,
+            HeaderTemplate = (DataTemplate)Root.Resources["ApplicationTabHeaderTemplate"],
             Content = tabViewModel,
             ContentTemplate = (DataTemplate)Root.Resources["ApplicationDetailTemplate"]
         };
-        tab.SetBinding(TabViewItem.HeaderProperty, new Binding
-        {
-            Source = tabViewModel,
-            Path = new PropertyPath(nameof(ApplicationTabViewModel.Title)),
-            Mode = BindingMode.OneWay
-        });
         AutomationProperties.SetName(tab, $"{tabViewModel.Title} application tab");
         _applicationTabs.Add(tabViewModel.LogicalApplicationId, tab);
         WorkspaceTabs.TabItems.Add(tab);
@@ -352,15 +358,27 @@ public sealed partial class MainWindow : Window, IDisposable
         NavigationViewSelectionChangedEventArgs args)
     {
         string? selected = args.SelectedItemContainer?.Tag?.ToString();
+        bool systemOverviewSelected = selected == "system-overview";
         bool historySelected = selected == "history";
+        bool diagnosticsSelected = selected == "diagnostics";
         bool settingsSelected = selected == "settings";
+        bool aboutSelected = selected == "about";
         WorkspaceTabs.Visibility =
-            historySelected || settingsSelected ? Visibility.Collapsed : Visibility.Visible;
+            systemOverviewSelected || historySelected || diagnosticsSelected || settingsSelected || aboutSelected
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        SystemOverviewWorkspace.Visibility = systemOverviewSelected ? Visibility.Visible : Visibility.Collapsed;
         HistoryWorkspace.Visibility = historySelected ? Visibility.Visible : Visibility.Collapsed;
+        DiagnosticsWorkspace.Visibility = diagnosticsSelected ? Visibility.Visible : Visibility.Collapsed;
         SettingsWorkspace.Visibility = settingsSelected ? Visibility.Visible : Visibility.Collapsed;
+        AboutWorkspace.Visibility = aboutSelected ? Visibility.Visible : Visibility.Collapsed;
         if (historySelected)
         {
             await HistoryWorkspace.ActivateAsync();
+        }
+        else if (diagnosticsSelected)
+        {
+            await DiagnosticsWorkspace.ActivateAsync();
         }
         else if (settingsSelected)
         {
@@ -370,6 +388,16 @@ public sealed partial class MainWindow : Window, IDisposable
 
     private void SortDirection_Click(object sender, RoutedEventArgs args) =>
         ViewModel.ToggleSortDirection();
+
+    private void ApplicationSearchBox_TextChanged(object sender, TextChangedEventArgs args) =>
+        ViewModel.SearchText = ApplicationSearchBox.Text;
+
+    private void ClearApplicationSearchButton_Click(object sender, RoutedEventArgs args)
+    {
+        ViewModel.ClearSearch();
+        ApplicationSearchBox.Text = string.Empty;
+        ApplicationSearchBox.Focus(FocusState.Programmatic);
+    }
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
@@ -387,6 +415,7 @@ public sealed partial class MainWindow : Window, IDisposable
         AppWindow.Changed -= AppWindow_Changed;
         Root.ActualThemeChanged -= Root_ActualThemeChanged;
         _settingsViewModel.ThemeRequested -= ApplyAppearance;
+        AboutWorkspace.Dispose();
         _shutdown.Cancel();
     }
 }

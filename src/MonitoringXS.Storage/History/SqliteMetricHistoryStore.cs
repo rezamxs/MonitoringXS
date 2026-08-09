@@ -67,6 +67,12 @@ public sealed class SqliteMetricHistoryStore :
         }
     }
 
+    public string DatabasePath => _options.DatabasePath;
+
+    public int QueueCapacity => _options.QueueCapacity;
+
+    public TimeSpan Retention => TimeSpan.FromTicks(Interlocked.Read(ref _retentionTicks));
+
     public ValueTask<MetricHistoryWriteResult> EnqueueAsync(
         IReadOnlyList<ApplicationMetricSnapshot> snapshots,
         CancellationToken cancellationToken)

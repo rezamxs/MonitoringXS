@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MonitoringXS.App.Localization;
@@ -30,7 +31,7 @@ public sealed record ProcessActionConfirmation(
     string Message,
     string ConfirmButtonText);
 
-public sealed partial class ProcessActionsViewModel : ObservableObject
+public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposable
 {
     private readonly IProcessActionService _actions;
     private readonly IClipboardService _clipboard;
@@ -57,8 +58,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
     public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
-    public partial IReadOnlyList<ProcessActionChoice> Processes { get; set; } =
-        Array.Empty<ProcessActionChoice>();
+    public partial ObservableCollection<ProcessActionChoice> Processes { get; set; } = [];
 
     [ObservableProperty]
     public partial string StatusText { get; set; } = string.Empty;
@@ -102,10 +102,11 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
     {
         ProcessActionChoice? previous = SelectedProcess;
         ProcessInstanceId? selected = previous?.Target.InstanceId;
+        bool hadExplicitSelection = selected is not null;
         Dictionary<ProcessInstanceId, ProcessActionChoice> existing =
             Processes.ToDictionary(choice => choice.Target.InstanceId);
         _snapshot = snapshot;
-        ProcessActionChoice[] choices = snapshot.Processes
+        List<ProcessActionChoice> sorted = snapshot.Processes
             .OrderByDescending(process => process.HasVisibleWindow)
             .ThenBy(process => process.NormalizedProcessName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(process => process.InstanceId.ProcessId)
@@ -120,17 +121,115 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
                             process.NormalizedProcessName,
                             process.ExecutablePath),
                         process))
-            .ToArray();
+            .ToList();
         ProcessActionChoice? next =
-            choices.FirstOrDefault(choice => choice.Target.InstanceId == selected);
+            sorted.FirstOrDefault(choice => choice.Target.InstanceId == selected);
         if (next is null && IsBusy && previous is not null)
         {
-            choices = [previous, .. choices];
+            sorted.Insert(0, previous);
             next = previous;
         }
 
-        Processes = choices;
-        SelectedProcess = next ?? choices.FirstOrDefault();
+        SynchronizeProcesses(sorted);
+
+        if (next is not null)
+        {
+            SelectedProcess = next;
+        }
+        else if (hadExplicitSelection && selected is not null)
+        {
+            // Selected process has exited; do not auto-select another.
+            SelectedProcess = null;
+            StatusText = _localization.Get(LocalizationKeys.SelectedProcessExited);
+            IdentityText = _localization.Get(LocalizationKeys.NoProcessSelected);
+            ExecutablePathText = _localization.Get(LocalizationKeys.Unavailable);
+            StartTimeText = _localization.Get(LocalizationKeys.Unavailable);
+        }
+        else if (!hadExplicitSelection && sorted.Count > 0)
+        {
+            // Initial load with no prior selection: auto-select first.
+            SelectedProcess = sorted[0];
+        }
+    }
+
+    /// <summary>
+    /// Synchronizes the ObservableCollection in place so that WinUI's ComboBox
+    /// does not lose its SelectedItem binding when ItemsSource reference stays stable.
+    /// </summary>
+    private void SynchronizeProcesses(List<ProcessActionChoice> desired)
+    {
+        ObservableCollection<ProcessActionChoice> collection = Processes;
+        HashSet<ProcessInstanceId> desiredIds = desired.Select(c => c.Target.InstanceId).ToHashSet();
+
+        // Remove items no longer present.
+        for (int i = collection.Count - 1; i >= 0; i--)
+        {
+            if (!desiredIds.Contains(collection[i].Target.InstanceId))
+            {
+                collection.RemoveAt(i);
+            }
+        }
+
+        // Build lookup of current items for reuse detection.
+        Dictionary<ProcessInstanceId, int> currentIndex = new(collection.Count);
+        for (int i = 0; i < collection.Count; i++)
+        {
+            currentIndex[collection[i].Target.InstanceId] = i;
+        }
+
+        // Insert or move items to match desired order.
+        for (int desiredIndex = 0; desiredIndex < desired.Count; desiredIndex++)
+        {
+            ProcessActionChoice item = desired[desiredIndex];
+            if (currentIndex.TryGetValue(item.Target.InstanceId, out int actualIndex))
+            {
+                if (actualIndex != desiredIndex)
+                {
+                    collection.Move(actualIndex, desiredIndex);
+                    // Rebuild index after move since positions shifted.
+                    currentIndex.Clear();
+                    for (int k = 0; k < collection.Count; k++)
+                    {
+                        currentIndex[collection[k].Target.InstanceId] = k;
+                    }
+                }
+            }
+            else
+            {
+                collection.Insert(desiredIndex, item);
+                // Rebuild index after insert.
+                currentIndex.Clear();
+                for (int k = 0; k < collection.Count; k++)
+                {
+                    currentIndex[collection[k].Target.InstanceId] = k;
+                }
+            }
+        }
+    }
+
+    partial void OnIsBusyChanged(bool oldValue, bool newValue)
+    {
+        if (oldValue && !newValue)
+        {
+            // Revalidate selection after action completes.
+            // Only clear if PID was reused with a different identity (different start time).
+            // If the process simply exited without PID reuse, preserve the selection.
+            ProcessActionChoice? selected = SelectedProcess;
+            if (selected is not null && _snapshot is not null)
+            {
+                bool pidReusedWithDifferentIdentity = _snapshot.Processes.Any(
+                    p => p.InstanceId.ProcessId == selected.Target.InstanceId.ProcessId
+                        && p.InstanceId != selected.Target.InstanceId);
+                if (pidReusedWithDifferentIdentity)
+                {
+                    SelectedProcess = null;
+                    StatusText = _localization.Get(LocalizationKeys.SelectedProcessExited);
+                    IdentityText = _localization.Get(LocalizationKeys.NoProcessSelected);
+                    ExecutablePathText = _localization.Get(LocalizationKeys.Unavailable);
+                    StartTimeText = _localization.Get(LocalizationKeys.Unavailable);
+                }
+            }
+        }
     }
 
     partial void OnSelectedProcessChanged(
@@ -415,4 +514,6 @@ public sealed partial class ProcessActionsViewModel : ObservableObject
                 : _localization.Format(LocalizationKeys.ReadyLastAction, _lastActionFeedback);
         }
     }
+
+    public void Dispose() => _localization.LanguageChanged -= Localization_LanguageChanged;
 }

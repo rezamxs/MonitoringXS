@@ -21,6 +21,11 @@ chart gaps. The earliest raw timestamp represents each downsample bucket.
 
 Live sampling defaults to one second. Each sample carries a UTC wall-clock timestamp. PID plus process start time identifies a process instance and prevents PID-reuse contamination.
 
+The UI explains each supported metric from one localized presentation service.
+Beginner text uses provider-neutral product language; Advanced details show the
+technical provider, cadence, scope, aggregation, completeness, and mapped typed
+reason. Missing values keep their availability state and never become zero.
+
 ## CPU
 
 Per-process CPU is computed from the delta in total process CPU time divided by elapsed wall time and logical processor count. The Beginner value therefore represents percentage of total machine CPU capacity. The first sample is unavailable because no valid delta exists.
@@ -113,3 +118,11 @@ coordinates cover the complete selected range, not only stored sample bounds.
 - 6-24 hours: about 1 minute.
 
 Downsampling preserves averages and peaks. Disk writes are batched in transactions; expired data is removed off the UI thread.
+
+## Diagnostics projection
+
+Diagnostics reads the latest published logical-application snapshot and the
+existing collector/store diagnostic records. It does not trigger another
+collection. Queue, loss, lower-bound, last-event, provider, database-size, and
+retention values appear only when already tracked. Safe copy omits the database
+path and all unrelated sensitive data.

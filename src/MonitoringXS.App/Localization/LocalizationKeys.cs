@@ -2,6 +2,7 @@ namespace MonitoringXS.App.Localization;
 
 internal static class LocalizationKeys
 {
+    public const string HistoryPageTitleText = "HistoryPageTitle.Text";
     public const string Available = nameof(Available);
     public const string PartialLowerBound = nameof(PartialLowerBound);
     public const string WarmingUp = nameof(WarmingUp);
@@ -147,4 +148,111 @@ internal static class LocalizationKeys
     public const string DedicatedLabel = nameof(DedicatedLabel);
     public const string SharedLabel = nameof(SharedLabel);
     public const string AtLeast = nameof(AtLeast);
+    public const string MetricExplanationCpu = nameof(MetricExplanationCpu);
+    public const string MetricExplanationMemory = nameof(MetricExplanationMemory);
+    public const string MetricExplanationProcessIo = nameof(MetricExplanationProcessIo);
+    public const string MetricExplanationPhysicalDisk = nameof(MetricExplanationPhysicalDisk);
+    public const string MetricExplanationNetwork = nameof(MetricExplanationNetwork);
+    public const string MetricExplanationGpu = nameof(MetricExplanationGpu);
+    public const string MetricExplanationGpuDedicated = nameof(MetricExplanationGpuDedicated);
+    public const string MetricExplanationGpuShared = nameof(MetricExplanationGpuShared);
+    public const string MetricExplanationHistory = nameof(MetricExplanationHistory);
+    public const string MetricAdvancedCpu = nameof(MetricAdvancedCpu);
+    public const string MetricAdvancedMemory = nameof(MetricAdvancedMemory);
+    public const string MetricAdvancedProcessIo = nameof(MetricAdvancedProcessIo);
+    public const string MetricAdvancedPhysicalDisk = nameof(MetricAdvancedPhysicalDisk);
+    public const string MetricAdvancedNetwork = nameof(MetricAdvancedNetwork);
+    public const string MetricAdvancedGpu = nameof(MetricAdvancedGpu);
+    public const string MetricAdvancedGpuDedicated = nameof(MetricAdvancedGpuDedicated);
+    public const string MetricAdvancedGpuShared = nameof(MetricAdvancedGpuShared);
+    public const string MetricAdvancedHistory = nameof(MetricAdvancedHistory);
+    public const string ReasonAvailable = nameof(ReasonAvailable);
+    public const string ReasonPartial = nameof(ReasonPartial);
+    public const string ReasonWarmingUp = nameof(ReasonWarmingUp);
+    public const string ReasonPermissionRequired = nameof(ReasonPermissionRequired);
+    public const string ReasonProviderUnsupported = nameof(ReasonProviderUnsupported);
+    public const string ReasonServiceNotInstalled = nameof(ReasonServiceNotInstalled);
+    public const string ReasonServiceStopped = nameof(ReasonServiceStopped);
+    public const string ReasonServiceConnection = nameof(ReasonServiceConnection);
+    public const string ReasonProtocolMismatch = nameof(ReasonProtocolMismatch);
+    public const string ReasonSessionConflict = nameof(ReasonSessionConflict);
+    public const string ReasonEventLoss = nameof(ReasonEventLoss);
+    public const string ReasonProcessExited = nameof(ReasonProcessExited);
+    public const string ReasonDriverCounters = nameof(ReasonDriverCounters);
+    public const string ReasonNoAttributedData = nameof(ReasonNoAttributedData);
+    public const string ReasonHistoryNotCollected = nameof(ReasonHistoryNotCollected);
+    public const string ReasonHistoryDatabaseUnavailable = nameof(ReasonHistoryDatabaseUnavailable);
+    public const string ReasonTemporarilyUnavailable = nameof(ReasonTemporarilyUnavailable);
+    public const string ReasonCollectorError = nameof(ReasonCollectorError);
+    public const string SelectedProcessExited = nameof(SelectedProcessExited);
+
+    // System Overview
+    public const string SystemOverviewPageTitle = nameof(SystemOverviewPageTitle);
+    public const string SystemOverviewSubtitle = nameof(SystemOverviewSubtitle);
+    public const string SystemOverviewPrimaryMetrics = nameof(SystemOverviewPrimaryMetrics);
+    public const string SystemOverviewSecondaryMetrics = nameof(SystemOverviewSecondaryMetrics);
+    public const string SystemOverviewCpu = nameof(SystemOverviewCpu);
+    public const string SystemOverviewMemory = nameof(SystemOverviewMemory);
+    public const string SystemOverviewDisk = nameof(SystemOverviewDisk);
+    public const string SystemOverviewNetwork = nameof(SystemOverviewNetwork);
+    public const string SystemOverviewGpu = nameof(SystemOverviewGpu);
+    public const string SystemOverviewUtilization = nameof(SystemOverviewUtilization);
+    public const string SystemOverviewUsed = nameof(SystemOverviewUsed);
+    public const string SystemOverviewAvailableMemory = nameof(SystemOverviewAvailableMemory);
+    public const string SystemOverviewRead = nameof(SystemOverviewRead);
+    public const string SystemOverviewWrite = nameof(SystemOverviewWrite);
+    public const string SystemOverviewReceive = nameof(SystemOverviewReceive);
+    public const string SystemOverviewSend = nameof(SystemOverviewSend);
+    public const string SystemOverviewMemoryUsedFormat = nameof(SystemOverviewMemoryUsedFormat);
+    public const string SystemOverviewStatusPartialLabel = nameof(SystemOverviewStatusPartialLabel);
+    public const string SystemOverviewStatusPartial = nameof(SystemOverviewStatusPartial);
+    public const string SystemOverviewStatusWarmingUp = nameof(SystemOverviewStatusWarmingUp);
+    public const string SystemOverviewStatusUnavailable = nameof(SystemOverviewStatusUnavailable);
+    public const string SystemOverviewStatusUnsupported = nameof(SystemOverviewStatusUnsupported);
+    public const string SystemOverviewStatusAccessDenied = nameof(SystemOverviewStatusAccessDenied);
+    public const string SystemOverviewStatusError = nameof(SystemOverviewStatusError);
+    public const string SystemOverviewChartSummary = nameof(SystemOverviewChartSummary);
+    public const string SystemOverviewChartEmpty = nameof(SystemOverviewChartEmpty);
+    public const string SystemOverviewChartAutomationName = nameof(SystemOverviewChartAutomationName);
+
+    // About page
+    public const string AboutPageTitle = nameof(AboutPageTitle);
+    public const string AboutDescription = nameof(AboutDescription);
+    public const string AboutPlatform = nameof(AboutPlatform);
+    public const string AboutOpenSource = nameof(AboutOpenSource);
+    public const string AboutPrivacySummary = nameof(AboutPrivacySummary);
+    public const string AboutPrivacyDetail = nameof(AboutPrivacyDetail);
+    public const string AboutRepository = nameof(AboutRepository);
+    public const string AboutLicense = nameof(AboutLicense);
+    public const string AboutCopyright = nameof(AboutCopyright);
+    public const string AboutBetaBadge = nameof(AboutBetaBadge);
+
+    // What's New
+    public const string WhatsNewTitle = nameof(WhatsNewTitle);
+    public const string WhatsNewLocalization = nameof(WhatsNewLocalization);
+    public const string WhatsNewSearch = nameof(WhatsNewSearch);
+    public const string WhatsNewSorting = nameof(WhatsNewSorting);
+    public const string WhatsNewDiagnostics = nameof(WhatsNewDiagnostics);
+    public const string WhatsNewMetricExplanations = nameof(WhatsNewMetricExplanations);
+    public const string WhatsNewProcessSelection = nameof(WhatsNewProcessSelection);
+    public const string WhatsNewProcessSafety = nameof(WhatsNewProcessSafety);
+    public const string WhatsNewCpuMonitoring = nameof(WhatsNewCpuMonitoring);
+    public const string WhatsNewMemoryMonitoring = nameof(WhatsNewMemoryMonitoring);
+    public const string WhatsNewDiskMonitoring = nameof(WhatsNewDiskMonitoring);
+    public const string WhatsNewNetworkMonitoring = nameof(WhatsNewNetworkMonitoring);
+    public const string WhatsNewGpuMonitoring = nameof(WhatsNewGpuMonitoring);
+    public const string WhatsNewHistory = nameof(WhatsNewHistory);
+    public const string WhatsNewChartGaps = nameof(WhatsNewChartGaps);
+    public const string WhatsNewInstaller = nameof(WhatsNewInstaller);
+    public const string WhatsNewSystemOverviewFoundation = nameof(WhatsNewSystemOverviewFoundation);
+
+    // Beta Limitations
+    public const string BetaLimitationsTitle = nameof(BetaLimitationsTitle);
+    public const string BetaLimitationProviders = nameof(BetaLimitationProviders);
+    public const string BetaLimitationHardware = nameof(BetaLimitationHardware);
+    public const string BetaLimitationPermissions = nameof(BetaLimitationPermissions);
+    public const string BetaLimitationMetricStates = nameof(BetaLimitationMetricStates);
+    public const string BetaLimitationChartGaps = nameof(BetaLimitationChartGaps);
+    public const string BetaLimitationNoFakeData = nameof(BetaLimitationNoFakeData);
+    public const string BetaLimitationDefects = nameof(BetaLimitationDefects);
 }

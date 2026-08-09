@@ -32,7 +32,6 @@ public sealed class ApplicationSortPresentationTests
     [InlineData(ApplicationSortField.PhysicalDiskRate)]
     [InlineData(ApplicationSortField.NetworkRate)]
     [InlineData(ApplicationSortField.GpuUsage)]
-    [InlineData(ApplicationSortField.ProcessCount)]
     public void NumericMetricsDefaultToHighestFirst(ApplicationSortField field)
     {
         Assert.True(ApplicationSortPresentation.DefaultDescending(field));
@@ -61,7 +60,6 @@ public sealed class ApplicationSortPresentationTests
     [InlineData(ApplicationSortField.PhysicalDiskRate)]
     [InlineData(ApplicationSortField.NetworkRate)]
     [InlineData(ApplicationSortField.GpuUsage)]
-    [InlineData(ApplicationSortField.ProcessCount)]
     public void SelectingANumericFieldAppliesItsSmartDefault(ApplicationSortField field)
     {
         MainWindowViewModel viewModel = CreateViewModel();

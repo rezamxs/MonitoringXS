@@ -14,12 +14,25 @@ public enum ApplicationLanguage
     Persian
 }
 
+public enum ApplicationSortPreference
+{
+    Name,
+    Cpu,
+    Memory,
+    ProcessIo,
+    PhysicalDisk,
+    Network,
+    Gpu
+}
+
 public sealed record ApplicationSettings(
     int Version,
     int LiveSamplingSeconds,
     int HistoryRetentionHours,
     ApplicationTheme Theme,
-    ApplicationLanguage Language = ApplicationLanguage.System)
+    ApplicationLanguage Language = ApplicationLanguage.System,
+    ApplicationSortPreference ApplicationSort = ApplicationSortPreference.Name,
+    bool ApplicationSortDescending = false)
 {
     public const int CurrentVersion = 1;
 
@@ -28,7 +41,9 @@ public sealed record ApplicationSettings(
         1,
         24,
         ApplicationTheme.System,
-        ApplicationLanguage.System);
+        ApplicationLanguage.System,
+        ApplicationSortPreference.Name,
+        false);
 
     public TimeSpan LiveSamplingInterval => TimeSpan.FromSeconds(LiveSamplingSeconds);
 
@@ -39,7 +54,8 @@ public sealed record ApplicationSettings(
         && LiveSamplingSeconds is 1 or 2 or 5
         && HistoryRetentionHours is 6 or 24 or 72 or 168
         && Enum.IsDefined(Theme)
-        && Enum.IsDefined(Language);
+        && Enum.IsDefined(Language)
+        && Enum.IsDefined(ApplicationSort);
 }
 
 public sealed record ApplicationSettingsLoadResult(

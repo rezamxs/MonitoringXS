@@ -23,6 +23,12 @@ public sealed partial class MetricSparkline : UserControl
         typeof(MetricSparkline),
         new PropertyMetadata(null, OnTextChanged));
 
+    public static readonly DependencyProperty ShowSummaryProperty = DependencyProperty.Register(
+        nameof(ShowSummary),
+        typeof(bool),
+        typeof(MetricSparkline),
+        new PropertyMetadata(true, OnTextChanged));
+
     public static readonly DependencyProperty EmptyTextProperty = DependencyProperty.Register(
         nameof(EmptyText),
         typeof(string),
@@ -53,12 +59,20 @@ public sealed partial class MetricSparkline : UserControl
         typeof(MetricSparkline),
         new PropertyMetadata(string.Empty, OnTextChanged));
 
+    public static readonly DependencyProperty IsEmbeddedProperty = DependencyProperty.Register(
+        nameof(IsEmbedded),
+        typeof(bool),
+        typeof(MetricSparkline),
+        new PropertyMetadata(false, OnEmbeddedChanged));
+
     private INotifyCollectionChanged? _observableSamples;
-    private bool _resizeRedrawPending;
+    private bool _redrawPending;
+    private readonly Brush? _defaultBackground;
 
     public MetricSparkline()
     {
         InitializeComponent();
+        _defaultBackground = ChartRoot.Background;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -73,6 +87,12 @@ public sealed partial class MetricSparkline : UserControl
     {
         get => (string?)GetValue(SummaryTextProperty);
         set => SetValue(SummaryTextProperty, value);
+    }
+
+    public bool ShowSummary
+    {
+        get => (bool)GetValue(ShowSummaryProperty);
+        set => SetValue(ShowSummaryProperty, value);
     }
 
     public string EmptyText
@@ -105,26 +125,72 @@ public sealed partial class MetricSparkline : UserControl
         set => SetValue(UnitTextProperty, value);
     }
 
+    public bool IsEmbedded
+    {
+        get => (bool)GetValue(IsEmbeddedProperty);
+        set => SetValue(IsEmbeddedProperty, value);
+    }
+
+    private static void OnEmbeddedChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+    {
+        MetricSparkline chart = (MetricSparkline)sender;
+        chart.ApplyEmbeddedState();
+        chart.QueueRedraw();
+    }
+
+    private void ApplyEmbeddedState()
+    {
+        if (IsEmbedded)
+        {
+            ChartRoot.Background = null;
+            ChartRoot.BorderThickness = new Thickness(0);
+            ChartRoot.CornerRadius = new CornerRadius(0);
+            Summary.Visibility = Visibility.Collapsed;
+            TopAxisLabel.Visibility = Visibility.Collapsed;
+            BottomAxisLabel.Visibility = Visibility.Collapsed;
+            StartAxisLabel.Visibility = Visibility.Collapsed;
+            EndAxisLabel.Visibility = Visibility.Collapsed;
+            EmptyState.Visibility = Visibility.Collapsed;
+            MidGridLine.Visibility = Visibility.Collapsed;
+            BaselineGridLine.Opacity = 0.35;
+            MinHeight = 44;
+        }
+        else
+        {
+            ChartRoot.Background = _defaultBackground;
+            ChartRoot.BorderThickness = new Thickness(1);
+            ChartRoot.CornerRadius = new CornerRadius(8);
+            TopAxisLabel.Visibility = Visibility.Visible;
+            BottomAxisLabel.Visibility = Visibility.Visible;
+            StartAxisLabel.Visibility = Visibility.Visible;
+            EndAxisLabel.Visibility = Visibility.Visible;
+            MidGridLine.Visibility = Visibility.Visible;
+            BaselineGridLine.Opacity = 0.55;
+            Summary.Visibility = ShowSummary ? Visibility.Visible : Visibility.Collapsed;
+            MinHeight = 120;
+        }
+    }
+
     private static void OnSamplesChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
     {
         MetricSparkline chart = (MetricSparkline)sender;
         chart.Unsubscribe();
-        chart._observableSamples = args.NewValue as INotifyCollectionChanged;
-        if (chart._observableSamples is not null)
+        if (chart.IsLoaded && args.NewValue is INotifyCollectionChanged observable)
         {
+            chart._observableSamples = observable;
             chart._observableSamples.CollectionChanged += chart.OnCollectionChanged;
         }
 
-        chart.Redraw();
+        chart.QueueRedraw();
     }
 
     private static void OnTextChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args) =>
-        ((MetricSparkline)sender).Redraw();
+        ((MetricSparkline)sender).QueueRedraw();
 
     private static void OnLayoutChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args) =>
-        ((MetricSparkline)sender).Redraw();
+        ((MetricSparkline)sender).QueueRedraw();
 
-    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs args) => Redraw();
+    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs args) => QueueRedraw();
 
     private void OnLoaded(object sender, RoutedEventArgs args)
     {
@@ -134,21 +200,25 @@ public sealed partial class MetricSparkline : UserControl
             _observableSamples.CollectionChanged += OnCollectionChanged;
         }
 
+        ApplyEmbeddedState();
         Redraw();
     }
 
     private void ChartRoot_SizeChanged(object sender, SizeChangedEventArgs args)
+        => QueueRedraw();
+
+    private void QueueRedraw()
     {
-        if (_resizeRedrawPending)
+        if (_redrawPending || !IsLoaded)
         {
             return;
         }
 
-        _resizeRedrawPending = DispatcherQueue.TryEnqueue(
+        _redrawPending = DispatcherQueue.TryEnqueue(
             DispatcherQueuePriority.Low,
             () =>
             {
-                _resizeRedrawPending = false;
+                _redrawPending = false;
                 if (IsLoaded)
                 {
                     Redraw();
@@ -164,10 +234,13 @@ public sealed partial class MetricSparkline : UserControl
             PlotArea.ActualHeight,
             ChartScale,
             RangeStartUtc,
-            RangeEndUtc);
+            RangeEndUtc,
+            IsEmbedded);
         bool hasSeries = layout.Segments.Count > 0 || layout.Markers.Count > 0;
         EmptyState.Text = EmptyText;
-        EmptyState.Visibility = hasSeries ? Visibility.Collapsed : Visibility.Visible;
+        EmptyState.Visibility = IsEmbedded
+            ? Visibility.Collapsed
+            : (hasSeries ? Visibility.Collapsed : Visibility.Visible);
         Line.Visibility = hasSeries ? Visibility.Visible : Visibility.Collapsed;
         PathGeometry geometry = new();
 
@@ -210,12 +283,16 @@ public sealed partial class MetricSparkline : UserControl
             Markers.Children.Add(ellipse);
         }
 
-        TopAxisLabel.Text = FormatAxis(layout.DomainMaximum);
-        BottomAxisLabel.Text = FormatAxis(layout.DomainMinimum);
-        StartAxisLabel.Text = layout.RangeStartUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
-        EndAxisLabel.Text = layout.RangeEndUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
+        if (!IsEmbedded)
+        {
+            TopAxisLabel.Text = FormatAxis(layout.DomainMaximum);
+            BottomAxisLabel.Text = FormatAxis(layout.DomainMinimum);
+            StartAxisLabel.Text = layout.RangeStartUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
+            EndAxisLabel.Text = layout.RangeEndUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
 
-        Summary.Text = string.IsNullOrWhiteSpace(SummaryText) ? layout.Summary : SummaryText;
+            Summary.Text = string.IsNullOrWhiteSpace(SummaryText) ? layout.Summary : SummaryText;
+            Summary.Visibility = ShowSummary ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 
     private string FormatAxis(double value) =>

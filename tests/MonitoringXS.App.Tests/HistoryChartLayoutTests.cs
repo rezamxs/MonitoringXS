@@ -100,6 +100,33 @@ public sealed class HistoryChartLayoutTests
     }
 
     [Fact]
+    public void EmbeddedLayoutUsesTheCardWidthWithoutDetailedChartInsets()
+    {
+        MetricSparklineLayout embedded = MetricSparklineLayout.Create(
+            [new(Start, 10), new(Start.AddSeconds(1), 20)],
+            220,
+            52,
+            MetricSparklineScale.Dynamic,
+            Start,
+            Start.AddSeconds(1),
+            isEmbedded: true);
+        MetricSparklineLayout detailed = MetricSparklineLayout.Create(
+            [new(Start, 10), new(Start.AddSeconds(1), 20)],
+            220,
+            120,
+            MetricSparklineScale.Dynamic,
+            Start,
+            Start.AddSeconds(1));
+
+        Assert.Equal(2, embedded.PlotLeft);
+        Assert.Equal(4, embedded.PlotTop);
+        Assert.Equal(218, embedded.PlotRight);
+        Assert.Equal(48, embedded.PlotBottom);
+        Assert.True(embedded.PlotLeft < detailed.PlotLeft);
+        Assert.True(embedded.PlotBottom > detailed.PlotBottom / 2);
+    }
+
+    [Fact]
     public void CpuAndGpuPercentDomainIsAlwaysZeroToOneHundred()
     {
         MetricSparklineLayout layout = Layout(
@@ -219,7 +246,7 @@ public sealed class HistoryChartLayoutTests
         const double pageHorizontalPadding = 48;
         const double pageVerticalPadding = 40;
         const double cardMinimumWidth = 400;
-        const double cardHeight = 230;
+        const double cardHeight = 208;
         const double spacing = 12;
         const double refreshWidth = 80;
         string xaml = File.ReadAllText(Path.Combine(
@@ -229,11 +256,12 @@ public sealed class HistoryChartLayoutTests
             "HistoryPage.xaml"));
 
         Assert.Contains("Padding=\"24,16,24,24\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Width=\"280\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Width=\"160\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"220\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"160\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AdaptiveTrigger MinWindowWidth=\"760\"", xaml, StringComparison.Ordinal);
         Assert.Contains("MinItemWidth=\"400\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("MinItemHeight=\"230\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Height=\"180\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinItemHeight=\"208\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Height=\"156\"", xaml, StringComparison.Ordinal);
         Assert.Contains("VerticalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
         Assert.Contains(
             "AutomationProperties.Name=\"{Binding AccessibilityText, Mode=OneWay}\"",
@@ -246,7 +274,7 @@ public sealed class HistoryChartLayoutTests
         double contentWidth = logicalWidth - pageHorizontalPadding;
         double contentHeight = logicalHeight - pageVerticalPadding;
         double toolbarInnerWidth = contentWidth - 24;
-        double toolbarControlsWidth = 280 + spacing + 160 + spacing + refreshWidth;
+        double toolbarControlsWidth = 220 + spacing + 160 + spacing + refreshWidth;
         int columns = Math.Max(
             1,
             (int)Math.Floor((contentWidth + spacing) / (cardMinimumWidth + spacing)));
@@ -264,7 +292,7 @@ public sealed class HistoryChartLayoutTests
         double toolbarTop = headerBottom + spacing;
         double toolbarBottom = toolbarTop + 60;
         double selectorLeft = 24 + 12;
-        double selectorRight = selectorLeft + 280;
+        double selectorRight = selectorLeft + 220;
         double rangeLeft = selectorRight + spacing;
         double rangeRight = rangeLeft + 160;
         double refreshRight = rangeRight + spacing + refreshWidth;
@@ -278,14 +306,14 @@ public sealed class HistoryChartLayoutTests
         MetricSparklineLayout plot = MetricSparklineLayout.Create(
             [new(Start, 10), new(Start.AddMinutes(15), 20)],
             plotWidth,
-            180,
+            156,
             MetricSparklineScale.Dynamic,
             Start,
             Start.AddMinutes(15));
         Assert.True(plot.PlotLeft >= 0);
         Assert.True(plot.PlotRight <= plotWidth);
         Assert.True(plot.PlotTop >= 0);
-        Assert.True(plot.PlotBottom <= 180);
+        Assert.True(plot.PlotBottom <= 156);
 
         double chartViewportHeight = contentHeight - (56 + 60 + 40 + (3 * spacing));
         double rowStride = cardHeight + spacing;

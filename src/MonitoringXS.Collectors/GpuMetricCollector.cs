@@ -12,6 +12,8 @@ public sealed class GpuMetricCollector : IGpuMetricCollector
         _counterSource = counterSource;
     }
 
+    public GpuCounterBatch? LastBatch { get; private set; }
+
     public async ValueTask<IReadOnlyList<GpuProcessSample>> CollectAsync(
         IReadOnlyList<ProcessDescriptor> processes,
         DateTimeOffset capturedAtUtc,
@@ -21,6 +23,7 @@ public sealed class GpuMetricCollector : IGpuMetricCollector
             processes,
             capturedAtUtc.ToUniversalTime(),
             cancellationToken);
+        LastBatch = batch;
         Dictionary<ProcessInstanceId, GpuProcessCounterSnapshot> byProcess =
             batch.Processes
                 .GroupBy(snapshot => snapshot.Process)

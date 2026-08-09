@@ -85,6 +85,26 @@ public sealed class JsonApplicationSettingsStoreTests
         Assert.Equal(expected, result.Settings);
     }
 
+    [Fact]
+    public async Task ApplicationSortPersistsInTheExistingAtomicDocument()
+    {
+        using TestDirectory directory = new();
+        ApplicationSettings expected = ApplicationSettings.Default with
+        {
+            ApplicationSort = ApplicationSortPreference.Network,
+            ApplicationSortDescending = true
+        };
+        await using JsonApplicationSettingsStore store = new(directory.SettingsPath);
+
+        Assert.True((await store.SaveAsync(expected, TestCancellation)).Succeeded);
+        ApplicationSettingsLoadResult result = await store.LoadAsync(TestCancellation);
+
+        Assert.Equal(expected, result.Settings);
+        string json = await File.ReadAllTextAsync(directory.SettingsPath, TestCancellation);
+        Assert.Contains("\"ApplicationSort\": \"Network\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"ApplicationSortDescending\": true", json, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("Klingon")]

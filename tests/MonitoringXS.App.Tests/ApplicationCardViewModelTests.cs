@@ -36,9 +36,9 @@ public sealed class ApplicationCardViewModelTests
         Assert.Contains("CPU 12.5%", card.AutomationName, StringComparison.Ordinal);
         Assert.Contains("Memory 256 MB", card.AutomationName, StringComparison.Ordinal);
         Assert.Contains("Process I/O 2.0 KB/s read", card.AutomationName, StringComparison.Ordinal);
-        Assert.Contains("Physical disk Access denied", card.AutomationName, StringComparison.Ordinal);
-        Assert.Contains("Network Access denied", card.AutomationName, StringComparison.Ordinal);
-        Assert.Contains("GPU Access denied", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("Physical disk Permission required", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("Network Permission required", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("GPU Permission required", card.AutomationName, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -53,23 +53,23 @@ public sealed class ApplicationCardViewModelTests
             MetricValue<double>.Unavailable(MetricAvailability.AccessDenied)), []);
 
         Assert.Equal("Unavailable", card.IoText);
-        Assert.Equal("Access denied", card.IoStatusText);
+        Assert.Equal("Permission required for this provider or process.", card.IoStatusText);
         Assert.Equal("Unavailable", card.PhysicalDiskText);
-        Assert.Equal("Access denied", card.PhysicalDiskStatusText);
+        Assert.Equal("Permission required for this provider or process.", card.PhysicalDiskStatusText);
         Assert.Equal("Unavailable", card.NetworkText);
-        Assert.Equal("Access denied", card.NetworkStatusText);
+        Assert.Equal("Permission required for this provider or process.", card.NetworkStatusText);
         Assert.DoesNotContain("Unavailable read", card.PhysicalDiskText, StringComparison.Ordinal);
         Assert.DoesNotContain("Unavailable receive", card.NetworkText, StringComparison.Ordinal);
-        Assert.Contains("Process I/O Access denied", card.AutomationName, StringComparison.Ordinal);
-        Assert.Contains("Physical disk Access denied", card.AutomationName, StringComparison.Ordinal);
-        Assert.Contains("Network Access denied", card.AutomationName, StringComparison.Ordinal);
-        Assert.Contains("GPU Access denied", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("Process I/O Permission required", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("Physical disk Permission required", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("Network Permission required", card.AutomationName, StringComparison.Ordinal);
+        Assert.Contains("GPU Permission required", card.AutomationName, StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData(MetricAvailability.WarmingUp, "Warming up", "")]
-    [InlineData(MetricAvailability.Unavailable, "Unavailable", "")]
-    [InlineData(MetricAvailability.Unsupported, "Unavailable", "Unsupported")]
+    [InlineData(MetricAvailability.WarmingUp, "Warming up", "Warming up: another valid sample is required.")]
+    [InlineData(MetricAvailability.Unavailable, "Unavailable", "Data is temporarily unavailable.")]
+    [InlineData(MetricAvailability.Unsupported, "Unavailable", "This Windows monitoring provider is unsupported on the current system.")]
     public void KeepsUnavailableReasonsVisibleWithoutRepeatingDirections(
         MetricAvailability availability,
         string expectedValue,
@@ -101,12 +101,12 @@ public sealed class ApplicationCardViewModelTests
     }
 
     [Theory]
-    [InlineData("Broker service not installed.", "Broker service not installed.")]
-    [InlineData("Broker service stopped.", "Broker service stopped.")]
-    [InlineData("Broker connection failed.", "Broker connection failed.")]
-    [InlineData("The privileged ETW broker protocol version is incompatible. Client version 1; server version 2.", "The privileged ETW broker protocol version is incompatible. Client version 1; server version 2.")]
-    [InlineData("TraceEventSession.EnableKernelProvider failed with Win32 5.", "ETW unavailable.")]
-    [InlineData(@"C:\sensitive\broker.exe failed.", "")]
+    [InlineData("Broker service not installed.", "The Privileged Metrics Service is not installed.")]
+    [InlineData("Broker service stopped.", "The Privileged Metrics Service is stopped.")]
+    [InlineData("Broker connection failed.", "The Privileged Metrics Service connection is unavailable.")]
+    [InlineData("The privileged ETW broker protocol version is incompatible. Client version 1; server version 2.", "The app and Privileged Metrics Service protocol versions do not match.")]
+    [InlineData("TraceEventSession.EnableKernelProvider failed with Win32 5.", "Data is temporarily unavailable.")]
+    [InlineData(@"C:\sensitive\broker.exe failed.", "Data is temporarily unavailable.")]
     public void BrokerStatusShowsOnlySafeActionableDetail(string detail, string expected)
     {
         ApplicationCardViewModel card = Card();

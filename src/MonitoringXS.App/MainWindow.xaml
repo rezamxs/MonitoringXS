@@ -11,23 +11,122 @@
         Background="{StaticResource PageBrush}">
         <Grid.Resources>
         <local:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <DataTemplate x:Key="ApplicationDetailTemplate">
-            <ScrollViewer>
-                <StackPanel Padding="24" Spacing="20">
-                    <StackPanel Spacing="4">
+        <DataTemplate x:Key="ApplicationTabHeaderTemplate">
+            <Grid
+                AutomationProperties.Name="{Binding Title}"
+                ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid
+                    Width="24"
+                    Height="24">
+                    <SymbolIcon
+                        Foreground="{StaticResource SecondaryTextBrush}"
+                        Symbol="AllApps"
+                        Visibility="{Binding HasFallbackIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Image
+                        Width="20"
+                        Height="20"
+                        Source="{Binding AppIconSource}"
+                        Stretch="Uniform"
+                        Visibility="{Binding HasAppIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+                <TextBlock
+                    Grid.Column="1"
+                    MaxWidth="220"
+                    VerticalAlignment="Center"
+                    Text="{Binding Title}"
+                    TextTrimming="CharacterEllipsis" />
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="MetricExplanationTemplate" x:DataType="vm:MetricExplanationViewModel">
+            <Border
+                Margin="0,0,0,4"
+                Padding="10,8"
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource SubtleBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="6">
+                <StackPanel Spacing="4">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
                         <TextBlock
-                            Style="{StaticResource SectionTitleStyle}"
-                            Text="{Binding Title}" />
+                            FontWeight="SemiBold"
+                            Text="{x:Bind Name, Mode=OneWay}"
+                            VerticalAlignment="Center" />
                         <TextBlock
+                            Grid.Column="1"
                             Foreground="{StaticResource SecondaryTextBrush}"
-                            Text="{Binding ProcessSummary}" />
-                    </StackPanel>
+                            Text="{x:Bind BeginnerText, Mode=OneWay}"
+                            TextWrapping="Wrap"
+                            VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock
+                        Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                        Text="{x:Bind StatusText, Mode=OneWay}"
+                        TextWrapping="Wrap"
+                        Visibility="{x:Bind HasVisibleStatus, Mode=OneWay}" />
+                    <Expander
+                        x:Uid="MetricAdvancedDetails"
+                        IsExpanded="{x:Bind IsExpanded, Mode=TwoWay}">
+                        <StackPanel Padding="0,8,0,0" Spacing="6">
+                            <TextBlock
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="{x:Bind AdvancedText, Mode=OneWay}"
+                                TextWrapping="Wrap" />
+                            <TextBlock x:Uid="MetricProviderLabel" FontWeight="SemiBold" />
+                            <TextBlock
+                                FlowDirection="LeftToRight"
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="{x:Bind ProviderName, Mode=OneWay}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Expander>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+        <DataTemplate x:Key="ApplicationDetailTemplate">
+            <ScrollViewer x:Name="ApplicationDetailRoot" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel MaxWidth="1800" Padding="24" HorizontalAlignment="Stretch" Spacing="16">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid
+                            Width="44"
+                            Height="44"
+                            AutomationProperties.Name="{Binding Title}">
+                            <SymbolIcon
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Symbol="AllApps"
+                                Visibility="{Binding HasFallbackIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <Image
+                                Width="32"
+                                Height="32"
+                                Source="{Binding AppIconSource}"
+                                Stretch="Uniform"
+                                Visibility="{Binding HasAppIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </Grid>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                            <TextBlock
+                                Style="{StaticResource PageTitleStyle}"
+                                Text="{Binding Title}"
+                                TextTrimming="CharacterEllipsis" />
+                            <TextBlock
+                                FlowDirection="LeftToRight"
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="{Binding ProcessSummary}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
                     <Border
-                        Padding="16"
-                        Background="{StaticResource SurfaceBrush}"
-                        BorderBrush="{StaticResource SubtleBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="12"
+                        Style="{StaticResource SectionSurfaceStyle}"
                         DataContext="{Binding ProcessActions}">
                         <StackPanel Spacing="12">
                             <StackPanel Spacing="4">
@@ -39,14 +138,34 @@
                                     Text="Actions remain non-elevated and revalidate PID, start time, and executable identity."
                                     TextWrapping="Wrap" />
                             </StackPanel>
-                            <ComboBox x:Uid="ProcessSelector"
-                                MaxWidth="420"
-                                HorizontalAlignment="Stretch"
-                                AutomationProperties.Name="Process for application actions"
-                                DisplayMemberPath="Label"
-                                ItemsSource="{Binding Processes, Mode=OneWay}"
-                                SelectedItem="{Binding SelectedProcess, Mode=TwoWay}"
-                                UseSystemFocusVisuals="True" />
+                            <Grid MaxWidth="460" HorizontalAlignment="Stretch" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid
+                                    Width="32"
+                                    Height="32">
+                                    <SymbolIcon
+                                        Foreground="{StaticResource SecondaryTextBrush}"
+                                        Symbol="AllApps"
+                                        Visibility="{Binding DataContext.HasFallbackIcon, ElementName=ApplicationDetailRoot, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <Image
+                                        Width="28"
+                                        Height="28"
+                                        Source="{Binding DataContext.AppIconSource, ElementName=ApplicationDetailRoot}"
+                                        Stretch="Uniform"
+                                        Visibility="{Binding DataContext.HasAppIcon, ElementName=ApplicationDetailRoot, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                </Grid>
+                                <ComboBox x:Uid="ProcessSelector"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.Name="Process for application actions"
+                                    DisplayMemberPath="Label"
+                                    ItemsSource="{Binding Processes, Mode=OneWay}"
+                                    SelectedItem="{Binding SelectedProcess, Mode=TwoWay}"
+                                    UseSystemFocusVisuals="True" />
+                            </Grid>
                             <StackPanel Spacing="4">
                                 <TextBlock
                                     FontWeight="SemiBold"
@@ -78,26 +197,38 @@
                                     AutomationProperties.HelpText="Ends only the selected process after confirmation and identity revalidation."
                                     AutomationProperties.Name="End selected task"
                                     Command="{Binding EndTaskCommand}"
-                                    Content="End Task"
                                     Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                    UseSystemFocusVisuals="True" />
+                                    UseSystemFocusVisuals="True">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Stop" />
+                                        <TextBlock x:Uid="EndTaskButtonLabel" Text="End Task" />
+                                    </StackPanel>
+                                </Button>
                                 <Button x:Uid="EndTreeButton"
                                     Grid.Column="1"
                                     HorizontalAlignment="Stretch"
                                     AutomationProperties.HelpText="Ends verified descendants from leaves to root after stronger confirmation."
                                     AutomationProperties.Name="End selected process tree"
                                     Command="{Binding EndProcessTreeCommand}"
-                                    Content="End Process Tree"
                                     Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                    UseSystemFocusVisuals="True" />
+                                    UseSystemFocusVisuals="True">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Delete" />
+                                        <TextBlock x:Uid="EndTreeButtonLabel" Text="End Process Tree" />
+                                    </StackPanel>
+                                </Button>
                                 <Button x:Uid="OpenLocationButton"
                                     Grid.Row="1"
                                     HorizontalAlignment="Stretch"
                                     AutomationProperties.HelpText="Opens Explorer and selects the verified executable."
                                     AutomationProperties.Name="Open selected process file location"
                                     Command="{Binding OpenFileLocationCommand}"
-                                    Content="Open File Location"
-                                    UseSystemFocusVisuals="True" />
+                                    UseSystemFocusVisuals="True">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="OpenFile" />
+                                        <TextBlock x:Uid="OpenLocationButtonLabel" Text="Open File Location" />
+                                    </StackPanel>
+                                </Button>
                                 <Button x:Uid="CopyDetailsButton"
                                     Grid.Row="1"
                                     Grid.Column="1"
@@ -105,8 +236,12 @@
                                     AutomationProperties.HelpText="Copies safe process identity and current application metrics without command lines or secrets."
                                     AutomationProperties.Name="Copy selected process details"
                                     Command="{Binding CopyProcessDetailsCommand}"
-                                    Content="Copy Process Details"
-                                    UseSystemFocusVisuals="True" />
+                                    UseSystemFocusVisuals="True">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Copy" />
+                                        <TextBlock x:Uid="CopyDetailsButtonLabel" Text="Copy Process Details" />
+                                    </StackPanel>
+                                </Button>
                             </Grid>
                             <TextBlock
                                 AutomationProperties.LiveSetting="Assertive"
@@ -115,12 +250,34 @@
                                 TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
-                    <Grid ColumnSpacing="12">
+                    <Grid x:Name="DetailMetricGrid" ColumnSpacing="12" RowSpacing="12">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup>
+                                <VisualState x:Name="CompactDetailMetrics" />
+                                <VisualState x:Name="WideDetailMetrics">
+                                    <VisualState.StateTriggers>
+                                        <AdaptiveTrigger MinWindowWidth="1000" />
+                                    </VisualState.StateTriggers>
+                                    <VisualState.Setters>
+                                        <Setter Target="DetailIoReadCard.(Grid.Row)" Value="0" />
+                                        <Setter Target="DetailIoReadCard.(Grid.Column)" Value="2" />
+                                        <Setter Target="DetailIoWriteCard.(Grid.Row)" Value="0" />
+                                        <Setter Target="DetailIoWriteCard.(Grid.Column)" Value="3" />
+                                        <Setter Target="DetailMetricColumnThree.Width" Value="*" />
+                                        <Setter Target="DetailMetricColumnFour.Width" Value="*" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition x:Name="DetailMetricColumnThree" Width="0" />
+                            <ColumnDefinition x:Name="DetailMetricColumnFour" Width="0" />
                         </Grid.ColumnDefinitions>
                         <Border
                             Padding="16"
@@ -128,9 +285,23 @@
                             BorderBrush="{StaticResource SubtleBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="12">
-                            <StackPanel Spacing="6">
-                                <TextBlock x:Uid="MetricCpuLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="CPU" />
-                                <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding CpuText}" />
+                            <StackPanel Spacing="8">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon FontSize="16" Glyph="&#xE9F5;" Foreground="{StaticResource DataAccentBrush}" />
+                                    <TextBlock x:Uid="MetricCpuLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="CPU" />
+                                </Grid>
+                                <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="24" Text="{Binding CpuText}" />
+                                <TextBlock FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding CpuStatusText}" TextWrapping="Wrap" />
+                                <controls:MetricSparkline
+                                    Height="48"
+                                    ChartScale="Percent"
+                                    IsEmbedded="True"
+                                    ShowSummary="False"
+                                    Samples="{Binding CpuSamples}" />
                             </StackPanel>
                         </Border>
                         <Border
@@ -140,38 +311,77 @@
                             BorderBrush="{StaticResource SubtleBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="12">
-                            <StackPanel Spacing="6">
-                                <TextBlock x:Uid="MetricMemoryLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Working set" />
-                                <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding MemoryText}" />
+                            <StackPanel Spacing="8">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon FontSize="16" Glyph="&#xE950;" Foreground="{StaticResource DataAccentBrush}" />
+                                    <TextBlock x:Uid="MetricMemoryLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Working set" />
+                                </Grid>
+                                <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="24" Text="{Binding MemoryText}" />
+                                <TextBlock FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding MemoryStatusText}" TextWrapping="Wrap" />
+                                <controls:MetricSparkline
+                                    Height="48"
+                                    ChartScale="Dynamic"
+                                    IsEmbedded="True"
+                                    ShowSummary="False"
+                                    Samples="{Binding MemorySamples}" />
                             </StackPanel>
                         </Border>
-                        <Border
-                            Grid.Column="2"
+                        <Border x:Name="DetailIoReadCard"
+                            Grid.Row="1"
+                            Grid.Column="0"
                             Padding="16"
                             Background="{StaticResource SurfaceBrush}"
                             BorderBrush="{StaticResource SubtleBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="12">
-                            <StackPanel Spacing="6">
-                                <TextBlock x:Uid="MetricIoReadLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Process I/O read" />
-                                <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding IoReadText}" />
+                            <StackPanel Spacing="8">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon FontSize="16" Glyph="&#xE8B6;" Foreground="{StaticResource DataAccentBrush}" />
+                                    <TextBlock x:Uid="MetricIoReadLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Process I/O read" />
+                                </Grid>
+                                <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="24" Text="{Binding IoReadText}" />
+                                <TextBlock FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding IoStatusText}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
-                        <Border
-                            Grid.Column="3"
+                        <Border x:Name="DetailIoWriteCard"
+                            Grid.Row="1"
+                            Grid.Column="1"
                             Padding="16"
                             Background="{StaticResource SurfaceBrush}"
                             BorderBrush="{StaticResource SubtleBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="12">
-                            <StackPanel Spacing="6">
-                                <TextBlock x:Uid="MetricIoWriteLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Process I/O write" />
-                                <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding IoWriteText}" />
+                            <StackPanel Spacing="8">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon FontSize="16" Glyph="&#xE74E;" Foreground="{StaticResource DataAccentBrush}" />
+                                    <TextBlock x:Uid="MetricIoWriteLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Process I/O write" />
+                                </Grid>
+                                <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="24" Text="{Binding IoWriteText}" />
+                                <TextBlock FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding IoStatusText}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
                     </Grid>
                     <StackPanel Spacing="10">
-                        <TextBlock x:Uid="MetricDiskTitle" Style="{StaticResource SectionTitleStyle}" Text="Physical disk" />
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon FontSize="18" Glyph="&#xEDA2;" Foreground="{StaticResource DataAccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock x:Uid="MetricDiskTitle" Grid.Column="1" Style="{StaticResource SectionTitleStyle}" Text="Physical disk" VerticalAlignment="Center" />
+                        </Grid>
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -184,9 +394,17 @@
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="12">
-                                <StackPanel Spacing="6">
-                                    <TextBlock x:Uid="MetricReadLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Read" />
-                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding PhysicalDiskReadText}" />
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon FontSize="14" Glyph="&#xE8B6;" Foreground="{StaticResource DataAccentBrush}" />
+                                        <TextBlock x:Uid="MetricReadLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Read" />
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="22" Text="{Binding PhysicalDiskReadText}" />
+                                    <TextBlock FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding PhysicalDiskStatusText}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <Border
@@ -197,19 +415,29 @@
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="12">
-                                <StackPanel Spacing="6">
-                                    <TextBlock x:Uid="MetricWriteLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Write" />
-                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding PhysicalDiskWriteText}" />
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon FontSize="14" Glyph="&#xE74E;" Foreground="{StaticResource DataAccentBrush}" />
+                                        <TextBlock x:Uid="MetricWriteLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Write" />
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="22" Text="{Binding PhysicalDiskWriteText}" />
                                 </StackPanel>
                             </Border>
                         </Grid>
-                        <TextBlock
-                            AutomationProperties.LiveSetting="Polite"
-                            Foreground="{StaticResource SecondaryTextBrush}"
-                            Text="{Binding PhysicalDiskStatusText}" />
                     </StackPanel>
                     <StackPanel Spacing="10">
-                        <TextBlock x:Uid="MetricNetworkTitle" Style="{StaticResource SectionTitleStyle}" Text="Network" />
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon FontSize="18" Glyph="&#xE968;" Foreground="{StaticResource DataAccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock x:Uid="MetricNetworkTitle" Grid.Column="1" Style="{StaticResource SectionTitleStyle}" Text="Network" VerticalAlignment="Center" />
+                        </Grid>
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -222,9 +450,17 @@
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="12">
-                                <StackPanel Spacing="6">
-                                    <TextBlock x:Uid="MetricReceiveLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Download / Receive" />
-                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding NetworkDownloadText}" />
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon FontSize="14" Glyph="&#xE704;" Foreground="{StaticResource DataAccentBrush}" />
+                                        <TextBlock x:Uid="MetricReceiveLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Download / Receive" />
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="22" Text="{Binding NetworkDownloadText}" />
+                                    <TextBlock FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding NetworkStatusText}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <Border
@@ -235,19 +471,29 @@
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="12">
-                                <StackPanel Spacing="6">
-                                    <TextBlock x:Uid="MetricSendLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Upload / Send" />
-                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding NetworkUploadText}" />
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon FontSize="14" Glyph="&#xE705;" Foreground="{StaticResource DataAccentBrush}" />
+                                        <TextBlock x:Uid="MetricSendLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Upload / Send" />
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="22" Text="{Binding NetworkUploadText}" />
                                 </StackPanel>
                             </Border>
                         </Grid>
-                        <TextBlock
-                            AutomationProperties.LiveSetting="Polite"
-                            Foreground="{StaticResource SecondaryTextBrush}"
-                            Text="{Binding NetworkStatusText}" />
                     </StackPanel>
                     <StackPanel Spacing="10">
-                        <TextBlock x:Uid="MetricGpuTitle" Style="{StaticResource SectionTitleStyle}" Text="GPU" />
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon FontSize="18" Glyph="&#xE943;" Foreground="{StaticResource DataAccentBrush}" VerticalAlignment="Center" />
+                            <TextBlock x:Uid="MetricGpuTitle" Grid.Column="1" Style="{StaticResource SectionTitleStyle}" Text="GPU" VerticalAlignment="Center" />
+                        </Grid>
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -261,9 +507,17 @@
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="12">
-                                <StackPanel Spacing="6">
-                                    <TextBlock x:Uid="MetricBusiestEngineLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Busiest engine" />
-                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding GpuUsageText}" />
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon FontSize="14" Glyph="&#xE9F5;" Foreground="{StaticResource DataAccentBrush}" />
+                                        <TextBlock x:Uid="MetricBusiestEngineLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Busiest engine" />
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="22" Text="{Binding GpuUsageText}" />
+                                    <TextBlock FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding GpuStatusText}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <Border
@@ -274,9 +528,16 @@
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="12">
-                                <StackPanel Spacing="6">
-                                    <TextBlock x:Uid="MetricDedicatedLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Dedicated memory" />
-                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding DedicatedGpuMemoryText}" />
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon FontSize="14" Glyph="&#xE950;" Foreground="{StaticResource DataAccentBrush}" />
+                                        <TextBlock x:Uid="MetricDedicatedLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Dedicated memory" />
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="22" Text="{Binding DedicatedGpuMemoryText}" />
                                 </StackPanel>
                             </Border>
                             <Border
@@ -287,16 +548,19 @@
                                 BorderBrush="{StaticResource SubtleBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="12">
-                                <StackPanel Spacing="6">
-                                    <TextBlock x:Uid="MetricSharedLabel" Foreground="{StaticResource SecondaryTextBrush}" Text="Shared memory" />
-                                    <TextBlock Style="{StaticResource MetricValueStyle}" Text="{Binding SharedGpuMemoryText}" />
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon FontSize="14" Glyph="&#xE774;" Foreground="{StaticResource DataAccentBrush}" />
+                                        <TextBlock x:Uid="MetricSharedLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Shared memory" />
+                                    </Grid>
+                                    <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="22" Text="{Binding SharedGpuMemoryText}" />
                                 </StackPanel>
                             </Border>
                         </Grid>
-                        <TextBlock
-                            AutomationProperties.LiveSetting="Polite"
-                            Foreground="{StaticResource SecondaryTextBrush}"
-                            Text="{Binding GpuStatusText}" />
                     </StackPanel>
                     <StackPanel Spacing="10">
                         <TextBlock x:Uid="MetricCpuHistoryTitle" Style="{StaticResource SectionTitleStyle}" Text="CPU · last minute" />
@@ -304,6 +568,12 @@
                             AutomationProperties.Name="CPU history for the selected application"
                             Samples="{Binding CpuSamples}" />
                     </StackPanel>
+                    <Expander x:Uid="MetricExplanations">
+                        <ItemsControl
+                            Margin="0,12,0,0"
+                            ItemTemplate="{StaticResource MetricExplanationTemplate}"
+                            ItemsSource="{Binding MetricExplanations, Mode=OneWay}" />
+                    </Expander>
                     <Expander x:Uid="AdvancedInfo" Header="Advanced application information">
                         <StackPanel Padding="0,12,0,0" Spacing="8">
                             <TextBlock x:Uid="ClassificationEvidence" FontWeight="SemiBold" Text="Classification evidence" />
@@ -360,8 +630,7 @@
                 Padding="14"
                 AutomationProperties.Name="{x:Bind AutomationName, Mode=OneWay}"
                 Background="Transparent"
-                BorderBrush="{StaticResource SubtleBorderBrush}"
-                BorderThickness="1"
+                BorderThickness="0"
                 CornerRadius="12">
                 <Grid RowSpacing="12">
                     <Grid.RowDefinitions>
@@ -373,23 +642,43 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel
+                        <Grid
                             Margin="0,4,12,4"
                             VerticalAlignment="Center"
-                            Spacing="4">
-                            <TextBlock
-                                Style="{StaticResource CardIdentityStyle}"
-                                Text="{x:Bind DisplayName, Mode=OneWay}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                Style="{StaticResource CardSupportingTextStyle}"
-                                Text="{x:Bind Publisher, Mode=OneWay}"
-                                TextTrimming="CharacterEllipsis" />
-                            <TextBlock
-                                FontWeight="SemiBold"
-                                Style="{StaticResource CardSupportingTextStyle}"
-                                Text="{x:Bind StatusText, Mode=OneWay}" />
-                        </StackPanel>
+                            ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid
+                                Width="40"
+                                Height="40">
+                                <SymbolIcon
+                                    Foreground="{StaticResource SecondaryTextBrush}"
+                                    Symbol="AllApps"
+                                    Visibility="{Binding HasFallbackIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <Image
+                                    Width="32"
+                                    Height="32"
+                                    Source="{x:Bind AppIconSource, Mode=OneWay}"
+                                    Stretch="Uniform"
+                                    Visibility="{Binding HasAppIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </Grid>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock
+                                    Style="{StaticResource CardIdentityStyle}"
+                                    Text="{x:Bind DisplayName, Mode=OneWay}"
+                                    TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    Style="{StaticResource CardSupportingTextStyle}"
+                                    Text="{x:Bind Publisher, Mode=OneWay}"
+                                    TextTrimming="CharacterEllipsis" />
+                                <TextBlock
+                                    FontWeight="SemiBold"
+                                    Style="{StaticResource CardSupportingTextStyle}"
+                                    Text="{x:Bind StatusText, Mode=OneWay}" />
+                            </StackPanel>
+                        </Grid>
                         <Grid Grid.Column="1" ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -575,7 +864,9 @@
                 Background="{StaticResource ShellBrush}"
                 IsBackButtonVisible="Collapsed"
                 IsSettingsVisible="False"
-                PaneDisplayMode="LeftCompact"
+                CompactPaneLength="52"
+                OpenPaneLength="220"
+                PaneDisplayMode="Auto"
                 PaneTitle="Monitoring XS"
                 SelectionChanged="PrimaryNavigation_SelectionChanged">
             <NavigationView.Resources>
@@ -590,11 +881,15 @@
                 <NavigationViewItem x:Uid="NavRunning"
                     x:Name="RunningNavigationItem"
                     Content="Running Apps"
-                    FontWeight="SemiBold"
                     Icon="AllApps"
                     IsSelected="True"
                     Tag="running"
                     ToolTipService.ToolTip="Running Apps"
+                    UseSystemFocusVisuals="True" />
+                <NavigationViewItem x:Uid="NavSystemOverview"
+                    x:Name="SystemOverviewNavigationItem"
+                    Icon="ViewAll"
+                    Tag="system-overview"
                     UseSystemFocusVisuals="True" />
                 <NavigationViewItem x:Uid="NavPortable" Content="Portable Apps" Icon="OpenFile" IsEnabled="False" Tag="portable" ToolTipService.ToolTip="Portable Apps" />
                 <NavigationViewItem x:Uid="NavHistory"
@@ -604,6 +899,11 @@
                     Tag="history"
                     ToolTipService.ToolTip="History"
                     UseSystemFocusVisuals="True" />
+                <NavigationViewItem x:Uid="NavDiagnostics"
+                    x:Name="DiagnosticsNavigationItem"
+                    Icon="Repair"
+                    Tag="diagnostics"
+                    UseSystemFocusVisuals="True" />
                 <NavigationViewItem x:Uid="NavSettings"
                     x:Name="SettingsNavigationItem"
                     Content="Settings"
@@ -611,7 +911,13 @@
                     Tag="settings"
                     ToolTipService.ToolTip="Settings"
                     UseSystemFocusVisuals="True" />
-                <NavigationViewItem x:Uid="NavAbout" Content="About" Icon="Help" IsEnabled="False" Tag="about" ToolTipService.ToolTip="About" />
+                <NavigationViewItem x:Uid="NavAbout"
+                    x:Name="AboutNavigationItem"
+                    Content="About"
+                    Icon="Help"
+                    Tag="about"
+                    ToolTipService.ToolTip="About"
+                    UseSystemFocusVisuals="True" />
             </NavigationView.MenuItems>
             <Grid>
             <TabView
@@ -626,7 +932,7 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid
-                            MaxWidth="1320"
+                            MaxWidth="1800"
                             Margin="24,16,24,12"
                             HorizontalAlignment="Stretch"
                             RowSpacing="12">
@@ -635,14 +941,19 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <StackPanel Spacing="4">
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <SymbolIcon Symbol="AllApps" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Style="{StaticResource PageTitleStyle}"
+                                        x:Uid="RunningAppsTitle"
+                                        Text="Running applications" />
+                                </Grid>
                                 <TextBlock
-                                    FontSize="28"
-                                    FontWeight="SemiBold"
-                                    Foreground="{StaticResource PrimaryTextBrush}"
-                                    x:Uid="RunningAppsTitle"
-                                    Text="Running applications" />
-                                <TextBlock
-                                    AutomationProperties.LiveSetting="Polite"
                                     Foreground="{StaticResource SecondaryTextBrush}"
                                     Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" />
                             </StackPanel>
@@ -658,6 +969,7 @@
                                     ColumnSpacing="12"
                                     RowSpacing="10">
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
@@ -705,10 +1017,34 @@
                                             CornerRadius="6"
                                             ToolTipService.ToolTip="{x:Bind ViewModel.SortDirectionLabel, Mode=OneWay}" />
                                     </Grid>
-                        <TextBlock x:Uid="NoComparableData"
-                                        x:Name="NoComparableDataText"
+
+                                    <Grid
+                                        x:Name="ApplicationSearchGroup"
                                         Grid.Row="0"
                                         Grid.Column="1"
+                                        ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Uid="ApplicationSearchBox"
+                                            x:Name="ApplicationSearchBox"
+                                            Height="36"
+                                            Text="{x:Bind ViewModel.SearchText, Mode=OneWay}"
+                                            TextChanged="ApplicationSearchBox_TextChanged"
+                                            UseSystemFocusVisuals="True" />
+                                        <Button x:Uid="ClearApplicationSearchButton"
+                                            Grid.Column="1"
+                                            Height="36"
+                                            Click="ClearApplicationSearchButton_Click"
+                                            UseSystemFocusVisuals="True" />
+                                    </Grid>
+
+                                    <TextBlock x:Uid="NoComparableData"
+                                        x:Name="NoComparableDataText"
+                                        Grid.Row="1"
+                                        Grid.Column="0"
+                                        Grid.ColumnSpan="3"
                                         VerticalAlignment="Center"
                                         AutomationProperties.LiveSetting="Polite"
                                         DataContext="{x:Bind ViewModel, Mode=OneTime}"
@@ -746,7 +1082,7 @@
                         </Grid>
                         <ListView x:Uid="RunningApplicationsList"
                             Grid.Row="1"
-                            MaxWidth="1320"
+                            MaxWidth="1800"
                             Margin="24,0,24,24"
                             HorizontalAlignment="Stretch"
                             AutomationProperties.Name="Running applications"
@@ -761,30 +1097,55 @@
                                 <x:Boolean x:Key="ListViewItemSelectionCheckMarkVisualEnabled">False</x:Boolean>
                             </ListView.Resources>
                             <ListView.Header>
-                                <Border
-                                    x:Name="AdvancedModeNotice"
-                                    Margin="0,0,0,8"
-                                    Padding="14"
-                                    Background="{StaticResource SurfaceRaisedBrush}"
-                                    BorderBrush="{StaticResource PriorityAccentBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Visibility="Collapsed">
-                        <TextBlock x:Uid="AdvancedNotice"
-                                        Foreground="{StaticResource PrimaryTextBrush}"
-                                        Text="Advanced mode is on. Open an application tab and expand Advanced application information for attribution evidence and implementation availability."
-                                        TextWrapping="Wrap" />
-                                </Border>
+                                <StackPanel DataContext="{x:Bind ViewModel, Mode=OneTime}">
+                                    <Border
+                                        x:Name="AdvancedModeNotice"
+                                        Margin="0,0,0,8"
+                                        Padding="14"
+                                        Background="{StaticResource SurfaceRaisedBrush}"
+                                        BorderBrush="{StaticResource PriorityAccentBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Visibility="Collapsed">
+                                        <TextBlock x:Uid="AdvancedNotice"
+                                            Foreground="{StaticResource PrimaryTextBrush}"
+                                            Text="Advanced mode is on. Open an application tab and expand Advanced application information for attribution evidence and implementation availability."
+                                            TextWrapping="Wrap" />
+                                    </Border>
+                                    <Border
+                                        Margin="0,0,0,8"
+                                        Padding="14"
+                                        Background="{StaticResource SurfaceBrush}"
+                                        BorderBrush="{StaticResource SubtleBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Visibility="{Binding HasNoSearchResults, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock x:Uid="NoSearchResults"
+                                            AutomationProperties.LiveSetting="Polite"
+                                            Foreground="{StaticResource SecondaryTextBrush}"
+                                            TextWrapping="Wrap" />
+                                    </Border>
+                                </StackPanel>
                             </ListView.Header>
                         </ListView>
                     </Grid>
                 </TabViewItem>
             </TabView>
+            <local:SystemOverviewPage
+                x:Name="SystemOverviewWorkspace"
+                DataContext="{x:Bind ViewModel.SystemOverview, Mode=OneTime}"
+                Visibility="Collapsed" />
             <local:HistoryPage
                 x:Name="HistoryWorkspace"
                 Visibility="Collapsed" />
+            <local:DiagnosticsPage
+                x:Name="DiagnosticsWorkspace"
+                Visibility="Collapsed" />
             <local:SettingsPage
                 x:Name="SettingsWorkspace"
+                Visibility="Collapsed" />
+            <local:AboutPage
+                x:Name="AboutWorkspace"
                 Visibility="Collapsed" />
             </Grid>
             </NavigationView>

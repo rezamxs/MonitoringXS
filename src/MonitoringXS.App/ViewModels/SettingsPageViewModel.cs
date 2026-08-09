@@ -125,7 +125,7 @@ internal static class BrokerStatusPresentation
 }
 
 #pragma warning disable CA1001 // Save serialization gate lives for the app lifetime.
-public sealed partial class SettingsPageViewModel : ObservableObject
+public sealed partial class SettingsPageViewModel : ObservableObject, IDisposable
 {
     private static readonly TimeSpan SaveDebounce = TimeSpan.FromMilliseconds(100);
     private readonly IApplicationSettingsStore _store;
@@ -311,6 +311,20 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             },
             cancellationToken);
     }
+
+    public BrokerOperationalState? BrokerState => _brokerState;
+
+    internal Task SetApplicationSortAsync(
+        ApplicationSortPreference field,
+        bool descending,
+        CancellationToken cancellationToken) => ChangeAsync(
+            settings => settings with
+            {
+                ApplicationSort = field,
+                ApplicationSortDescending = descending
+            },
+            _ => ValueTask.FromResult(MetricHistoryRetentionResult.Success),
+            cancellationToken);
 
     public async Task RefreshBrokerStatusAsync(CancellationToken cancellationToken)
     {
@@ -517,6 +531,12 @@ public sealed partial class SettingsPageViewModel : ObservableObject
                 IsSaving = false;
             }
         }
+    }
+
+    public void Dispose()
+    {
+        _localization.LanguageChanged -= Localization_LanguageChanged;
+        RefreshBrokerStatusCommand.Cancel();
     }
 }
 #pragma warning restore CA1001

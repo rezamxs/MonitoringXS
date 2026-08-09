@@ -12,6 +12,7 @@ Process metadata, command lines, executable paths, signatures, network destinati
 - Deny actions against critical/protected Windows processes regardless of UI attribution.
 - Avoid unsafe DLL search by using system-qualified paths and safe library-loading flags.
 - Sanitize logs; omit command-line arguments, credentials, tokens, and network query strings.
+- Diagnostics is local-only and projects existing allowlisted health state. Its safe-copy action excludes database paths, command lines, environment variables, tokens, provider internals, and private user data; it has no network or telemetry operation.
 - Store history locally and provide deletion controls.
 - Exporting advanced diagnostics requires a sensitivity warning and explicit user action.
 - Attribution overrides contain executable paths and are sensitive local data. The JSON store validates fully qualified paths and dispositions, caps entry count, writes through a unique temporary file plus atomic replacement, and never logs override contents.
@@ -86,7 +87,7 @@ storage or broker data into a fabricated zero.
 
 Settings stay under `%LOCALAPPDATA%\MonitoringXS\settings.json` as a small
 version-1 JSON document. It contains only the live interval, history-retention
-hours, and System/Light/Dark theme. It stores no credentials, tokens, SIDs,
+hours, System/Light/Dark theme, UI language, and Running Apps sort preference. It stores no credentials, tokens, SIDs,
 Broker ACLs, executable paths, command lines, or network data. Values are
 allowlisted, writes use a temporary file plus atomic replacement, and corrupt
 or invalid files are quarantined before safe defaults are used. A newer

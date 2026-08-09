@@ -1,24 +1,45 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using MonitoringXS.App.Localization;
 using MonitoringXS.Application;
+using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
+using Windows.Storage.Streams;
 
 namespace MonitoringXS.App.ViewModels;
 
 public sealed partial class ApplicationCardViewModel : ObservableObject, IApplicationListItemViewModel
 {
     private readonly LocalizationService _localization;
+    private readonly MetricExplanationService _metricExplanations;
+    private readonly IApplicationIconProvider? _iconProvider;
+    private string? _currentIconPath;
 
-    public ApplicationCardViewModel(LocalizationService? localization = null)
+    public ApplicationCardViewModel(
+        LocalizationService? localization = null,
+        MetricExplanationService? metricExplanations = null,
+        IApplicationIconProvider? iconProvider = null)
     {
         _localization = localization ?? new LocalizationService();
+        _metricExplanations = metricExplanations ?? new MetricExplanationService(_localization);
+        _iconProvider = iconProvider;
     }
     [ObservableProperty]
     public partial string DisplayName { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string Publisher { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAppIcon))]
+    [NotifyPropertyChangedFor(nameof(HasFallbackIcon))]
+    public partial ImageSource? AppIconSource { get; set; }
+
+    public bool HasAppIcon => AppIconSource is not null;
+
+    public bool HasFallbackIcon => AppIconSource is null;
 
     [ObservableProperty]
     public partial string CpuText { get; set; } = string.Empty;
@@ -79,6 +100,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         History = history;
         DisplayName = snapshot.Application.DisplayName;
         Publisher = snapshot.Application.Publisher ?? _localization.Get(LocalizationKeys.PublisherUnavailable);
+        TryLoadIcon(snapshot);
         ScalarPresentation cpu = FormatCpu(snapshot.CpuPercent);
         CpuText = cpu.ValueText;
         CpuStatusText = cpu.StatusText;
@@ -86,6 +108,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         MemoryText = memory.ValueText;
         MemoryStatusText = memory.StatusText;
         MetricPairPresentation io = FormatRatePair(
+            MetricDescriptionId.ProcessIo,
             snapshot.IoReadBytesPerSecond,
             "read",
             snapshot.IoWriteBytesPerSecond,
@@ -93,6 +116,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         IoText = io.ValueText;
         IoStatusText = io.StatusText;
         MetricPairPresentation physicalDisk = FormatRatePair(
+            MetricDescriptionId.PhysicalDisk,
             snapshot.PhysicalDisk.ReadBytesPerSecond,
             "read",
             snapshot.PhysicalDisk.WriteBytesPerSecond,
@@ -103,16 +127,20 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         PhysicalDiskText = physicalDisk.ValueText;
         PhysicalDiskStatusText = physicalDisk.StatusText;
         MetricPairPresentation network = FormatRatePair(
+            MetricDescriptionId.Network,
             snapshot.Network.DownloadBytesPerSecond,
             "receive",
             snapshot.Network.UploadBytesPerSecond,
             "send",
             HasNoAttributedActivity(
                 snapshot.Network.SessionDownloadedBytes,
-                snapshot.Network.SessionUploadedBytes));
+                snapshot.Network.SessionUploadedBytes),
+            snapshot.Network.Reason);
         NetworkText = network.ValueText;
         NetworkStatusText = network.StatusText;
-        ScalarPresentation gpu = FormatGpu(snapshot.Gpu.UtilizationPercent);
+        ScalarPresentation gpu = FormatGpu(
+            snapshot.Gpu.UtilizationPercent,
+            snapshot.Gpu.Reason);
         GpuText = gpu.ValueText;
         string gpuMemory = FormatGpuMemory(
             snapshot.Gpu.DedicatedMemoryBytes,
@@ -186,7 +214,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
     {
         if (!metric.IsAvailable)
         {
-            return FormatUnavailableScalar(metric);
+            return FormatUnavailableScalar(metric, MetricDescriptionId.Cpu);
         }
 
         string value = $"{PartialPrefix(metric)}{metric.Value!.Value.ToString("0.0", CultureInfo.InvariantCulture)}%";
@@ -197,7 +225,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
     {
         if (!metric.IsAvailable)
         {
-            return FormatUnavailableScalar(metric);
+            return FormatUnavailableScalar(metric, MetricDescriptionId.Memory);
         }
 
         double bytes = metric.Value!.Value;
@@ -207,11 +235,16 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         return FormatAvailableScalar(value, metric);
     }
 
-    private ScalarPresentation FormatGpu(MetricValue<double> metric)
+    private ScalarPresentation FormatGpu(
+        MetricValue<double> metric,
+        GpuAvailabilityReason reason)
     {
         if (!metric.IsAvailable)
         {
-            return FormatUnavailableScalar(metric);
+            return FormatUnavailableScalar(
+                metric,
+                MetricDescriptionId.Gpu,
+                gpuReason: reason);
         }
 
         string value = $"{PartialPrefix(metric)}{metric.Value!.Value.ToString("0.0", CultureInfo.InvariantCulture)}%";
@@ -258,18 +291,88 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             $"{_localization.Get(LocalizationKeys.AtLeast)} {value.TrimStart('\u2265', ' ')}, partial lower bound")
         : new(value, string.Empty, value);
 
-    private ScalarPresentation FormatUnavailableScalar<T>(MetricValue<T> metric)
-        where T : struct => new(
+    private ScalarPresentation FormatUnavailableScalar<T>(
+        MetricValue<T> metric,
+        MetricDescriptionId description,
+        NetworkAvailabilityReason networkReason = NetworkAvailabilityReason.None,
+        GpuAvailabilityReason gpuReason = GpuAvailabilityReason.None)
+        where T : struct
+    {
+        string reason = _metricExplanations.Reason(
+            description,
+            metric.Availability,
+            metric.Detail,
+            networkReason,
+            gpuReason);
+        return new(
             FormatCompactUnavailable(metric.Availability),
-            FormatSupportingAvailability(metric.Availability, metric.Detail),
-            FormatAvailability(metric));
+            reason,
+            reason);
+    }
+
+    private void TryLoadIcon(ApplicationMetricSnapshot snapshot)
+    {
+        if (_iconProvider is null)
+        {
+            return;
+        }
+
+        string? executablePath = snapshot.Processes
+            .Select(process => process.ExecutablePath)
+            .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path))
+            ?? snapshot.Application.InstallationPath;
+        if (string.IsNullOrWhiteSpace(executablePath)
+            || string.Equals(executablePath, _currentIconPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _currentIconPath = executablePath;
+        _ = LoadIconAsync(executablePath);
+    }
+
+    private async Task LoadIconAsync(string executablePath)
+    {
+        try
+        {
+            ApplicationIconData? iconData = await _iconProvider!.GetIconAsync(
+                executablePath,
+                32,
+                CancellationToken.None);
+            if (iconData is null)
+            {
+                return;
+            }
+
+            InMemoryRandomAccessStream stream = new();
+            using (DataWriter writer = new(stream.GetOutputStreamAt(0)))
+            {
+                writer.WriteBytes(iconData.Content.ToArray());
+                await writer.StoreAsync();
+            }
+
+            stream.Seek(0);
+            BitmapImage bitmap = new();
+            await bitmap.SetSourceAsync(stream);
+            if (string.Equals(executablePath, _currentIconPath, StringComparison.OrdinalIgnoreCase))
+            {
+                AppIconSource = bitmap;
+            }
+        }
+        catch
+        {
+            // Icon loading is best-effort; the native fallback remains visible.
+        }
+    }
 
     private MetricPairPresentation FormatRatePair(
+        MetricDescriptionId description,
         MetricValue<double> first,
         string firstDirection,
         MetricValue<double> second,
         string secondDirection,
-        bool noAttributedActivityYet = false)
+        bool noAttributedActivityYet = false,
+        NetworkAvailabilityReason networkReason = NetworkAvailabilityReason.None)
     {
         if (!first.IsAvailable
             && !second.IsAvailable
@@ -277,8 +380,16 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         {
             return new(
                 FormatCompactUnavailable(first.Availability),
-                FormatSupportingAvailability(first.Availability, first.Detail ?? second.Detail),
-                FormatAvailability(first));
+                _metricExplanations.Reason(
+                    description,
+                    first.Availability,
+                    first.Detail ?? second.Detail,
+                    networkReason),
+                _metricExplanations.Reason(
+                    description,
+                    first.Availability,
+                    first.Detail ?? second.Detail,
+                    networkReason));
         }
 
         string values = $"{FormatDirectionalRate(first, firstDirection)} · {FormatDirectionalRate(second, secondDirection)}";
@@ -286,8 +397,8 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             $"{FormatAccessibleDirectionalRate(first, firstDirection)}, {FormatAccessibleDirectionalRate(second, secondDirection)}";
         string[] statuses =
         [
-            FormatMetricStatus(first),
-            FormatMetricStatus(second),
+            FormatMetricStatus(first, description, networkReason),
+            FormatMetricStatus(second, description, networkReason),
             noAttributedActivityYet ? _localization.Get(LocalizationKeys.NoAttributedActivity) : string.Empty
         ];
         string status = string.Join(
@@ -325,51 +436,24 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             : $"{_localization.Get(LocalizationKeys.AtLeast)} {rate.TrimStart('\u2265', ' ')} {direction}";
     }
 
-    private string FormatMetricStatus<T>(MetricValue<T> metric)
+    private string FormatMetricStatus<T>(
+        MetricValue<T> metric,
+        MetricDescriptionId description,
+        NetworkAvailabilityReason networkReason)
         where T : struct => metric.Availability == MetricAvailability.Partial
         ? _localization.Get(LocalizationKeys.PartialLowerBound)
-        : FormatSupportingAvailability(metric.Availability, metric.Detail);
+        : metric.Availability == MetricAvailability.Available
+            ? string.Empty
+            : _metricExplanations.Reason(
+                description,
+                metric.Availability,
+                metric.Detail,
+                networkReason);
 
     private string FormatCompactUnavailable(MetricAvailability availability) =>
         availability == MetricAvailability.WarmingUp
             ? _localization.Get(LocalizationKeys.WarmingUp)
             : _localization.Get(LocalizationKeys.Unavailable);
-
-    private string FormatSupportingAvailability(
-        MetricAvailability availability,
-        string? detail = null)
-    {
-        string? safeDetail = SafeBrokerDetail(detail);
-        return safeDetail ?? availability switch
-        {
-            MetricAvailability.AccessDenied => _localization.Get(LocalizationKeys.AccessDenied),
-            MetricAvailability.Unsupported => _localization.Get(LocalizationKeys.Unsupported),
-            MetricAvailability.Error => _localization.Get(LocalizationKeys.Error),
-            _ => string.Empty
-        };
-    }
-
-    private static string? SafeBrokerDetail(string? detail)
-    {
-        if (string.IsNullOrWhiteSpace(detail))
-        {
-            return null;
-        }
-
-        string firstLine = detail.Split('\r', '\n')[0];
-        return firstLine.StartsWith("Broker service not installed.", StringComparison.Ordinal)
-            || firstLine.StartsWith("Broker service stopped.", StringComparison.Ordinal)
-            || firstLine.StartsWith("Broker connection failed.", StringComparison.Ordinal)
-            || firstLine.StartsWith("ETW unavailable.", StringComparison.Ordinal)
-            || firstLine.StartsWith("No attributed activity yet.", StringComparison.Ordinal)
-            || firstLine.StartsWith(
-                "The privileged ETW broker protocol version is incompatible.",
-                StringComparison.Ordinal)
-            ? firstLine
-            : firstLine.Contains("TraceEventSession.", StringComparison.Ordinal)
-                ? "ETW unavailable."
-                : null;
-    }
 
     private static bool HasNoAttributedActivity(
         MetricValue<ulong> firstTotal,

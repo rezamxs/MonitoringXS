@@ -161,6 +161,23 @@ public sealed class SettingsPageViewModelTests
     }
 
     [Fact]
+    public async Task ApplicationSortUsesTheExistingAtomicSettingsPipeline()
+    {
+        TestHarness context = new();
+        SettingsPageViewModel viewModel = context.InitializedViewModel();
+
+        await viewModel.SetApplicationSortAsync(
+            ApplicationSortPreference.PhysicalDisk,
+            descending: true,
+            TestCancellation);
+
+        Assert.Equal(ApplicationSortPreference.PhysicalDisk, viewModel.CurrentSettings.ApplicationSort);
+        Assert.True(viewModel.CurrentSettings.ApplicationSortDescending);
+        Assert.Equal(ApplicationSortPreference.PhysicalDisk, context.Store.Saved[^1].ApplicationSort);
+        Assert.True(context.Store.Saved[^1].ApplicationSortDescending);
+    }
+
+    [Fact]
     public async Task PersistenceFailureDoesNotThrowOrStopAppliedLiveSetting()
     {
         TestHarness context = new();
@@ -303,7 +320,8 @@ public sealed class SettingsPageViewModelTests
 
         Assert.Contains("VerticalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
         Assert.Contains("HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("MaxWidth=\"900\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MaxWidth=\"1600\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AdaptiveTrigger MinWindowWidth=\"940\"", xaml, StringComparison.Ordinal);
         Assert.Equal(4, Count(xaml, "<ComboBox"));
         Assert.True(Count(xaml, "UseSystemFocusVisuals=\"True\"") >= 4);
         Assert.True(Count(xaml, "AutomationProperties.Name=") >= 8);

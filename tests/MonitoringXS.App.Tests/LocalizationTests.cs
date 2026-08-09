@@ -66,7 +66,7 @@ public sealed class LocalizationTests
         string root = FindRepositoryRoot();
         string allXaml = string.Join('\n', new[]
         {
-            "MainWindow.xaml", "HistoryPage.xaml", "SettingsPage.xaml",
+            "MainWindow.xaml", "HistoryPage.xaml", "SettingsPage.xaml", "DiagnosticsPage.xaml",
             Path.Combine("Controls", "MetricSparkline.xaml")
         }.Select(path => File.ReadAllText(Path.Combine(root, "src", "MonitoringXS.App", path))));
 

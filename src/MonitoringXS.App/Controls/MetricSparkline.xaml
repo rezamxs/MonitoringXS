@@ -40,12 +40,14 @@
                 FontSize="10"
                 FlowDirection="LeftToRight" />
             <Border
+                x:Name="MidGridLine"
                 Grid.Row="1"
                 VerticalAlignment="Top"
                 BorderBrush="{StaticResource SubtleBorderBrush}"
                 BorderThickness="0,1,0,0"
                 Opacity="0.55" />
             <Border
+                x:Name="BaselineGridLine"
                 Grid.Row="2"
                 VerticalAlignment="Top"
                 BorderBrush="{StaticResource SubtleBorderBrush}"

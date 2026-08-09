@@ -235,6 +235,8 @@ public sealed partial class WindowsGpuPerformanceCounterSource : IGpuCounterSour
         int outsideApplicationSetCounterInstances = 0;
         int exitedProcessCounterInstances = 0;
         int unknownProcessCounterInstances = 0;
+        double machineWideMaxEngineUtilization = 0d;
+        bool machineWideEngineFound = false;
 
         foreach (PdhCounterValue<double> item in engineResult.Items)
         {
@@ -258,6 +260,18 @@ public sealed partial class WindowsGpuPerformanceCounterSource : IGpuCounterSour
 
             observedEngineCounterPids.Add(processId);
             adapters.Add(engine.AdapterLuid);
+
+            // Track machine-wide busiest engine across ALL processes, before target filtering.
+            if (IsValidCounterStatus(item.CounterStatus)
+                && double.IsFinite(item.Value)
+                && item.Value >= 0
+                && item.Value <= 100d)
+            {
+                machineWideMaxEngineUtilization = Math.Max(
+                    machineWideMaxEngineUtilization, item.Value);
+                machineWideEngineFound = true;
+            }
+
             if (!targetByPid.ContainsKey(processId))
             {
                 if (TryFindTargetAncestor(
@@ -547,7 +561,17 @@ public sealed partial class WindowsGpuPerformanceCounterSource : IGpuCounterSour
             RegisterQueryFailure(engineResult.Status);
         }
 
-        return new GpuCounterBatch(snapshots, batchAvailability, reason, diagnostics);
+        MetricValue<double>? machineWideGpu = engineFailure.Availability is
+            MetricAvailability.Available or MetricAvailability.Partial
+            ? machineWideEngineFound
+                ? new MetricValue<double>(machineWideMaxEngineUtilization, MetricAvailability.Available, null)
+                : null
+            : null;
+
+        return new GpuCounterBatch(snapshots, batchAvailability, reason, diagnostics)
+        {
+            MachineWideGpuUtilizationPercent = machineWideGpu
+        };
     }
 
     private uint EnsureQuery()

@@ -65,6 +65,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             _services.GetRequiredService<MainWindowViewModel>(),
             load.Settings,
             _services.GetRequiredService<HistoryPageViewModel>(),
+            _services.GetRequiredService<DiagnosticsPageViewModel>(),
             settingsViewModel,
             cadence,
             Localization);
@@ -99,6 +100,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             _services.GetRequiredService<MainWindowViewModel>(),
             _services.GetRequiredService<SettingsPageViewModel>().CurrentSettings,
             _services.GetRequiredService<HistoryPageViewModel>(),
+            _services.GetRequiredService<DiagnosticsPageViewModel>(),
             _services.GetRequiredService<SettingsPageViewModel>(),
             _services.GetRequiredService<LiveRefreshCadence>(),
             Localization,
@@ -165,13 +167,17 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<IGpuCounterSource, WindowsGpuPerformanceCounterSource>();
         services.AddSingleton<IGpuMetricCollector, GpuMetricCollector>();
         services.AddSingleton<IGpuMetricAggregationService, GpuMetricAggregationService>();
+        services.AddSingleton<ISystemOverviewProvider, WindowsSystemOverviewProvider>();
+        services.AddSingleton<SystemOverviewService>();
         services.AddSingleton<MonitoringCoordinator>();
         services.AddSingleton<LocalizationService>();
         services.AddSingleton(_ => new LiveRefreshCadence(
             ApplicationSettings.Default.LiveSamplingInterval));
+        services.AddSingleton<MetricExplanationService>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<HistoryPageViewModel>();
         services.AddSingleton<SettingsPageViewModel>();
+        services.AddSingleton<DiagnosticsPageViewModel>();
         return services.BuildServiceProvider(validateScopes: true);
     }
 

@@ -1,17 +1,35 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using MonitoringXS.App.Controls;
 using MonitoringXS.App.Localization;
 using MonitoringXS.Application;
+using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
+using Windows.Storage.Streams;
 
 namespace MonitoringXS.App.ViewModels;
 
-public sealed partial class ApplicationTabViewModel : ObservableObject
+public sealed partial class ApplicationTabViewModel : ObservableObject, IDisposable
 {
     private readonly LocalizationService _localization;
+    private readonly MetricExplanationService _metricExplanations;
+    private readonly IApplicationIconProvider? _iconProvider;
+    private string? _currentIconPath;
+
     [ObservableProperty]
     public partial string Title { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAppIcon))]
+    [NotifyPropertyChangedFor(nameof(HasFallbackIcon))]
+    public partial ImageSource? AppIconSource { get; set; }
+
+    public bool HasAppIcon => AppIconSource is not null;
+
+    public bool HasFallbackIcon => AppIconSource is null;
 
     [ObservableProperty]
     public partial string CpuText { get; set; } = "Warming up";
@@ -86,18 +104,35 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
     public partial string ClassificationConfidence { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial IList<CpuHistorySample> CpuSamples { get; set; } = Array.Empty<CpuHistorySample>();
+    public partial string CpuStatusText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string MemoryStatusText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string IoStatusText { get; set; } = string.Empty;
+
+    public ObservableCollection<CpuHistorySample> CpuSamples { get; } = [];
+
+    public ObservableCollection<CpuHistorySample> MemorySamples { get; } = [];
+
+    [ObservableProperty]
+    public partial IReadOnlyList<MetricExplanationViewModel> MetricExplanations { get; set; } = [];
 
     public ApplicationTabViewModel(
         string logicalApplicationId,
         string title,
         ProcessActionsViewModel? processActions = null,
-        LocalizationService? localization = null)
+        LocalizationService? localization = null,
+        MetricExplanationService? metricExplanations = null,
+        IApplicationIconProvider? iconProvider = null)
     {
         LogicalApplicationId = logicalApplicationId;
         Title = title;
         ProcessActions = processActions;
         _localization = localization ?? new LocalizationService();
+        _metricExplanations = metricExplanations ?? new MetricExplanationService(_localization);
+        _iconProvider = iconProvider;
     }
 
     public string LogicalApplicationId { get; }
@@ -113,9 +148,12 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
         CpuText = snapshot.CpuPercent.IsAvailable
             ? $"{PartialPrefix(snapshot.CpuPercent)}{snapshot.CpuPercent.Value!.Value.ToString("0.0", CultureInfo.InvariantCulture)}%"
             : snapshot.CpuPercent.Availability == MetricAvailability.WarmingUp ? "Warming up" : "Unavailable";
+        CpuStatusText = FormatAvailability(snapshot.CpuPercent);
         MemoryText = FormatMemory(snapshot.WorkingSetBytes);
+        MemoryStatusText = FormatAvailability(snapshot.WorkingSetBytes);
         IoReadText = FormatRate(snapshot.IoReadBytesPerSecond);
         IoWriteText = FormatRate(snapshot.IoWriteBytesPerSecond);
+        IoStatusText = FormatIoStatus(snapshot.IoReadBytesPerSecond, snapshot.IoWriteBytesPerSecond);
         PhysicalDiskReadText = FormatRate(snapshot.PhysicalDisk.ReadBytesPerSecond);
         PhysicalDiskWriteText = FormatRate(snapshot.PhysicalDisk.WriteBytesPerSecond);
         PhysicalDiskStatusText = FormatAvailability(snapshot.PhysicalDisk.ReadBytesPerSecond);
@@ -154,13 +192,70 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
             ? "none"
             : gpuDiagnostics.CollectorStatusReason;
         string busiestEngine = snapshot.Gpu.BusiestEngine is GpuEngineId engine
-            ? $"{engine.EngineType} engine {engine.EngineIndex}, adapter LUID 0x{engine.AdapterLuid:X16}, physical index {engine.PhysicalAdapterIndex}"
+            ? $"{engine.EngineType}, adapter LUID 0x{engine.AdapterLuid:X16}, physical index {engine.PhysicalAdapterIndex}"
             : "none";
         GpuDiagnosticsText = $"Provider {gpuDiagnostics.ProviderName}; status {gpuDiagnostics.CollectorStatus}; reason {gpuDiagnostics.Reason}; detail {gpuDetail}; counter status utilization {gpuDiagnostics.UtilizationCounterStatus}, dedicated memory {gpuDiagnostics.DedicatedMemoryCounterStatus}, shared memory {gpuDiagnostics.SharedMemoryCounterStatus}; target processes {gpuDiagnostics.TargetProcessCount}; sampled {gpuDiagnostics.SampledProcessCount}; engine instances {gpuDiagnostics.EngineCounterInstanceCount}; process-memory instances {gpuDiagnostics.ProcessMemoryCounterInstanceCount}; adapters {gpuDiagnostics.ActiveAdapterCount}; busiest {busiestEngine}; PID-reuse rejected {gpuDiagnostics.PidReuseSamplesRejected}; first-observation counters rejected {gpuDiagnostics.FirstObservationCounterSamplesRejected}; quarantined utilization {gpuDiagnostics.QuarantinedUtilizationSamples}, dedicated memory {gpuDiagnostics.QuarantinedDedicatedMemorySamples}, shared memory {gpuDiagnostics.QuarantinedSharedMemorySamples}; inaccessible target samples {gpuDiagnostics.InaccessibleProcessSamples}; descendant counters not attributed {gpuDiagnostics.UnattributedDescendantCounterInstances}; outside application set {gpuDiagnostics.OutsideApplicationSetCounterInstances}; exited process counters {gpuDiagnostics.ExitedProcessCounterInstances}; unknown PID counters {gpuDiagnostics.UnknownProcessCounterInstances}; malformed instances {gpuDiagnostics.MalformedCounterInstances}; duplicate instances {gpuDiagnostics.DuplicateCounterInstances}; invalid values {gpuDiagnostics.InvalidCounterSamples}; query recreations {gpuDiagnostics.QueryRecreationCount}; collection {gpuDiagnostics.CollectionDurationMilliseconds.ToString("0.###", CultureInfo.InvariantCulture)} ms. Dedicated/shared values are sums of Windows per-process counters; shared values are not unique physical ownership and cross-process allocations can be counted more than once.";
         ProcessSummary = $"{snapshot.ProcessCount} process{(snapshot.ProcessCount == 1 ? string.Empty : "es")} · {snapshot.Application.Disposition}";
         ClassificationReason = snapshot.Application.ClassificationReason;
         ClassificationConfidence = $"{snapshot.Application.Confidence} confidence";
-        CpuSamples = CpuHistorySeries.Create(history).ToArray();
+        SynchronizeCpuSamples(CpuHistorySeries.Create(history));
+        SynchronizeMemorySamples(CpuHistorySeries.CreateMemory(history));
+        UpdateMetricExplanations(_metricExplanations.Create(snapshot, history.Count));
+        TryLoadIcon(snapshot);
+    }
+
+    private void TryLoadIcon(ApplicationMetricSnapshot snapshot)
+    {
+        if (_iconProvider is null)
+        {
+            return;
+        }
+
+        string? executablePath = snapshot.Processes
+            .Select(process => process.ExecutablePath)
+            .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path))
+            ?? snapshot.Application.InstallationPath;
+
+        if (string.IsNullOrWhiteSpace(executablePath)
+            || string.Equals(executablePath, _currentIconPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _currentIconPath = executablePath;
+        _ = LoadIconAsync(executablePath);
+    }
+
+    private async Task LoadIconAsync(string executablePath)
+    {
+        try
+        {
+            ApplicationIconData? iconData = await _iconProvider!.GetIconAsync(
+                executablePath, 32, CancellationToken.None);
+            if (iconData is null)
+            {
+                return;
+            }
+
+            InMemoryRandomAccessStream stream = new();
+            using (DataWriter writer = new(stream.GetOutputStreamAt(0)))
+            {
+                writer.WriteBytes(iconData.Content.ToArray());
+                await writer.StoreAsync();
+            }
+            stream.Seek(0);
+
+            BitmapImage bitmap = new();
+            await bitmap.SetSourceAsync(stream);
+            if (string.Equals(executablePath, _currentIconPath, StringComparison.OrdinalIgnoreCase))
+            {
+                AppIconSource = bitmap;
+            }
+        }
+        catch
+        {
+            // Icon loading is best-effort; failures are silently ignored.
+        }
     }
 
     public void Relocalize()
@@ -173,6 +268,107 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
 
     private ApplicationMetricSnapshot? _lastSnapshot;
     private IReadOnlyList<ApplicationHistoryPoint> _lastHistory = [];
+
+    private void SynchronizeCpuSamples(IReadOnlyList<CpuHistorySample> desired)
+    {
+        DateTimeOffset firstTimestamp = desired.Count == 0 ? default : desired[0].Timestamp;
+        while (CpuSamples.Count > 0
+            && (desired.Count == 0 || CpuSamples[0].Timestamp < firstTimestamp))
+        {
+            CpuSamples.RemoveAt(0);
+        }
+
+        for (int index = 0; index < desired.Count; index++)
+        {
+            CpuHistorySample sample = desired[index];
+            if (index < CpuSamples.Count && CpuSamples[index].Timestamp != sample.Timestamp)
+            {
+                while (CpuSamples.Count > index)
+                {
+                    CpuSamples.RemoveAt(CpuSamples.Count - 1);
+                }
+            }
+
+            if (index == CpuSamples.Count)
+            {
+                CpuSamples.Add(sample);
+            }
+            else if (CpuSamples[index].Value != sample.Value)
+            {
+                CpuSamples[index] = sample;
+            }
+        }
+
+        while (CpuSamples.Count > desired.Count)
+        {
+            CpuSamples.RemoveAt(CpuSamples.Count - 1);
+        }
+    }
+
+    private void SynchronizeMemorySamples(IReadOnlyList<CpuHistorySample> desired)
+    {
+        DateTimeOffset firstTimestamp = desired.Count == 0 ? default : desired[0].Timestamp;
+        while (MemorySamples.Count > 0
+            && (desired.Count == 0 || MemorySamples[0].Timestamp < firstTimestamp))
+        {
+            MemorySamples.RemoveAt(0);
+        }
+
+        for (int index = 0; index < desired.Count; index++)
+        {
+            CpuHistorySample sample = desired[index];
+            if (index < MemorySamples.Count && MemorySamples[index].Timestamp != sample.Timestamp)
+            {
+                while (MemorySamples.Count > index)
+                {
+                    MemorySamples.RemoveAt(MemorySamples.Count - 1);
+                }
+            }
+
+            if (index == MemorySamples.Count)
+            {
+                MemorySamples.Add(sample);
+            }
+            else if (MemorySamples[index].Value != sample.Value)
+            {
+                MemorySamples[index] = sample;
+            }
+        }
+
+        while (MemorySamples.Count > desired.Count)
+        {
+            MemorySamples.RemoveAt(MemorySamples.Count - 1);
+        }
+    }
+
+    public void Dispose() => ProcessActions?.Dispose();
+
+    /// <summary>
+    /// Updates metric explanations in place to preserve expansion state and avoid
+    /// scroll jumps. Only recreates the collection when the count changes (e.g.,
+    /// language switch or first load).
+    /// </summary>
+    private void UpdateMetricExplanations(IReadOnlyList<MetricExplanationItem> newItems)
+    {
+        var current = MetricExplanations;
+        if (current.Count != newItems.Count)
+        {
+            // Structure changed (first load or language change), recreate collection
+            var newList = new List<MetricExplanationViewModel>(newItems.Count);
+            foreach (var item in newItems)
+            {
+                newList.Add(new MetricExplanationViewModel(item));
+            }
+            MetricExplanations = newList;
+            return;
+        }
+
+        // Update existing items in place to preserve expansion state
+        for (int i = 0; i < current.Count; i++)
+        {
+            current[i].Update(newItems[i]);
+        }
+    }
 
     private static string FormatMemory(MetricValue<long> metric) => metric.IsAvailable
         ? $"{PartialPrefix(metric)}{(metric.Value!.Value / (1024d * 1024d)).ToString("0", CultureInfo.InvariantCulture)} MB"
@@ -237,6 +433,15 @@ public sealed partial class ApplicationTabViewModel : ObservableObject
             MetricAvailability.Unavailable => _localization.Get(LocalizationKeys.Unavailable),
             _ => _localization.Get(LocalizationKeys.Error)
         };
+
+    private string FormatIoStatus(MetricValue<double> read, MetricValue<double> write)
+    {
+        string readStatus = FormatAvailability(read);
+        string writeStatus = FormatAvailability(write);
+        return string.Equals(readStatus, writeStatus, StringComparison.Ordinal)
+            ? readStatus
+            : $"{readStatus} / {writeStatus}";
+    }
 
     private static string PartialPrefix<T>(MetricValue<T> metric) where T : struct =>
         metric.IsComplete ? string.Empty : "≥ ";
