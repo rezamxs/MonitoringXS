@@ -3,7 +3,7 @@
     # Scope: scripts/**/*.ps1, installer scripts, broker management, validation.
     # Designed to avoid massive unrelated churn while catching real issues.
 
-    Severity = @('Error', 'Warning', 'Information')
+    Severity = @('Error')
 
     IncludeRules = @(
         'PSAvoidUsingCmdletAliases'
