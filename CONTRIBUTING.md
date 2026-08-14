@@ -9,3 +9,19 @@ Thank you for improving Monitoring XS. Keep changes focused, preserve the depend
 5. Keep diagnostics free of sensitive command lines, tokens, and network credentials.
 
 New application-specific attribution rules should be evidence-based, extensible, and accompanied by positive and negative tests. Do not special-case an executable solely by publisher.
+
+## Repository hygiene
+
+Use `git --no-pager` for agent or script inspection commands that do not need interactive paging. Never commit terminal, pager, command-help, or redirected diagnostic output.
+
+Before every commit, review the worktree and staged file list:
+
+```powershell
+git status --short
+git diff --check
+git diff --stat
+git diff --cached --name-only
+git diff --cached --stat
+```
+
+Do not use broad `git add -A` without first reviewing the filenames that would be staged. Stage only the intended paths, then repeat the cached-name and cached-stat checks.

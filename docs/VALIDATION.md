@@ -1330,3 +1330,40 @@ Release --no-build`, and `dotnet build MonitoringXS.sln -c Debug` passed.
 Release and Debug builds had zero warnings/errors. Tests passed 358/358: Core
 5, Collectors 86, Application 10, App 115, Storage 31, and Integration 111.
 `git diff --check` passed.
+
+## 2026-08-09 repository hygiene and CI baseline
+
+Repository inspection found one tracked root file containing `less --help`
+output and three mode-`160000` entries under `skills/` without a `.gitmodules`
+file. The root artifact and unresolved gitlinks were removed from the worktree.
+The former skill checkouts are optional development aids; restore, build, tests,
+runtime behavior, and contributor guidance do not depend on them.
+
+`MainWindow.xaml` and its selection handler confirm that Running Apps, System
+Overview, History, Diagnostics, Settings, and About are active. Dashboard and
+Portable Apps remain visible, disabled placeholders. README, product-spec, and
+milestone wording was aligned with that current implementation without changing
+metric truthfulness, attribution, privacy, security, or ADR contracts.
+
+The new `.github/workflows/ci.yml` uses `windows-latest`, reads the SDK selection
+from `global.json`, restores the solution, builds Release with
+`-p:TreatWarningsAsErrors=true`, and runs the solution tests for pushes and pull
+requests. Local YAML parsing passed. An ignored temporary probe confirmed that
+the CI property promoted compiler warning `CS0168` and analyzer warning `CA1822`
+to errors; the probe was then deleted. No GitHub-hosted run is claimed.
+
+Commands and observed results:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore -p:TreatWarningsAsErrors=true
+dotnet test MonitoringXS.sln -c Release --no-build --blame-hang --blame-hang-timeout 2m --blame-hang-dump-type none --diag ".\TestResults\hang-diagnostics\vstest-diag.log" --logger "trx;LogFileName=hang-diagnostics.trx" --results-directory ".\TestResults\hang-diagnostics"
+```
+
+The sandboxed restore first failed with `NU1301` because Windows TLS credentials
+were unavailable; the identical approved-network restore succeeded with all
+projects up to date. Release build succeeded with 0 warnings and 0 errors. The
+diagnostic full suite completed without reproducing the earlier transient stall:
+506 passed, 0 failed, and 0 skipped (Core 11, Application 36, Collectors 86,
+Storage 35, Integration 137, and App 201). All test hosts exited normally and
+blame-hang produced no sequence file because every test completed.

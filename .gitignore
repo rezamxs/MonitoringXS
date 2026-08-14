@@ -22,3 +22,12 @@ BenchmarkDotNet.Artifacts/
 *.appxbundle
 GeneratedFiles/
 .tools/
+
+# Tooling artifacts
+context-packs/
+.tooling/indexes/
+.tooling/.cache/
+*.cobertura.xml
+TestResults/Coverage/
+.artifacts/sbom/
+/.agents/skills/ui-styling/scripts/tests/coverage-ui.json

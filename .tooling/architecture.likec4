@@ -1,0 +1,130 @@
+// LikeC4 architecture model for Monitoring XS
+// Small prototype — major components and key flows only.
+// Requires: npm install -g likec4 (or npx likec4)
+
+model {
+    element monitoringXS {
+        title "Monitoring XS"
+        description "Windows application-centric resource monitor"
+
+        element App {
+            title "MonitoringXS.App"
+            description "WinUI views, ViewModels, navigation, DI composition"
+            technology "WinUI 3 / .NET 10"
+        }
+
+        element Application {
+            title "MonitoringXS.Application"
+            description "Orchestration and use cases"
+            technology ".NET 10"
+        }
+
+        element Core {
+            title "MonitoringXS.Core"
+            description "Immutable models, interfaces, abstractions"
+            technology ".NET 10"
+        }
+
+        element Collectors {
+            title "MonitoringXS.Collectors"
+            description "Real metric sampling and aggregation"
+            technology ".NET 10"
+        }
+
+        element PlatformWindows {
+            title "MonitoringXS.Platform.Windows"
+            description "Windows discovery, metadata, P/Invoke"
+            technology ".NET 10 / Win32"
+        }
+
+        element Storage {
+            title "MonitoringXS.Storage"
+            description "Persistence, migrations, retention"
+            technology ".NET 10 / SQLite"
+        }
+
+        element DesignSystem {
+            title "MonitoringXS.DesignSystem"
+            description "Precision Glass tokens"
+            technology ".NET 10"
+        }
+
+        element PrivilegedBroker {
+            title "Privileged Broker"
+            description "LocalSystem ETW broker with security boundary"
+            technology ".NET 10 / Named Pipe IPC"
+        }
+
+        element Installer {
+            title "Installer"
+            description "WiX 7 MSI installer"
+            technology "WiX 7"
+        }
+
+        element SqliteHistory {
+            title "SQLite History DB"
+            description "Metric history persistence"
+            technology "SQLite"
+        }
+
+        element WindowsAPIs {
+            title "Windows APIs"
+            description "ETW, Performance Counters, Win32"
+            technology "Windows"
+        }
+    }
+}
+
+views {
+    view architecture-overview {
+        title "Monitoring XS Architecture Overview"
+
+        include *
+
+        App -> Application "orchestration"
+        App -> Collectors "metric collection"
+        App -> PlatformWindows "platform services"
+        App -> Storage "persistence"
+        App -> DesignSystem "visual tokens"
+        App -> Core "models/interfaces"
+
+        Application -> Core "abstractions"
+
+        Collectors -> Core "models"
+
+        PlatformWindows -> Core "abstractions"
+        PlatformWindows -> WindowsAPIs "ETW/Counters/P-Invoke"
+
+        Storage -> Core "interfaces"
+        Storage -> SqliteHistory "read/write"
+
+        PrivilegedBroker -> PlatformWindows "ETW session management"
+
+        App <- PrivilegedBroker "named pipe IPC (restricted ACL)"
+
+        Installer -> App "installs"
+    }
+
+    view data-flow {
+        title "Metric Data Flow"
+
+        include WindowsAPIs, PlatformWindows, Collectors, Application, Storage, SqliteHistory, App
+
+        WindowsAPIs -> PlatformWindows "raw events/counters"
+        PlatformWindows -> Collectors "typed metric batches"
+        Collectors -> Application "process samples"
+        Application -> Storage "persist metrics"
+        Storage -> SqliteHistory "SQL operations"
+        Application -> App "UI state updates"
+    }
+
+    view security-boundary {
+        title "Broker Security Boundary"
+
+        include App, PrivilegedBroker, PlatformWindows, WindowsAPIs
+
+        App <- PrivilegedBroker "restricted named pipe"
+        PrivilegedBroker -> PlatformWindows "ETW session control"
+        PlatformWindows -> WindowsAPIs "kernel trace"
+    }
+}

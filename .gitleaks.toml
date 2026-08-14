@@ -1,0 +1,27 @@
+# Gitleaks configuration for Monitoring XS
+# Development/CI secret scanning — never whitelist real secrets.
+
+title = "Monitoring XS Gitleaks Configuration"
+
+[extend]
+# Use the default gitleaks rules as a baseline
+useDefault = true
+
+[allowlist]
+description = "Repository-level allowlist for generated/build artifacts"
+paths = [
+    '''bin/''',
+    '''obj/''',
+    '''artifacts/''',
+    '''.artifacts/''',
+    '''TestResults/''',
+    '''BenchmarkDotNet.Artifacts/''',
+    '''GeneratedFiles/''',
+    '''.tools/''',
+    '''\.vs/''',
+    '''\.idea/''',
+    '''node_modules/''',
+    '''\.git/''',
+    # Context packs and tooling outputs
+    '''context-packs/''',
+]

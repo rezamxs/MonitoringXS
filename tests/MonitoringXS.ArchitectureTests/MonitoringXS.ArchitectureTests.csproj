@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <PackageReference Include="TngTech.ArchUnitNET" />
+    <PackageReference Include="TngTech.ArchUnitNET.xUnitV3" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="coverlet.collector" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MonitoringXS.App\MonitoringXS.App.csproj" />
+    <ProjectReference Include="..\..\src\MonitoringXS.Application\MonitoringXS.Application.csproj" />
+    <ProjectReference Include="..\..\src\MonitoringXS.Collectors\MonitoringXS.Collectors.csproj" />
+    <ProjectReference Include="..\..\src\MonitoringXS.Core\MonitoringXS.Core.csproj" />
+    <ProjectReference Include="..\..\src\MonitoringXS.DesignSystem\MonitoringXS.DesignSystem.csproj" />
+    <ProjectReference Include="..\..\src\MonitoringXS.ElevatedHelper\MonitoringXS.ElevatedHelper.csproj" />
+    <ProjectReference Include="..\..\src\MonitoringXS.Platform.Windows\MonitoringXS.Platform.Windows.csproj" />
+    <ProjectReference Include="..\..\src\MonitoringXS.PrivilegedBroker\MonitoringXS.PrivilegedBroker.csproj" />
+    <ProjectReference Include="..\..\src\MonitoringXS.Storage\MonitoringXS.Storage.csproj" />
+  </ItemGroup>
+</Project>

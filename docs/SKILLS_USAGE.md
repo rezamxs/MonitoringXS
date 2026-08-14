@@ -1,10 +1,14 @@
 # Skills usage
 
+Skills and coding assistants are optional development aids. They are not build, test, runtime, or contributor prerequisites. A normal clone needs only the Windows/.NET tooling documented in `DEVELOPMENT.md`; no repository under `skills/` is required.
+
+This file is a historical record of guidance used during earlier development, not a lock file or an instruction to reproduce those tool sessions. The engineering conventions needed by contributors are self-contained in `AGENTS.md`, `ENGINEERING_STYLE.md`, and `CONTRIBUTING.md`.
+
 ## Selected skills
 
 | Skill | Purpose in Monitoring XS |
 | --- | --- |
-| `ui-skills-root` | Routed the UI task to the smallest relevant local skill set using the repository's UI Skills CLI. |
+| `ui-skills-root` | Routed an earlier UI task to the smallest relevant local guidance set. |
 | `baseline-ui` | Enforces restrained hierarchy, reusable primitives, compact layout, bounded decoration, and honest empty/error states. Web-only Tailwind rules are not applied to WinUI. |
 | `fixing-accessibility` | Applied by platform analogy to accessible names, keyboard access, native semantics, focus visibility, dialog safety, and non-color status encoding. HTML-specific rules are translated to WinUI AutomationProperties. |
 | `fixing-motion-performance` | Keeps WinUI motion short and compositor-friendly, avoids layout animation and continuous blur, and requires reduced-motion behavior. |
@@ -13,13 +17,15 @@
 
 - `improve-ui` is a read-only audit-and-plan workflow and conflicts with the requested implementation.
 - `fixing-metadata` applies to HTML/social metadata rather than a native Windows desktop application.
-- The Codex Companion skills under `skills/codex-plugin-cc` are internal Claude Code forwarding/result contracts, not implementation guidance for this repository.
+- Codex Companion forwarding/result contracts were not implementation guidance for this repository.
 - No installed skill specifically covers C#, .NET, WinUI 3, Windows internals, security engineering, Git, or open-source setup. Those areas follow official Microsoft guidance and documented engineering practices.
 - Milestone 3A did not select an additional skill because the available session skills cover image generation, OpenAI products, plugins, and skill management rather than Windows ETW network collection.
 
 ## Application notes
 
 Skill guidance is subordinate to native Windows conventions and this product contract. For example, HTML ARIA guidance maps to WinUI `AutomationProperties`, and browser animation advice maps to compositor-friendly WinUI transitions. The selected skills influenced the Precision Glass tokens, native control selection, explicit accessible names, reduced-motion stance, and the decision to avoid decorative live animation.
+
+The former `skills/ui-skills`, `skills/codex-plugin-cc`, and `skills/devobin` gitlinks were optional local tooling checkouts, not product dependencies. They were removed because the repository had no `.gitmodules` metadata capable of resolving them for an external clone.
 
 ## 2026-07-22 network stabilization
 

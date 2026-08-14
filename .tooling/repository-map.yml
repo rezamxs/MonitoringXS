@@ -1,0 +1,122 @@
+# Monitoring XS Repository Knowledge Layer
+# Machine-readable source-close index for AI agent discovery.
+# Points to authoritative files — does not duplicate documentation.
+
+repository:
+  name: MonitoringXS
+  url: https://github.com/rezamxs/MonitoringXS
+  license: MIT
+  dotnet_sdk: "10.0.100"
+  target_framework: net10.0-windows10.0.26100.0
+
+architecture:
+  layers:
+    - name: Core
+      project: src/MonitoringXS.Core/MonitoringXS.Core.csproj
+      namespace: MonitoringXS.Core
+      role: Immutable models, interfaces, abstractions. No UI, SQLite, or WinUI dependency.
+      dependencies: []
+
+    - name: DesignSystem
+      project: src/MonitoringXS.DesignSystem/MonitoringXS.DesignSystem.csproj
+      namespace: MonitoringXS.DesignSystem
+      role: Precision Glass tokens and reusable visual resources.
+      dependencies: []
+
+    - name: Application
+      project: src/MonitoringXS.Application/MonitoringXS.Application.csproj
+      namespace: MonitoringXS.Application
+      role: Orchestration and use cases. Must not call Win32 directly.
+      dependencies: [Core]
+
+    - name: Collectors
+      project: src/MonitoringXS.Collectors/MonitoringXS.Collectors.csproj
+      namespace: MonitoringXS.Collectors
+      role: Real metric sampling and aggregation. No ViewModel references.
+      dependencies: [Core]
+
+    - name: Platform.Windows
+      project: src/MonitoringXS.Platform.Windows/MonitoringXS.Platform.Windows.csproj
+      namespace: MonitoringXS.Platform.Windows
+      role: Windows discovery, metadata, safety checks, P/Invoke.
+      dependencies: [Core]
+
+    - name: Storage
+      project: src/MonitoringXS.Storage/MonitoringXS.Storage.csproj
+      namespace: MonitoringXS.Storage
+      role: Persistence, migrations, retention, downsampling.
+      dependencies: [Core]
+
+    - name: App
+      project: src/MonitoringXS.App/MonitoringXS.App.csproj
+      namespace: MonitoringXS.App
+      role: WinUI views, ViewModels, navigation, tabs, DI composition.
+      dependencies: [Application, Collectors, Core, DesignSystem, Platform.Windows, Storage]
+
+    - name: ElevatedHelper
+      project: src/MonitoringXS.ElevatedHelper/MonitoringXS.ElevatedHelper.csproj
+      namespace: MonitoringXS.ElevatedHelper
+      role: On-demand single-operation elevated process with validated input.
+      dependencies: []
+
+    - name: PrivilegedBroker
+      project: src/MonitoringXS.PrivilegedBroker/MonitoringXS.PrivilegedBroker.csproj
+      namespace: MonitoringXS.PrivilegedBroker
+      role: LocalSystem ETW broker. Security boundary. Named-pipe IPC.
+      dependencies: [Platform.Windows]
+
+critical_entry_points:
+  app_main: src/MonitoringXS.App/Program.cs
+  broker_main: src/MonitoringXS.PrivilegedBroker/Program.cs
+  elevated_helper_main: src/MonitoringXS.ElevatedHelper/Program.cs
+  monitoring_coordinator: src/MonitoringXS.Application/MonitoringCoordinator.cs
+
+security_boundary:
+  broker:
+    description: PrivilegedBroker runs as LocalSystem, communicates via restricted named pipe.
+    ipc: Named pipe (restricted ACL)
+    docs: docs/SECURITY.md
+    scripts: scripts/privileged-broker/Manage-PrivilegedBroker.ps1
+
+history_storage:
+  engine: SQLite (Microsoft.Data.Sqlite)
+  store_class: MonitoringXS.Storage.History.SqliteMetricHistoryStore
+  docs: docs/METRICS.md
+  tests: tests/MonitoringXS.Storage.Tests/SqliteMetricHistoryStoreTests.cs
+
+localization:
+  format: .resw resource files
+  location: src/MonitoringXS.App/Strings/**/*.resw
+  tests: tests/MonitoringXS.App.Tests/LocalizationTests.cs
+
+installer:
+  framework: WiX 7
+  project: installer/MonitoringXS.Installer/
+  custom_actions: installer/MonitoringXS.Installer.CustomActions/
+  build_script: scripts/installer/Build-Installer.ps1
+  validation_script: scripts/installer/Invoke-InstallerLifecycleValidation.ps1
+  docs: docs/INSTALLER.md
+
+validation_scripts:
+  ui_automation_stress: scripts/validation/Invoke-MonitoringXsUiAutomationStress.ps1
+  published_app_smoke: scripts/validation/Test-PublishedAppSmoke.ps1
+  installer_lifecycle: scripts/installer/Invoke-InstallerLifecycleValidation.ps1
+
+key_documentation:
+  architecture: docs/ARCHITECTURE.md
+  engineering_style: docs/ENGINEERING_STYLE.md
+  security: docs/SECURITY.md
+  metrics: docs/METRICS.md
+  performance: docs/PERFORMANCE.md
+  troubleshooting: docs/TROUBLESHOOTING.md
+  validation: docs/VALIDATION.md
+  adr_directory: docs/adr/
+
+test_projects:
+  - tests/MonitoringXS.Core.Tests/
+  - tests/MonitoringXS.Application.Tests/
+  - tests/MonitoringXS.Collectors.Tests/
+  - tests/MonitoringXS.Storage.Tests/
+  - tests/MonitoringXS.App.Tests/
+  - tests/MonitoringXS.IntegrationTests/
+  - tests/MonitoringXS.ArchitectureTests/

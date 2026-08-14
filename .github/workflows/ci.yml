@@ -1,0 +1,58 @@
+name: CI
+
+"on":
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - run: dotnet restore MonitoringXS.sln
+      - run: dotnet build MonitoringXS.sln -c Release --no-restore -p:TreatWarningsAsErrors=true
+      - run: dotnet test MonitoringXS.sln -c Release --no-build
+
+  psscriptanalyzer:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Force -Scope CurrentUser
+          $results = Invoke-ScriptAnalyzer -Path scripts/ -Settings PSScriptAnalyzerSettings.psd1 -Recurse -Severity Error
+          if ($results) {
+            $results | Format-Table -AutoSize
+            exit 1
+          }
+
+  gitleaks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config-path: .gitleaks.toml
+
+  actionlint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: rhysd/actionlint@v1
+        with:
+          args: -color
