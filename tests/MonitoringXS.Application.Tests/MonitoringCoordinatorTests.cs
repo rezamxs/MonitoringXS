@@ -19,10 +19,10 @@ public sealed class MonitoringCoordinatorTests
             new Collector(process),
             new Aggregator(identity, process));
 
-        MonitoringDashboardSnapshot result = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot result = await coordinator.CaptureAsync(CancellationToken.None);
 
-        Assert.Empty(result.InstalledApplications);
-        Assert.Single(result.PortableApplications);
+        Assert.DoesNotContain(result.Applications, item => item.Application.Disposition == ApplicationDisposition.Installed);
+        Assert.Single(result.Applications, item => item.Application.Disposition == ApplicationDisposition.Portable);
         Assert.Single(result.OneMinuteHistory["tool"]);
     }
 
@@ -41,10 +41,10 @@ public sealed class MonitoringCoordinatorTests
             new Collector(process),
             aggregator);
 
-        MonitoringDashboardSnapshot firstCapture = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot firstCapture = await coordinator.CaptureAsync(CancellationToken.None);
         attribution.Identity = second;
         aggregator.Identity = second;
-        MonitoringDashboardSnapshot secondCapture = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot secondCapture = await coordinator.CaptureAsync(CancellationToken.None);
 
         Assert.Contains("first", firstCapture.OneMinuteHistory.Keys);
         Assert.DoesNotContain("first", secondCapture.OneMinuteHistory.Keys);
@@ -77,7 +77,7 @@ public sealed class MonitoringCoordinatorTests
         DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
         ProcessDescriptor process = new(new ProcessInstanceId(46, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
         ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
-        MonitoringCoordinator coordinator = new(
+        MonitoringCoordinator coordinator = CreateCoordinator(
             new Discovery(process),
             new Attribution(process, identity),
             new Collector(process),
@@ -85,9 +85,9 @@ public sealed class MonitoringCoordinatorTests
             new PhysicalCollector(process),
             new PhysicalAggregator(identity));
 
-        MonitoringDashboardSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
 
-        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
         Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
         Assert.Equal(123d, snapshot.PhysicalDisk.ReadBytesPerSecond.Value);
     }
@@ -98,7 +98,7 @@ public sealed class MonitoringCoordinatorTests
         DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
         ProcessDescriptor process = new(new ProcessInstanceId(47, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
         ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
-        MonitoringCoordinator coordinator = new(
+        MonitoringCoordinator coordinator = CreateCoordinator(
             new Discovery(process),
             new Attribution(process, identity),
             new Collector(process),
@@ -108,9 +108,9 @@ public sealed class MonitoringCoordinatorTests
             new NetworkCollector(process),
             new NetworkAggregator(identity));
 
-        MonitoringDashboardSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
 
-        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
         Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
         Assert.Equal(123d, snapshot.PhysicalDisk.ReadBytesPerSecond.Value);
         Assert.Equal(789d, snapshot.Network.DownloadBytesPerSecond.Value);
@@ -122,7 +122,7 @@ public sealed class MonitoringCoordinatorTests
         DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
         ProcessDescriptor process = new(new ProcessInstanceId(48, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
         ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
-        MonitoringCoordinator coordinator = new(
+        MonitoringCoordinator coordinator = CreateCoordinator(
             new Discovery(process),
             new Attribution(process, identity),
             new Collector(process),
@@ -134,9 +134,9 @@ public sealed class MonitoringCoordinatorTests
             new GpuCollector(process),
             new GpuAggregator(identity));
 
-        MonitoringDashboardSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
 
-        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
         Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
         Assert.Equal(123d, snapshot.PhysicalDisk.ReadBytesPerSecond.Value);
         Assert.Equal(789d, snapshot.Network.DownloadBytesPerSecond.Value);
@@ -150,7 +150,7 @@ public sealed class MonitoringCoordinatorTests
         DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
         ProcessDescriptor process = new(new ProcessInstanceId(49, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
         ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
-        MonitoringCoordinator coordinator = new(
+        MonitoringCoordinator coordinator = CreateCoordinator(
             new Discovery(process),
             new Attribution(process, identity),
             new Collector(process),
@@ -158,9 +158,9 @@ public sealed class MonitoringCoordinatorTests
             gpuCollector: new ThrowingGpuCollector(),
             gpuAggregation: new GpuAggregator(identity));
 
-        MonitoringDashboardSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
 
-        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
         Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
         Assert.Equal(MetricAvailability.Error, snapshot.Gpu.UtilizationPercent.Availability);
         Assert.Equal(GpuAvailabilityReason.CounterReadFailure, snapshot.Gpu.Reason);
@@ -189,7 +189,7 @@ public sealed class MonitoringCoordinatorTests
             @"C:\Apps",
             ClassificationConfidence.High,
             "test");
-        MonitoringCoordinator coordinator = new(
+        MonitoringCoordinator coordinator = CreateCoordinator(
             new Discovery(process),
             new Attribution(process, identity),
             new Collector(process),
@@ -199,13 +199,12 @@ public sealed class MonitoringCoordinatorTests
             new UnavailableNetworkCollector(process),
             new NetworkAggregator(identity),
             new GpuCollector(process),
-            new GpuAggregator(identity),
-            new ThrowingHistoryStore());
+            new GpuAggregator(identity));
 
-        MonitoringDashboardSnapshot dashboard =
+        MonitoringSnapshot dashboard =
             await coordinator.CaptureAsync(CancellationToken.None);
 
-        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
         Assert.Equal(1d, snapshot.CpuPercent.Value);
         Assert.Equal(1024, snapshot.WorkingSetBytes.Value);
         Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
@@ -241,7 +240,7 @@ public sealed class MonitoringCoordinatorTests
             @"C:\Apps",
             ClassificationConfidence.High,
             "test");
-        MonitoringCoordinator coordinator = new(
+        MonitoringCoordinator coordinator = CreateCoordinator(
             new Discovery(process),
             new Attribution(process, identity),
             new Collector(process),
@@ -251,13 +250,12 @@ public sealed class MonitoringCoordinatorTests
             new TransientNetworkCollector(process),
             new NetworkAggregator(identity),
             new GpuCollector(process),
-            new GpuAggregator(identity),
-            new ThrowingHistoryStore());
+            new GpuAggregator(identity));
 
-        MonitoringDashboardSnapshot failed = await coordinator.CaptureAsync(CancellationToken.None);
-        MonitoringDashboardSnapshot recovered = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot failed = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot recovered = await coordinator.CaptureAsync(CancellationToken.None);
 
-        ApplicationMetricSnapshot failedSnapshot = Assert.Single(failed.InstalledApplications);
+        ApplicationMetricSnapshot failedSnapshot = Assert.Single(failed.Applications);
         Assert.Equal(1d, failedSnapshot.CpuPercent.Value);
         Assert.Equal(1024, failedSnapshot.WorkingSetBytes.Value);
         Assert.Equal(10d, failedSnapshot.IoReadBytesPerSecond.Value);
@@ -265,7 +263,7 @@ public sealed class MonitoringCoordinatorTests
         Assert.Equal(MetricAvailability.Error, failedSnapshot.PhysicalDisk.ReadBytesPerSecond.Availability);
         Assert.Equal(MetricAvailability.Error, failedSnapshot.Network.DownloadBytesPerSecond.Availability);
 
-        ApplicationMetricSnapshot recoveredSnapshot = Assert.Single(recovered.InstalledApplications);
+        ApplicationMetricSnapshot recoveredSnapshot = Assert.Single(recovered.Applications);
         Assert.Equal(123d, recoveredSnapshot.PhysicalDisk.ReadBytesPerSecond.Value);
         Assert.Equal(789d, recoveredSnapshot.Network.DownloadBytesPerSecond.Value);
         Assert.Equal(2, recovered.OneMinuteHistory["visible"].Count);
@@ -295,7 +293,7 @@ public sealed class MonitoringCoordinatorTests
             ClassificationConfidence.High,
             "test");
         CancellationAwarePhysicalCollector physical = new();
-        MonitoringCoordinator coordinator = new(
+        MonitoringCoordinator coordinator = CreateCoordinator(
             new Discovery(process),
             new Attribution(process, identity),
             new Collector(process),
@@ -308,10 +306,10 @@ public sealed class MonitoringCoordinatorTests
             new GpuAggregator(identity));
         Stopwatch elapsed = Stopwatch.StartNew();
 
-        MonitoringDashboardSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
 
         elapsed.Stop();
-        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
         Assert.True(physical.CancellationObserved);
         Assert.True(elapsed.Elapsed < TimeSpan.FromSeconds(2));
         Assert.Equal(1d, snapshot.CpuPercent.Value);
@@ -320,15 +318,58 @@ public sealed class MonitoringCoordinatorTests
         Assert.Equal(MetricAvailability.Error, snapshot.PhysicalDisk.ReadBytesPerSecond.Availability);
     }
 
+    private static MonitoringCoordinator CreateCoordinator(
+        IProcessDiscoveryService discovery,
+        IApplicationAttributionService attribution,
+        IProcessMetricCollector collector,
+        IMetricAggregationService aggregation,
+        IPhysicalDiskMetricCollector? physicalDiskCollector = null,
+        IPhysicalDiskAggregationService? physicalDiskAggregation = null,
+        INetworkMetricCollector? networkCollector = null,
+        INetworkMetricAggregationService? networkAggregation = null,
+        IGpuMetricCollector? gpuCollector = null,
+        IGpuMetricAggregationService? gpuAggregation = null)
+    {
+        List<IMetricCaptureStage> stages = [];
+        if (physicalDiskCollector is not null && physicalDiskAggregation is not null)
+        {
+            stages.Add(new PhysicalDiskMetricStage(physicalDiskCollector, physicalDiskAggregation));
+        }
+
+        if (networkCollector is not null && networkAggregation is not null)
+        {
+            stages.Add(new NetworkMetricStage(networkCollector, networkAggregation));
+        }
+
+        if (gpuCollector is not null && gpuAggregation is not null)
+        {
+            stages.Add(new GpuMetricStage(gpuCollector, gpuAggregation));
+        }
+
+        return new(
+            discovery,
+            attribution,
+            collector,
+            aggregation,
+            new MonitoringCapturePipeline(stages));
+    }
+
     private sealed class Discovery(ProcessDescriptor process) : IProcessDiscoveryService
     {
-        public ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken) => ValueTask.FromResult<IReadOnlyList<ProcessDescriptor>>([process]);
+        public ValueTask<ProcessDiscoverySnapshot> DiscoverAsync(CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new ProcessDiscoverySnapshot(
+                [process.InstanceId.ProcessId],
+                [process],
+                []));
     }
 
     private sealed class MultiDiscovery(IReadOnlyList<ProcessDescriptor> processes) : IProcessDiscoveryService
     {
-        public ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken) =>
-            ValueTask.FromResult(processes);
+        public ValueTask<ProcessDiscoverySnapshot> DiscoverAsync(CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new ProcessDiscoverySnapshot(
+                processes.Select(process => process.InstanceId.ProcessId).ToArray(),
+                processes,
+                []));
     }
 
     private sealed class Attribution(ProcessDescriptor process, ApplicationIdentity identity) : IApplicationAttributionService
@@ -605,37 +646,6 @@ public sealed class MonitoringCoordinatorTests
                     metrics[0].Engines[0].Engine,
                     metrics[0].Diagnostics)
             };
-    }
-
-    private sealed class ThrowingHistoryStore : IMetricHistoryStore
-    {
-        public MetricHistoryStoreDiagnostics Diagnostics =>
-            new(0, 0, 0, 0, 1, 0, 0, 0, 0, "test");
-
-        public ValueTask<MetricHistoryWriteResult> EnqueueAsync(
-            IReadOnlyList<ApplicationMetricSnapshot> snapshots,
-            CancellationToken cancellationToken) =>
-            throw new IOException("Simulated history failure.");
-
-        public ValueTask FlushAsync(CancellationToken cancellationToken) => ValueTask.CompletedTask;
-
-        public ValueTask<MetricHistoryApplicationsResult> ListApplicationsAsync(
-            CancellationToken cancellationToken) =>
-            ValueTask.FromResult(new MetricHistoryApplicationsResult([], false, "test"));
-
-        public ValueTask<MetricHistoryQueryResult> QueryAsync(
-            string logicalApplicationId,
-            MetricHistoryMetric metric,
-            DateTimeOffset fromUtc,
-            DateTimeOffset toUtc,
-            CancellationToken cancellationToken) =>
-            ValueTask.FromResult(new MetricHistoryQueryResult([], false, "test"));
-
-        public void Dispose()
-        {
-        }
-
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private sealed class Aggregator(ApplicationIdentity identity, ProcessDescriptor process) : IMetricAggregationService

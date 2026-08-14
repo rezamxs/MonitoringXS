@@ -1,4 +1,5 @@
 using MonitoringXS.App.ViewModels;
+using MonitoringXS.Application;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
 

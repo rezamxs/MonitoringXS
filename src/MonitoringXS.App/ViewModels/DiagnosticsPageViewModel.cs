@@ -145,10 +145,10 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
 
     private void Rebuild()
     {
-        MonitoringDashboardSnapshot? dashboard = _main.LatestDashboardSnapshot;
+        MonitoringSnapshot? dashboard = _main.LatestDashboardSnapshot;
         ApplicationMetricSnapshot[] applications = dashboard is null
             ? []
-            : [.. dashboard.InstalledApplications, .. dashboard.PortableApplications];
+            : dashboard.Applications.ToArray();
         MetricHistoryStoreDiagnostics history = _history.Diagnostics;
 
         MetricAvailability cpu = Aggregate(applications.Select(item => item.CpuPercent.Availability));

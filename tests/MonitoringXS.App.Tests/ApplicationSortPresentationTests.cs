@@ -99,38 +99,8 @@ public sealed class ApplicationSortPresentationTests
 
     private static MainWindowViewModel CreateViewModel()
     {
-        EmptyMonitoringPipeline pipeline = new();
-        MonitoringCoordinator coordinator = new(pipeline, pipeline, pipeline, pipeline);
         return new MainWindowViewModel(
-            coordinator,
             NullLogger<MainWindowViewModel>.Instance);
     }
 
-    private sealed class EmptyMonitoringPipeline :
-        IProcessDiscoveryService,
-        IApplicationAttributionService,
-        IProcessMetricCollector,
-        IMetricAggregationService
-    {
-        public ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(
-            CancellationToken cancellationToken) =>
-            ValueTask.FromResult<IReadOnlyList<ProcessDescriptor>>([]);
-
-        public ValueTask<IReadOnlyList<AttributionResult>> AttributeAsync(
-            IReadOnlyList<ProcessDescriptor> processes,
-            CancellationToken cancellationToken) =>
-            ValueTask.FromResult<IReadOnlyList<AttributionResult>>([]);
-
-        public ValueTask<IReadOnlyList<ProcessMetricSample>> CollectAsync(
-            IReadOnlyList<ProcessDescriptor> processes,
-            DateTimeOffset capturedAt,
-            CancellationToken cancellationToken) =>
-            ValueTask.FromResult<IReadOnlyList<ProcessMetricSample>>([]);
-
-        public IReadOnlyList<ApplicationMetricSnapshot> Aggregate(
-            IReadOnlyList<AttributionResult> attribution,
-            IReadOnlyList<ProcessMetricSample> metrics,
-            DateTimeOffset capturedAt) =>
-            [];
-    }
 }

@@ -1,4 +1,5 @@
 using MonitoringXS.App.Localization;
+using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
 
 namespace MonitoringXS.App.ViewModels;

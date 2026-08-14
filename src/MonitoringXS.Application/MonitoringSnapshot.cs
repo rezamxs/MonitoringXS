@@ -4,10 +4,10 @@ namespace MonitoringXS.Application;
 
 public sealed record ApplicationHistoryPoint(DateTimeOffset Timestamp, double? CpuPercent, long? WorkingSetBytes);
 
-public sealed record MonitoringDashboardSnapshot(
+public sealed record MonitoringSnapshot(
     DateTimeOffset CapturedAt,
-    IReadOnlyList<ApplicationMetricSnapshot> InstalledApplications,
-    IReadOnlyList<ApplicationMetricSnapshot> PortableApplications,
+    ProcessDiscoverySnapshot Discovery,
+    IReadOnlyList<ApplicationMetricSnapshot> Applications,
     IReadOnlyDictionary<string, IReadOnlyList<ApplicationHistoryPoint>> OneMinuteHistory,
     SystemOverviewSnapshot? SystemOverview = null,
     IReadOnlyList<SystemOverviewHistoryPoint>? SystemOverviewHistory = null);

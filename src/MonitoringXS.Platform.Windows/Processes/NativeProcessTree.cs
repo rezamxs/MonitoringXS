@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
@@ -12,7 +13,7 @@ internal static class NativeProcessTree
         using SafeSnapshotHandle snapshot = CreateToolhelp32Snapshot(Th32csSnapProcess, 0);
         if (snapshot.IsInvalid)
         {
-            return [];
+            throw new Win32Exception(Marshal.GetLastPInvokeError(), "Process enumeration could not start.");
         }
 
         ProcessEntry32 entry = new() { Size = (uint)Marshal.SizeOf<ProcessEntry32>() };
@@ -20,7 +21,11 @@ internal static class NativeProcessTree
 
         if (!Process32First(snapshot, ref entry))
         {
-            return processes;
+            const int errorNoMoreFiles = 18;
+            int error = Marshal.GetLastPInvokeError();
+            return error == errorNoMoreFiles
+                ? processes
+                : throw new Win32Exception(error, "Process enumeration could not read its first entry.");
         }
 
         do
@@ -39,6 +44,13 @@ internal static class NativeProcessTree
             entry.Size = (uint)Marshal.SizeOf<ProcessEntry32>();
         }
         while (Process32Next(snapshot, ref entry));
+
+        const int noMoreFiles = 18;
+        int finalError = Marshal.GetLastPInvokeError();
+        if (finalError != noMoreFiles)
+        {
+            throw new Win32Exception(finalError, "Process enumeration ended unexpectedly.");
+        }
 
         return processes;
     }

@@ -23,7 +23,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         new(ApplicationSortField.GpuUsage, "GPU usage")
     ];
 
-    private readonly MonitoringCoordinator _coordinator;
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IProcessActionService? _processActions;
     private readonly IClipboardService? _clipboard;
@@ -36,6 +35,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private ApplicationSectionViewModel _portableSection = null!;
     private DateTimeOffset _lastLiveSortAt = DateTimeOffset.MinValue;
     private Func<ProcessActionConfirmation, CancellationToken, Task<bool>>? _confirmProcessAction;
+    private Func<CancellationToken, Task>? _refreshAfterProcessAction;
     private Func<ApplicationSortPreference, bool, CancellationToken, Task>? _persistSort;
     private CancellationToken _shutdownToken;
     private bool _changingSortField;
@@ -63,16 +63,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public partial string SearchText { get; set; } = string.Empty;
 
     public MainWindowViewModel(
-        MonitoringCoordinator coordinator,
         ILogger<MainWindowViewModel> logger,
         LocalizationService? localization = null,
         MetricExplanationService? metricExplanations = null)
-        : this(coordinator, logger, null, null, localization, metricExplanations, null)
+        : this(logger, null, null, localization, metricExplanations, null)
     {
     }
 
     public MainWindowViewModel(
-        MonitoringCoordinator coordinator,
         ILogger<MainWindowViewModel> logger,
         IProcessActionService? processActions,
         IClipboardService? clipboard,
@@ -80,7 +78,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         MetricExplanationService? metricExplanations = null,
         IApplicationIconProvider? iconProvider = null)
     {
-        _coordinator = coordinator;
         _logger = logger;
         _processActions = processActions;
         _clipboard = clipboard;
@@ -105,7 +102,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public IReadOnlyCollection<ApplicationTabViewModel> OpenTabs => _openTabs.Values;
 
-    public MonitoringDashboardSnapshot? LatestDashboardSnapshot { get; private set; }
+    public MonitoringSnapshot? LatestDashboardSnapshot { get; private set; }
 
     public SystemOverviewPageViewModel SystemOverview { get; }
 
@@ -138,44 +135,32 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool HasNoSearchResults =>
         !string.IsNullOrWhiteSpace(SearchText) && !VisibleCards().Any();
 
-    public async Task RefreshAsync(CancellationToken cancellationToken)
+    public void ApplySnapshot(MonitoringSnapshot snapshot)
     {
-        try
-        {
-            MonitoringDashboardSnapshot snapshot = await Task.Run(
-                async () => await _coordinator.CaptureAsync(cancellationToken),
-                cancellationToken);
-            LatestDashboardSnapshot = snapshot;
-            SystemOverview.Update(snapshot.SystemOverview, snapshot.SystemOverviewHistory ?? []);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        LatestDashboardSnapshot = snapshot;
+        SystemOverview.Update(snapshot.SystemOverview, snapshot.SystemOverviewHistory ?? []);
+        ApplicationMetricSnapshot[] installed = snapshot.Applications
+            .Where(item => item.Application.Disposition is ApplicationDisposition.Installed or ApplicationDisposition.Packaged)
+            .ToArray();
+        ApplicationMetricSnapshot[] portable = snapshot.Applications
+            .Where(item => item.Application.Disposition is ApplicationDisposition.Portable or ApplicationDisposition.Unresolved)
+            .ToArray();
 
-            bool membershipChanged = UpdateCollection(
-                InstalledApplications,
-                snapshot.InstalledApplications,
-                snapshot.OneMinuteHistory);
-            membershipChanged |= UpdateCollection(
-                PortableApplications,
-                snapshot.PortableApplications,
-                snapshot.OneMinuteHistory);
-            ApplyCurrentSort(snapshot.CapturedAt, force: membershipChanged);
-            OnPropertyChanged(nameof(HasNoComparableData));
-            OnPropertyChanged(nameof(HasNoSearchResults));
-            UpdateOpenTabs(snapshot);
-            LastUpdated = snapshot.CapturedAt.ToLocalTime();
-            UpdateStatusMessage();
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            ReportRefreshFailure(exception);
-        }
-    }
-
-    internal void ReportRefreshFailure(Exception exception)
-    {
-        LogMonitoringRefreshFailed(_logger, exception);
-        StatusMessage = _localization.Get(LocalizationKeys.RefreshRetry);
+        bool membershipChanged = UpdateCollection(
+            InstalledApplications,
+            installed,
+            snapshot.OneMinuteHistory);
+        membershipChanged |= UpdateCollection(
+            PortableApplications,
+            portable,
+            snapshot.OneMinuteHistory);
+        ApplyCurrentSort(snapshot.CapturedAt, force: membershipChanged);
+        OnPropertyChanged(nameof(HasNoComparableData));
+        OnPropertyChanged(nameof(HasNoSearchResults));
+        UpdateOpenTabs(snapshot);
+        LastUpdated = snapshot.CapturedAt.ToLocalTime();
+        UpdateStatusMessage();
     }
 
     public ApplicationTabViewModel OpenTab(ApplicationCardViewModel card)
@@ -186,11 +171,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
                 _processActions is null || _clipboard is null
                     ? null
                     : new ProcessActionsViewModel(_processActions, _clipboard, _localization);
-            if (actions is not null && _confirmProcessAction is not null)
+            if (actions is not null
+                && _confirmProcessAction is not null
+                && _refreshAfterProcessAction is not null)
             {
                 actions.Configure(
                     _confirmProcessAction,
-                    RefreshAsync,
+                    _refreshAfterProcessAction,
                     _shutdownToken);
             }
 
@@ -214,9 +201,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     internal void ConfigureProcessActions(
         Func<ProcessActionConfirmation, CancellationToken, Task<bool>> confirm,
+        Func<CancellationToken, Task> refresh,
         CancellationToken shutdownToken)
     {
         _confirmProcessAction = confirm;
+        _refreshAfterProcessAction = refresh;
         _shutdownToken = shutdownToken;
     }
 
@@ -551,10 +540,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _openTabs.Clear();
     }
 
-    private void UpdateOpenTabs(MonitoringDashboardSnapshot dashboard)
+    private void UpdateOpenTabs(MonitoringSnapshot dashboard)
     {
-        Dictionary<string, ApplicationMetricSnapshot> snapshots = dashboard.InstalledApplications
-            .Concat(dashboard.PortableApplications)
+        Dictionary<string, ApplicationMetricSnapshot> snapshots = dashboard.Applications
             .ToDictionary(item => item.Application.LogicalApplicationId, StringComparer.Ordinal);
 
         foreach (ApplicationTabViewModel tab in _openTabs.Values)
@@ -566,9 +554,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             }
         }
     }
-
-    [LoggerMessage(EventId = 1, Level = LogLevel.Error, Message = "Monitoring refresh failed.")]
-    private static partial void LogMonitoringRefreshFailed(ILogger logger, Exception exception);
 
     [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Application sort preference could not be saved.")]
     private static partial void LogSortPreferenceSaveFailed(ILogger logger, Exception exception);

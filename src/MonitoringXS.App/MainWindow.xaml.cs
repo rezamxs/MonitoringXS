@@ -7,6 +7,7 @@ using Microsoft.UI.Windowing;
 using MonitoringXS.App.Appearance;
 using MonitoringXS.App.Localization;
 using MonitoringXS.App.ViewModels;
+using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
 using MonitoringXS.Platform.Windows.Accessibility;
 using Windows.Graphics;
@@ -23,7 +24,8 @@ public sealed partial class MainWindow : Window, IDisposable
         new("ms-appx:///Assets/Branding/MonitoringXS.Logo.Dark.24.png");
     private readonly CancellationTokenSource _shutdown = new();
     private readonly Dictionary<string, TabViewItem> _applicationTabs = new(StringComparer.Ordinal);
-    private readonly LiveRefreshCadence _cadence;
+    private readonly IMonitoringSnapshotSource _snapshots;
+    private readonly MonitoringRuntime _runtime;
     private readonly SettingsPageViewModel _settingsViewModel;
     private bool _disposed;
     private bool? _toolbarUsesSingleRow;
@@ -34,19 +36,24 @@ public sealed partial class MainWindow : Window, IDisposable
         HistoryPageViewModel historyViewModel,
         DiagnosticsPageViewModel diagnosticsViewModel,
         SettingsPageViewModel settingsViewModel,
-        LiveRefreshCadence cadence,
+        IMonitoringSnapshotSource snapshots,
+        MonitoringRuntime runtime,
         LocalizationService localization,
         string initialNavigationTag = "dashboard")
     {
         ViewModel = viewModel;
-        _cadence = cadence;
+        _snapshots = snapshots;
+        _runtime = runtime;
         _settingsViewModel = settingsViewModel;
         InitializeComponent();
         ViewModel.ConfigureApplicationSort(
             settings,
             settingsViewModel.SetApplicationSortAsync,
             _shutdown.Token);
-        ViewModel.ConfigureProcessActions(ConfirmProcessActionAsync, _shutdown.Token);
+        ViewModel.ConfigureProcessActions(
+            ConfirmProcessActionAsync,
+            _runtime.RequestCaptureAsync,
+            _shutdown.Token);
         HistoryWorkspace.Initialize(historyViewModel, _shutdown.Token);
         DiagnosticsWorkspace.Initialize(diagnosticsViewModel, _shutdown.Token);
         SettingsWorkspace.Initialize(settingsViewModel, _shutdown.Token);
@@ -236,7 +243,7 @@ public sealed partial class MainWindow : Window, IDisposable
         Root.Loaded -= Root_Loaded;
         try
         {
-            await RunMonitoringLoopAsync(_shutdown.Token);
+            await ConsumeSnapshotsAsync(_shutdown.Token);
         }
         catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
         {
@@ -247,12 +254,48 @@ public sealed partial class MainWindow : Window, IDisposable
         }
     }
 
-    private async Task RunMonitoringLoopAsync(CancellationToken cancellationToken)
-        => await LiveRefreshLoop.RunAsync(
-            ViewModel.RefreshAsync,
-            _cadence,
-            ViewModel.ReportRefreshFailure,
-            cancellationToken);
+    private async Task ConsumeSnapshotsAsync(CancellationToken cancellationToken)
+    {
+        await foreach (MonitoringSnapshot snapshot in _snapshots.SubscribeAsync(cancellationToken))
+        {
+            await ApplySnapshotOnUiThreadAsync(snapshot, cancellationToken);
+        }
+    }
+
+    private Task ApplySnapshotOnUiThreadAsync(
+        MonitoringSnapshot snapshot,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (DispatcherQueue.HasThreadAccess)
+        {
+            ViewModel.ApplySnapshot(snapshot);
+            return Task.CompletedTask;
+        }
+
+        TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!DispatcherQueue.TryEnqueue(() =>
+        {
+            try
+            {
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    ViewModel.ApplySnapshot(snapshot);
+                }
+
+                completion.TrySetResult();
+            }
+            catch (Exception exception)
+            {
+                completion.TrySetException(exception);
+            }
+        }))
+        {
+            completion.TrySetCanceled(cancellationToken);
+        }
+
+        return completion.Task;
+    }
 
     private void ApplicationList_ItemClick(object sender, ItemClickEventArgs args)
     {

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MonitoringXS.App.Localization;
+using MonitoringXS.Application;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
 using MonitoringXS.Platform.Windows.Broker;

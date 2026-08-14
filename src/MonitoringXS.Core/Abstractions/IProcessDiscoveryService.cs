@@ -4,5 +4,5 @@ namespace MonitoringXS.Core.Abstractions;
 
 public interface IProcessDiscoveryService
 {
-    ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken);
+    ValueTask<ProcessDiscoverySnapshot> DiscoverAsync(CancellationToken cancellationToken);
 }

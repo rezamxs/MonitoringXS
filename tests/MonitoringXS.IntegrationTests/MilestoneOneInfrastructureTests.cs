@@ -247,10 +247,10 @@ public sealed class MilestoneOneInfrastructureTests
         using Process current = Process.GetCurrentProcess();
         WindowsProcessDiscoveryService discovery = new(new ExecutableMetadataProvider());
 
-        IReadOnlyList<ProcessDescriptor> processes = await discovery.DiscoverAsync(TestContext.Current.CancellationToken);
+        ProcessDiscoverySnapshot snapshot = await discovery.DiscoverAsync(TestContext.Current.CancellationToken);
 
         ProcessDescriptor discovered = Assert.Single(
-            processes,
+            snapshot.Processes,
             item => item.InstanceId.ProcessId == current.Id);
         DateTimeOffset expected = new(current.StartTime.ToUniversalTime(), TimeSpan.Zero);
         Assert.Equal(expected, discovered.InstanceId.StartTimeUtc);

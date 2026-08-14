@@ -9,6 +9,9 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
     private const int MetadataCacheCapacity = 512;
     private static readonly TimeSpan MetadataRevalidationInterval = TimeSpan.FromMinutes(10);
     private readonly IExecutableMetadataProvider _metadataProvider;
+    private readonly Func<IReadOnlyList<NativeProcessTree.ProcessEntry>> _captureProcesses;
+    private readonly Func<IReadOnlyDictionary<int, NativeWindowSnapshot.WindowDescriptor>> _captureWindows;
+    private readonly Func<int, NativeProcessDetails.ProcessDetails?, NativeProcessDetails.ProcessDetailsReadResult> _readDetails;
     private readonly object _cacheGate = new();
     private readonly Dictionary<int, NativeProcessDetails.ProcessDetails> _processDetailsByPid = [];
     private readonly Dictionary<string, MetadataCacheEntry> _metadataByPath = new(StringComparer.OrdinalIgnoreCase);
@@ -19,17 +22,41 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
     }
 
     public WindowsProcessDiscoveryService(IExecutableMetadataProvider metadataProvider)
+        : this(
+            metadataProvider,
+            NativeProcessTree.Snapshot,
+            NativeWindowSnapshot.Capture,
+            NativeProcessDetails.Read)
     {
-        _metadataProvider = metadataProvider;
     }
 
-    public async ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken)
+    internal WindowsProcessDiscoveryService(
+        IExecutableMetadataProvider metadataProvider,
+        Func<IReadOnlyList<NativeProcessTree.ProcessEntry>> captureProcesses,
+        Func<IReadOnlyDictionary<int, NativeWindowSnapshot.WindowDescriptor>> captureWindows,
+        Func<int, NativeProcessDetails.ProcessDetails?, NativeProcessDetails.ProcessDetailsReadResult> readDetails)
     {
-        IReadOnlyDictionary<int, NativeWindowSnapshot.WindowDescriptor> windows = NativeWindowSnapshot.Capture();
+        ArgumentNullException.ThrowIfNull(metadataProvider);
+        ArgumentNullException.ThrowIfNull(captureProcesses);
+        ArgumentNullException.ThrowIfNull(captureWindows);
+        ArgumentNullException.ThrowIfNull(readDetails);
+        _metadataProvider = metadataProvider;
+        _captureProcesses = captureProcesses;
+        _captureWindows = captureWindows;
+        _readDetails = readDetails;
+    }
+
+    public async ValueTask<ProcessDiscoverySnapshot> DiscoverAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<NativeProcessTree.ProcessEntry> processSnapshot = _captureProcesses();
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyDictionary<int, NativeWindowSnapshot.WindowDescriptor> windows = _captureWindows();
         List<BasicProcessDescriptor> basics = [];
+        List<ProcessDiscoveryIssue> issues = [];
         HashSet<int> liveProcessIds = [];
 
-        foreach (NativeProcessTree.ProcessEntry process in NativeProcessTree.Snapshot())
+        foreach (NativeProcessTree.ProcessEntry process in processSnapshot)
         {
             cancellationToken.ThrowIfCancellationRequested();
             liveProcessIds.Add(process.ProcessId);
@@ -40,7 +67,22 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
                 _processDetailsByPid.TryGetValue(process.ProcessId, out cached);
             }
 
-            NativeProcessDetails.ProcessDetails? details = NativeProcessDetails.TryRead(process.ProcessId, cached);
+            NativeProcessDetails.ProcessDetailsReadResult read = _readDetails(process.ProcessId, cached);
+            NativeProcessDetails.ProcessDetails? details = read.Details;
+            if (details is null)
+            {
+                issues.Add(new(
+                    process.ProcessId,
+                    ToDescriptorIssueKind(read.Failure),
+                    "Process details could not be materialized."));
+            }
+            else if (details.ExecutablePathFailure != NativeProcessDetails.ProcessDetailsReadFailure.None)
+            {
+                issues.Add(new(
+                    process.ProcessId,
+                    ToPathIssueKind(details.ExecutablePathFailure),
+                    "Executable path is unavailable."));
+            }
             BasicProcessDescriptor? descriptor = TryDescribeBasic(process, window, details);
             if (descriptor is not null)
             {
@@ -86,6 +128,20 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
 
             ExecutableMetadata metadata = await _metadataProvider.GetMetadataAsync(path, cancellationToken);
             metadataByPath[path] = metadata;
+            if (!metadata.IsAvailable)
+            {
+                ProcessDiscoveryIssueKind kind = string.Equals(
+                    metadata.UnavailableReason,
+                    nameof(UnauthorizedAccessException),
+                    StringComparison.Ordinal)
+                        ? ProcessDiscoveryIssueKind.AccessDenied
+                        : ProcessDiscoveryIssueKind.MetadataUnavailable;
+                foreach (BasicProcessDescriptor basic in basics.Where(item =>
+                    string.Equals(item.ExecutablePath, path, StringComparison.OrdinalIgnoreCase)))
+                {
+                    issues.Add(new(basic.InstanceId.ProcessId, kind, metadata.UnavailableReason));
+                }
+            }
             lock (_cacheGate)
             {
                 if (_metadataByPath.ContainsKey(path) || _metadataByPath.Count < MetadataCacheCapacity)
@@ -107,9 +163,29 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
             }
         }
 
-        return basics.Select(item => item.ToProcessDescriptor(
+        ProcessDescriptor[] processes = basics.Select(item => item.ToProcessDescriptor(
             item.ExecutablePath is not null ? metadataByPath.GetValueOrDefault(item.ExecutablePath) : null)).ToArray();
+        return new(
+            liveProcessIds.Order().ToArray(),
+            processes,
+            issues.ToArray());
     }
+
+    private static ProcessDiscoveryIssueKind ToDescriptorIssueKind(
+        NativeProcessDetails.ProcessDetailsReadFailure failure) => failure switch
+        {
+            NativeProcessDetails.ProcessDetailsReadFailure.AccessDenied => ProcessDiscoveryIssueKind.AccessDenied,
+            NativeProcessDetails.ProcessDetailsReadFailure.ProcessExited => ProcessDiscoveryIssueKind.ProcessExited,
+            _ => ProcessDiscoveryIssueKind.DescriptorUnavailable
+        };
+
+    private static ProcessDiscoveryIssueKind ToPathIssueKind(
+        NativeProcessDetails.ProcessDetailsReadFailure failure) => failure switch
+        {
+            NativeProcessDetails.ProcessDetailsReadFailure.AccessDenied => ProcessDiscoveryIssueKind.AccessDenied,
+            NativeProcessDetails.ProcessDetailsReadFailure.ProcessExited => ProcessDiscoveryIssueKind.ProcessExited,
+            _ => ProcessDiscoveryIssueKind.ExecutablePathUnavailable
+        };
 
     private static BasicProcessDescriptor? TryDescribeBasic(
         NativeProcessTree.ProcessEntry process,
