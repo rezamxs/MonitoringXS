@@ -1,117 +1,48 @@
 # Monitoring XS
 
-Monitoring XS is a Windows desktop app I am building to make resource monitoring easier to understand.
+Monitoring XS is a Windows desktop app that groups related processes into logical applications and shows their combined resource usage. Instead of scanning dozens of Chrome or Visual Studio Code processes individually, you see one entry per application with its total CPU, memory, disk, network, and GPU usage.
 
-Windows Task Manager shows many separate processes, even when several of them belong to the same application. This project tries to group related processes and show the combined CPU, memory and disk usage of the application.
+The project is under active development. Core monitoring works; packaging and some UI features are not finished yet.
 
-The project is still under development. Some parts work, but several planned features are not finished yet.
+## Features
 
-Network and Physical disk ETW can optionally use the restricted
-`MonitoringXS.PrivilegedEtwBroker` automatically started as LocalSystem. Normal app launch
-remains `asInvoker` with no UAC; installation/setup is the only elevated step.
-Broker loss is shown honestly as `Unavailable`/`Partial`, while CPU, Memory,
-Process I/O, and GPU continue independently. See
-[architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), and
-[ADR 0004](docs/adr/0004-privileged-etw-broker-service.md).
-Development builds distinguish a missing or stopped service, connection failure,
-protocol mismatch, ETW failure, and a healthy broker with no attributed activity
-yet without exposing local paths or SIDs in normal UI.
+Working today:
 
-### Development Broker management
+- Application discovery for Win32 and MSIX apps
+- Process grouping by logical application
+- Separate tracking for portable and unregistered apps
+- CPU, memory, and process I/O metrics
+- Physical disk and network monitoring via ETW (requires Privileged Broker)
+- GPU engine and process-attributed GPU memory via performance counters
+- Beginner and advanced view modes
+- Keyboard navigation
+- SQLite metric history with 24-hour retention
+- History page with gap-aware charts
+- Process actions: End Task, End Process Tree, Open File Location, Copy Process Details
+- English and Persian localization
 
-From the repository root, use the tracked operator entry point:
+Not yet complete:
 
-```powershell
-# Install/start (requires elevated PowerShell/UAC)
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Install
+- Installer and release packaging
+- Uninstall support
+- Broader GPU driver/hardware validation
+- Stopped-application presentation and actions
 
-# Safe status check (normal PowerShell)
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Status
+## How it works
 
-# Stop/remove (requires elevated PowerShell/UAC)
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Remove
-```
+Windows creates multiple processes per application (renderer, GPU, utility, etc.). Monitoring XS classifies each process using executable metadata, package identity, and parent relationships, then aggregates metrics at the application level. Metrics that cannot be collected are shown as unavailable rather than fabricated.
 
-Install publishes the matching Release broker from the current checkout and
-creates the automatic non-interactive LocalSystem service. Status and
-`MonitoringXS.App` run normally; running the app as Administrator is not a
-substitute for installing the Broker. Network and Physical Disk remain
-`Unavailable` when the Broker is absent or stopped.
-
-## Author and direction
-
-Monitoring XS is created and maintained by [rezaalizadeh](https://github.com/rezamxs), using the public alias `rezamxs`.
-
-The project direction is simple: build a clean, accurate, low-overhead Windows application that helps people monitor logical applications instead of confusing raw process lists.
-
-Copyright (c) 2026 `rezam_xs`. The source is available under the MIT License.
-
-## Why I started this project
-
-I wanted a simpler way to see which applications are using my computer resources.
-
-Programs such as Chrome, Edge and Visual Studio Code can create many processes. Checking each process separately makes it difficult to understand the total usage of the program.
-
-Monitoring XS tries to group these related processes and show them as one application.
-
-## Current status
-
-Currently working:
-
-- running application discovery
-- Win32 and MSIX application detection
-- grouping related processes
-- separating portable and unregistered applications
-- CPU usage
-- memory usage
-- Process I/O
-- physical disk monitoring through ETW
-- network monitoring through ETW
-- GPU engine and process-attributed GPU memory through Windows performance counters (approved within the tested PDH/WDDM scope)
-- application tabs
-- beginner and advanced views
-- keyboard navigation
-- local SQLite metric history backend with bounded writes and 24-hour retention
-- History page with application/range selection and honest availability gaps
-- gap-aware History charts with fixed 0-100% CPU/GPU domains, bounded dynamic
-  byte/rate domains, single-point markers, UTC ordering, and 360-point caps
-- selected-process End Task, bounded End Process Tree, Open File Location, and
-  safe Copy Process Details actions
-
-Not finished yet:
-
-- broader GPU driver and hardware validation
-- stopped-application tab presentation
-- graceful close, restart, launch, and stopped-application actions
-- uninstall support
-- installer and release package
-- final UI pages and testing
-
-Physical disk and network monitoring may need Administrator access on some Windows systems. Without that permission, the application should show Access denied instead of displaying a fake value.
-
-## Validation
-
-The current repository has:
-
-- a successful Release build
-- 358 passing tests
-- no failed or skipped tests
-- validated ETW physical-disk monitoring on the development machine
-- accepted elevated ETW network attribution with controlled Microsoft Edge traffic on the development machine, including retained-helper totals and shared-session cleanup
-- validated real GPU engine and process-memory values with VLC on one dual-adapter development machine
-- validated that a controlled Edge WebGL workload is attributed to Edge while GPU counters remain unavailable on this machine
-
-These results only describe the current development environment and do not mean the application is ready for a public release. SQLite history and History page validation are recorded in `docs/VALIDATION.md`.
+Physical disk and network monitoring use a restricted LocalSystem service (`PrivilegedEtwBroker`) because kernel ETW requires elevated access. The main app runs unelevated. If the broker is not installed or stops, those metrics show as unavailable while CPU, memory, process I/O, and GPU continue working. See [security documentation](docs/SECURITY.md) and [ADR 0004](docs/adr/0004-privileged-etw-broker-service.md) for details.
 
 ## Requirements
 
-- Windows 10 build 17763 or later; Windows 11 recommended for development.
-- x64 machine (ARM64 compatibility is an architectural target).
-- .NET 10 SDK.
-- Visual Studio 2026 with the **WinUI application development** workload and a current Windows SDK.
-- Developer Mode for local unpackaged/debug deployment where required.
+- Windows 10 build 17763+ or Windows 11
+- x64 (ARM64 is an architectural target, not yet tested)
+- .NET 10 SDK
+- Visual Studio 2026 with **WinUI application development** workload and current Windows SDK
+- Developer Mode enabled for local debug deployment
 
-## Build and test
+## Build and run
 
 ```powershell
 dotnet restore MonitoringXS.sln
@@ -119,45 +50,55 @@ dotnet build MonitoringXS.sln -c Release --no-restore
 dotnet test MonitoringXS.sln -c Release --no-build
 ```
 
-Run the app from Visual Studio using the x64 target, or:
+Run from Visual Studio (x64 target) or:
 
 ```powershell
 dotnet run --project src/MonitoringXS.App/MonitoringXS.App.csproj -c Debug -p:Platform=x64
 ```
 
-Packaging profiles will be added before the release milestone. Some monitoring data can be unavailable for protected or higher-integrity processes. The app should show that limitation instead of requesting permanent elevation.
+To install the Privileged Broker for disk and network metrics, run from an elevated PowerShell:
 
-## Architecture and documentation
+```powershell
+.\scripts\privileged-broker\Manage-PrivilegedBroker.ps1 -Mode Install
+```
+
+See [development setup](docs/DEVELOPMENT.md) and [installer documentation](docs/INSTALLER.md) for additional options.
+
+## Project structure
+
+- `MonitoringXS.Core` — immutable models and interfaces
+- `MonitoringXS.Application` — orchestration and use cases
+- `MonitoringXS.Platform.Windows` — Windows discovery, metadata, P/Invoke
+- `MonitoringXS.Collectors` — metric sampling and aggregation
+- `MonitoringXS.Storage` — SQLite persistence and retention
+- `MonitoringXS.DesignSystem` — Precision Glass visual tokens
+- `MonitoringXS.App` — WinUI views, ViewModels, navigation
+- `MonitoringXS.ElevatedHelper` — on-demand privileged operations
+- `MonitoringXS.PrivilegedBroker` — optional ETW broker service
+
+Full architecture details are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Current status
+
+The repository builds cleanly in Release configuration with 358 passing tests. ETW disk and network attribution, GPU counters, and SQLite history have been validated on the development machine. These results reflect one environment and do not constitute a release qualification. See [validation results](docs/VALIDATION.md) for specifics.
+
+Some monitoring data may be unavailable for protected or higher-integrity processes. The app reports this honestly instead of requesting permanent elevation.
+
+## Documentation
 
 - [Product specification](docs/PRODUCT_SPEC.md)
 - [Architecture](docs/ARCHITECTURE.md)
-- [Engineering style](docs/ENGINEERING_STYLE.md)
-- [Logical applications and honest metrics decision](docs/adr/0001-logical-applications-and-honest-metrics.md)
-- [Shared kernel metrics session decision](docs/adr/0002-shared-kernel-metrics-session.md)
-- [Per-user settings decision](docs/adr/0006-versioned-per-user-settings.md)
-- [Application attribution](docs/APPLICATION_ATTRIBUTION.md)
 - [Metric semantics](docs/METRICS.md)
-- [Precision Glass design system](docs/DESIGN_SYSTEM.md)
+- [Application attribution](docs/APPLICATION_ATTRIBUTION.md)
 - [Security](docs/SECURITY.md) and [privacy](docs/PRIVACY.md)
 - [Performance](docs/PERFORMANCE.md)
+- [Design system](docs/DESIGN_SYSTEM.md)
 - [Milestones](docs/MILESTONES.md)
-- [Development setup](docs/DEVELOPMENT.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
-- [Latest validation results](docs/VALIDATION.md)
-- [Windows installer](docs/INSTALLER.md)
-
-## Unpackaged developer publish
-
-After the first successful build, an unpackaged self-contained x64 developer output can be produced with:
-
-```powershell
-dotnet publish src/MonitoringXS.App/MonitoringXS.App.csproj -c Release -p:Platform=x64 -r win-x64 --self-contained true
-```
-
-The production-oriented x64 MSI build and lifecycle are documented in
-[Windows installer](docs/INSTALLER.md). Release signing and public certificate
-acquisition remain separate work and are not claimed.
+- [Engineering style](docs/ENGINEERING_STYLE.md)
 
 ## Contributing
 
-Issues and focused pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md). Monitoring XS is licensed under the [MIT License](LICENSE).
+Issues and focused pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) before submitting.
+
+Created and maintained by [rezamxs](https://github.com/rezamxs). Licensed under the [MIT License](LICENSE).
