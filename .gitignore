@@ -30,4 +30,3 @@ context-packs/
 *.cobertura.xml
 TestResults/Coverage/
 .artifacts/sbom/
-/.agents/skills/ui-styling/scripts/tests/coverage-ui.json

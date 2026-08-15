@@ -52,7 +52,7 @@ rule:
     - pattern: new ProcessStartInfo("pwsh.exe", $$$)
 note: >
   Accidental use of shell/process invocation patterns.
-  Per AGENTS.md: "Do not execute strings through a shell when a direct Windows API exists."
+  Per CONTRIBUTING.md: "Do not execute strings through a shell when a direct Windows API exists."
   Elevated operations must go through the Broker security boundary.
 severity: error
 message: "Direct shell invocation detected — use Windows API or Broker security boundary instead"

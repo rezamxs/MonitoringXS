@@ -8,11 +8,11 @@ namespace MonitoringXS.ArchitectureTests;
 
 /// <summary>
 /// Machine-enforced architecture boundary tests for the Monitoring XS solution.
-/// Rules are derived from the actual project reference graph documented in AGENTS.md.
+/// Rules are derived from the actual project reference graph documented in docs/ARCHITECTURE.md.
 /// </summary>
 public sealed class ArchitectureBoundaryTests
 {
-    // ponytail: Architecture loaded once per test class; ArchUnitNET caches the model internally.
+    // Architecture loaded once per test class; ArchUnitNET caches the model internally.
     private static readonly Architecture Architecture = new ArchLoader()
         .LoadAssembly(typeof(MonitoringXS.Core.Models.ProcessDescriptor).Assembly)
         .LoadAssembly(typeof(MonitoringXS.Application.MonitoringCoordinator).Assembly)
