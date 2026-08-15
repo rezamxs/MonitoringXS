@@ -2,7 +2,7 @@
 
 Monitoring XS is a Windows desktop app that groups related processes into logical applications and shows their combined resource usage. Instead of scanning dozens of Chrome or Visual Studio Code processes individually, you see one entry per application with its total CPU, memory, disk, network, and GPU usage.
 
-The project is under active development. Core monitoring works; packaging and some UI features are not finished yet.
+The project is under active development. Core monitoring, installer packaging, and most UI features work; some validation and polish remain open.
 
 ## Features
 
@@ -20,13 +20,13 @@ Working today:
 - History page with gap-aware charts
 - Process actions: End Task, End Process Tree, Open File Location, Copy Process Details
 - English and Persian localization
+- MSI installer with install, repair, upgrade, and uninstall ([details](docs/INSTALLER.md))
 
 Not yet complete:
 
-- Installer and release packaging
-- Uninstall support
 - Broader GPU driver/hardware validation
 - Stopped-application presentation and actions
+- Remaining UI pages and high-DPI / High Contrast validation
 
 ## How it works
 
@@ -80,7 +80,7 @@ Full architecture details are in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Current status
 
-The repository builds cleanly in Release configuration with 358 passing tests. ETW disk and network attribution, GPU counters, and SQLite history have been validated on the development machine. These results reflect one environment and do not constitute a release qualification. See [validation results](docs/VALIDATION.md) for specifics.
+The repository builds cleanly in Release configuration. Current validation results are documented in [docs/VALIDATION.md](docs/VALIDATION.md). ETW disk and network attribution, GPU counters, and SQLite history have been validated on the development machine. These results reflect one environment and do not constitute a release qualification.
 
 Some monitoring data may be unavailable for protected or higher-integrity processes. The app reports this honestly instead of requesting permanent elevation.
 
