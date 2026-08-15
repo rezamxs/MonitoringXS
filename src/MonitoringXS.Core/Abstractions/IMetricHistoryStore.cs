@@ -10,6 +10,11 @@ public interface IMetricHistoryStore : IDisposable, IAsyncDisposable
         IReadOnlyList<ApplicationMetricSnapshot> snapshots,
         CancellationToken cancellationToken);
 
+    ValueTask<MetricHistoryWriteResult> EnqueueAsync(
+        MetricHistoryCapture capture,
+        CancellationToken cancellationToken) =>
+        EnqueueAsync(capture.Applications, cancellationToken);
+
     ValueTask FlushAsync(CancellationToken cancellationToken);
 
     ValueTask<MetricHistoryApplicationsResult> ListApplicationsAsync(

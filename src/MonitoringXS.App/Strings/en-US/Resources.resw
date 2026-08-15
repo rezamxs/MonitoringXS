@@ -202,9 +202,12 @@
   <data name="HistoryCancelled" xml:space="preserve"><value>History request cancelled.</value></data>
   <data name="HistoryQueryFailed" xml:space="preserve"><value>History query failed.</value></data>
   <data name="HistoryApplicationNotFound" xml:space="preserve"><value>Application not found.</value></data>
+  <data name="Range5Minutes" xml:space="preserve"><value>5 minutes</value></data>
   <data name="Range15Minutes" xml:space="preserve"><value>15 minutes</value></data>
   <data name="Range1Hour" xml:space="preserve"><value>1 hour</value></data>
+  <data name="Range3Hours" xml:space="preserve"><value>3 hours</value></data>
   <data name="Range6Hours" xml:space="preserve"><value>6 hours</value></data>
+  <data name="Range12Hours" xml:space="preserve"><value>12 hours</value></data>
   <data name="Range24Hours" xml:space="preserve"><value>24 hours</value></data>
   <data name="MetricCpu" xml:space="preserve"><value>CPU</value></data>
   <data name="MetricWorkingSet" xml:space="preserve"><value>Working Set memory</value></data>

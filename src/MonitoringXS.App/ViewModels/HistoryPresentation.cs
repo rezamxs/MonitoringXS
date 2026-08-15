@@ -118,7 +118,7 @@ internal static class HistorySeriesPresentation
         {
             DateTimeOffset timestampUtc = point.TimestampUtc.ToUniversalTime();
             bool lifetimeChanged = lifetime is not null
-                && !string.Equals(lifetime, point.ProcessLifetimeKey, StringComparison.Ordinal);
+                    && !string.Equals(lifetime, point.ContinuityKey, StringComparison.Ordinal);
             bool timeGap = previousTimestampUtc is { } previous
                 && timestampUtc - previous > gapThreshold;
             if (lifetimeChanged || timeGap)
@@ -137,7 +137,7 @@ internal static class HistorySeriesPresentation
                     ? measured
                     : null;
             samples.Add(new(timestampUtc, value));
-            lifetime = point.ProcessLifetimeKey;
+                lifetime = point.ContinuityKey;
             previousTimestampUtc = timestampUtc;
         }
 

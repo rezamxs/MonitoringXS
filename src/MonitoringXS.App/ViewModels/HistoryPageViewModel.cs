@@ -57,7 +57,7 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
             chart.Relocalize(_localization);
         }
         BuildRanges();
-        SelectedRange = Ranges[1];
+        SelectedRange = Ranges.Single(range => range.Duration == TimeSpan.FromHours(1));
         _localization.LanguageChanged += Localization_LanguageChanged;
     }
 
@@ -167,9 +167,12 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
         TimeSpan selected = SelectedRange.Duration;
         Ranges =
         [
+            new(_localization.Get(LocalizationKeys.Range5Minutes), TimeSpan.FromMinutes(5)),
             new(_localization.Get(LocalizationKeys.Range15Minutes), TimeSpan.FromMinutes(15)),
             new(_localization.Get(LocalizationKeys.Range1Hour), TimeSpan.FromHours(1)),
+            new(_localization.Get(LocalizationKeys.Range3Hours), TimeSpan.FromHours(3)),
             new(_localization.Get(LocalizationKeys.Range6Hours), TimeSpan.FromHours(6)),
+            new(_localization.Get(LocalizationKeys.Range12Hours), TimeSpan.FromHours(12)),
             new(_localization.Get(LocalizationKeys.Range24Hours), TimeSpan.FromHours(24))
         ];
         SelectedRange = Ranges.First(item => item.Duration == selected);

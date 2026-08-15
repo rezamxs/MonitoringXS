@@ -80,7 +80,8 @@ Older builds could synchronously redraw the CPU sparkline from `SizeChanged` whi
 
 Close Monitoring XS before inspecting `%LOCALAPPDATA%\MonitoringXS\history.db`.
 The backend automatically quarantines a corrupt file as `.corrupt-*` and creates
-a new version-2 database. Locked/read-only/full-disk failures are reported in
+a new version-3 database. A normal v2-to-v3 migration failure rolls back and
+preserves the original database; it is not treated as corruption. Locked/read-only/full-disk failures are reported in
 storage diagnostics and live metrics continue without fabricated zeros. Do not
 manually overwrite the database while Monitoring XS is running.
 

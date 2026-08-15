@@ -17,13 +17,46 @@ public enum MetricHistoryMetric
 
 public sealed record MetricHistoryPoint(
     string LogicalApplicationId,
-    string ProcessLifetimeKey,
+    long? ApplicationSessionId,
+    string? LegacyContinuityKey,
     DateTimeOffset TimestampUtc,
     MetricHistoryMetric Metric,
     double? Value,
     MetricAvailability Availability,
     string? Detail,
-    bool IsDownsampled);
+    bool IsDownsampled)
+{
+    public MetricHistoryPoint(
+        string logicalApplicationId,
+        string legacyContinuityKey,
+        DateTimeOffset timestampUtc,
+        MetricHistoryMetric metric,
+        double? value,
+        MetricAvailability availability,
+        string? detail,
+        bool isDownsampled)
+        : this(
+            logicalApplicationId,
+            null,
+            legacyContinuityKey,
+            timestampUtc,
+            metric,
+            value,
+            availability,
+            detail,
+            isDownsampled)
+    {
+    }
+
+    public string ContinuityKey => ApplicationSessionId is long sessionId
+        ? $"session:{sessionId}"
+        : $"legacy:{LegacyContinuityKey}";
+}
+
+public sealed record MetricHistoryCapture(
+    DateTimeOffset ObservedAtUtc,
+    ProcessDiscoverySnapshot Discovery,
+    IReadOnlyList<ApplicationMetricSnapshot> Applications);
 
 public sealed record MetricHistoryWriteResult(
     bool Accepted,

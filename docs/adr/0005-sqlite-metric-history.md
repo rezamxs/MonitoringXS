@@ -10,11 +10,13 @@ owns SQLite. The coordinator makes a best-effort bounded enqueue after a live
 capture. Storage failure, queue overflow, cancellation, or disposal never
 interrupts CPU, memory, Process I/O, Physical Disk, Network, or GPU collection.
 
-Schema version 2 uses a migration table and `PRAGMA user_version`. Applications
-are keyed by stable logical application ID. Samples additionally store a
-SHA-256 process-lifetime key derived from sorted PID plus UTC `StartTimeUtc`
-values. A relaunch therefore remains queryable under the same logical
-application without merging unrelated PID lifetimes.
+Schema version 3 uses a migration table and `PRAGMA user_version`. Applications
+are keyed by stable logical application ID. Each observed run has one application
+session; each OS lifetime has one process session keyed uniquely by PID plus UTC
+`StartTimeUtc`. Executable path remains optional metadata. Samples retain logical
+application ID and optionally reference an application session. Transactional v2
+migration preserves every old sample, renames its SHA-256 hash to
+`legacy_continuity_key`, leaves `application_session_id` null, and creates no fake sessions.
 
 Raw rows are retained for one hour. Maintenance groups older raw rows into
 five-minute buckets until the default 24-hour retention cutoff. Bucket values
@@ -24,15 +26,16 @@ remain SQL `NULL`. Cumulative totals are not averaged into rate history. A 64 Mi
 downsampled rows first, then raw rows, with a diagnostic.
 
 Writes use parameterized SQL, WAL when supported, `synchronous=NORMAL`, a
-five-second busy timeout, bounded queue capacity 256, and transactions of at
-most 32 snapshots. Queries are parameterized and ordered by UTC timestamp.
+five-second busy timeout, bounded capture queue capacity 256, and one transaction
+per accepted snapshot. Session heartbeats are coalesced to 30 seconds. Queries are parameterized and ordered by UTC timestamp.
 Corrupt databases are quarantined as `.corrupt-*` and recreated. Locked,
 read-only, disk-full, newer-schema, and other SQLite failures are surfaced in
 diagnostics; no zero is fabricated.
 
 ## Privacy and security
 
-Only application metadata, lifetime keys, numeric metric values, UTC timestamps,
+Only application metadata, session timestamps/reasons, PID/start identity,
+process name, optional executable path/publisher, numeric metric values, UTC timestamps,
 availability, and diagnostic detail capped at 512 characters are persisted. Packet payloads,
 URLs, hosts, IPs, ports, command lines, secrets, and raw ETW events are not
 stored. The database is local and follows the user's local application-data

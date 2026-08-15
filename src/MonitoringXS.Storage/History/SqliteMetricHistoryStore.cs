@@ -10,13 +10,14 @@ public sealed class SqliteMetricHistoryStore :
     IMetricHistoryStore,
     IMetricHistoryRetentionController
 {
-    public const int SchemaVersion = 2;
+    public const int SchemaVersion = 3;
     private const int RawSampleKind = 0;
     private const int DownsampledSampleKind = 1;
     private const int SqliteCorrupt = 11;
     private const int SqliteNotADatabase = 26;
     private readonly SqliteMetricHistoryOptions _options;
-    private readonly Queue<IReadOnlyList<ApplicationMetricSnapshot>> _queue = new();
+    private readonly Queue<MetricHistoryCapture> _queue = new();
+    private readonly SqliteHistorySessionReconciler _sessionReconciler = new();
     private readonly object _queueGate = new();
     private readonly SemaphoreSlim _signal = new(0);
     private readonly CancellationTokenSource _shutdown = new();
@@ -73,7 +74,7 @@ public sealed class SqliteMetricHistoryStore :
 
     public TimeSpan Retention => TimeSpan.FromTicks(Interlocked.Read(ref _retentionTicks));
 
-    public ValueTask<MetricHistoryWriteResult> EnqueueAsync(
+    public async ValueTask<MetricHistoryWriteResult> EnqueueAsync(
         IReadOnlyList<ApplicationMetricSnapshot> snapshots,
         CancellationToken cancellationToken)
     {
@@ -81,41 +82,75 @@ public sealed class SqliteMetricHistoryStore :
         ArgumentNullException.ThrowIfNull(snapshots);
         if (snapshots.Count == 0)
         {
-            return ValueTask.FromResult(MetricHistoryWriteResult.Success);
+            return MetricHistoryWriteResult.Success;
         }
 
-        ApplicationMetricSnapshot[] copy = snapshots.ToArray();
+        bool accepted = true;
+        foreach (ApplicationMetricSnapshot[] captureApplications in snapshots
+            .GroupBy(snapshot => snapshot.CapturedAt)
+            .Select(group => group.ToArray()))
+        {
+            ProcessDescriptor[] processes = captureApplications
+                .SelectMany(snapshot => snapshot.Processes)
+                .DistinctBy(process => process.InstanceId)
+                .ToArray();
+            MetricHistoryWriteResult result = await EnqueueAsync(
+                new MetricHistoryCapture(
+                    captureApplications[0].CapturedAt,
+                    new ProcessDiscoverySnapshot(
+                        processes.Select(process => process.InstanceId.ProcessId).Distinct().ToArray(),
+                        processes,
+                        []),
+                    captureApplications),
+                cancellationToken).ConfigureAwait(false);
+            accepted &= result.Accepted;
+        }
+
+        return accepted
+            ? MetricHistoryWriteResult.Success
+            : MetricHistoryWriteResult.DroppedResult("The history write queue is full.");
+    }
+
+    public ValueTask<MetricHistoryWriteResult> EnqueueAsync(
+        MetricHistoryCapture capture,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(capture);
+        ArgumentNullException.ThrowIfNull(capture.Discovery);
+        ArgumentNullException.ThrowIfNull(capture.Applications);
+        MetricHistoryCapture copy = capture with
+        {
+            ObservedAtUtc = capture.ObservedAtUtc.ToUniversalTime(),
+            Discovery = capture.Discovery with
+            {
+                ObservedProcessIds = capture.Discovery.ObservedProcessIds.ToArray(),
+                Processes = capture.Discovery.Processes.ToArray(),
+                Issues = capture.Discovery.Issues.ToArray()
+            },
+            Applications = capture.Applications.ToArray()
+        };
         lock (_queueGate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            bool accepted = true;
-            foreach (ApplicationMetricSnapshot[] batch in copy
-                .Chunk(_options.BatchSize)
-                .Select(chunk => chunk.ToArray()))
+            if (_queue.Count >= _options.QueueCapacity)
             {
-                if (_queue.Count >= _options.QueueCapacity)
-                {
-                    Interlocked.Increment(ref _queueDrops);
-                    SetError($"History write queue is full; dropped batch of {batch.Length} samples.");
-                    accepted = false;
-                    continue;
-                }
-
-                if (_queue.Count == 0 && !_writing)
-                {
-                    _currentDrain = new TaskCompletionSource(
-                        TaskCreationOptions.RunContinuationsAsynchronously);
-                }
-
-                _queue.Enqueue(batch);
-                Interlocked.Increment(ref _batchesEnqueued);
-                _signal.Release();
+                Interlocked.Increment(ref _queueDrops);
+                SetError($"History write queue is full; dropped capture of {copy.Applications.Count} samples.");
+                return ValueTask.FromResult(
+                    MetricHistoryWriteResult.DroppedResult("The history write queue is full."));
             }
 
-            return ValueTask.FromResult(
-                accepted
-                    ? MetricHistoryWriteResult.Success
-                    : MetricHistoryWriteResult.DroppedResult("The history write queue is full."));
+            if (_queue.Count == 0 && !_writing)
+            {
+                _currentDrain = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+
+            _queue.Enqueue(copy);
+            Interlocked.Increment(ref _batchesEnqueued);
+            _signal.Release();
+            return ValueTask.FromResult(MetricHistoryWriteResult.Success);
         }
     }
 
@@ -179,7 +214,7 @@ public sealed class SqliteMetricHistoryStore :
             string column = MetricColumn(metric);
             await using SqliteCommand command = connection.CreateCommand();
             command.CommandText = $"""
-                SELECT process_lifetime_key, timestamp_utc, {column}_value,
+                SELECT application_session_id, legacy_continuity_key, timestamp_utc, {column}_value,
                        {column}_availability, {column}_detail, sample_kind
                 FROM metric_samples
                 WHERE logical_application_id = $application
@@ -199,13 +234,14 @@ public sealed class SqliteMetricHistoryStore :
             {
                 points.Add(new(
                     logicalApplicationId,
-                    reader.GetString(0),
-                    ParseDatabaseTimestamp(reader.GetString(1)),
+                    reader.IsDBNull(0) ? null : reader.GetInt64(0),
+                    reader.IsDBNull(1) ? null : reader.GetString(1),
+                    ParseDatabaseTimestamp(reader.GetString(2)),
                     metric,
-                    reader.IsDBNull(2) ? null : reader.GetDouble(2),
-                    (MetricAvailability)reader.GetInt32(3),
-                    reader.IsDBNull(4) ? null : reader.GetString(4),
-                    reader.GetInt32(5) == DownsampledSampleKind));
+                    reader.IsDBNull(3) ? null : reader.GetDouble(3),
+                    (MetricAvailability)reader.GetInt32(4),
+                    reader.IsDBNull(5) ? null : reader.GetString(5),
+                    reader.GetInt32(6) == DownsampledSampleKind));
             }
 
             return new(points, true);
@@ -319,7 +355,7 @@ public sealed class SqliteMetricHistoryStore :
                 return;
             }
 
-            IReadOnlyList<ApplicationMetricSnapshot>? batch;
+            MetricHistoryCapture capture;
             lock (_queueGate)
             {
                 if (_queue.Count == 0)
@@ -332,15 +368,15 @@ public sealed class SqliteMetricHistoryStore :
                     continue;
                 }
 
-                batch = _queue.Dequeue();
+                capture = _queue.Dequeue();
                 _writing = true;
             }
 
             try
             {
-                await WriteBatchAsync(batch, _shutdown.Token).ConfigureAwait(false);
+                int written = await WriteBatchAsync(capture, _shutdown.Token).ConfigureAwait(false);
                 Interlocked.Increment(ref _batchesWritten);
-                Interlocked.Add(ref _samplesWritten, batch.Count);
+                Interlocked.Add(ref _samplesWritten, written);
             }
             catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
             {
@@ -396,8 +432,8 @@ public sealed class SqliteMetricHistoryStore :
         }
     }
 
-    private async Task WriteBatchAsync(
-        IReadOnlyList<ApplicationMetricSnapshot> snapshots,
+    private async Task<int> WriteBatchAsync(
+        MetricHistoryCapture capture,
         CancellationToken cancellationToken)
     {
         await using SqliteConnection connection = await OpenInitializedConnectionAsync(
@@ -423,11 +459,27 @@ public sealed class SqliteMetricHistoryStore :
                 updated_utc = excluded.updated_utc;
             """;
 
+        ApplicationMetricSnapshot[] distinctApplications = capture.Applications
+            .DistinctBy(snapshot => snapshot.Application.LogicalApplicationId)
+            .ToArray();
+        foreach (ApplicationMetricSnapshot snapshot in distinctApplications)
+        {
+            SetApplicationParameters(applicationCommand, snapshot, snapshot.CapturedAt.ToUniversalTime());
+            await applicationCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        SqliteHistorySessionReconciler.SessionReconciliation reconciliation =
+            await _sessionReconciler.ReconcileAsync(
+            connection,
+            transaction,
+            capture with { Applications = distinctApplications },
+            cancellationToken).ConfigureAwait(false);
+
         await using SqliteCommand sampleCommand = connection.CreateCommand();
         sampleCommand.Transaction = transaction;
         sampleCommand.CommandText = """
             INSERT INTO metric_samples (
-                logical_application_id, process_lifetime_key, timestamp_utc,
+                logical_application_id, application_session_id, legacy_continuity_key, timestamp_utc,
                 sample_kind, bucket_seconds, completeness_availability,
                 cpu_value, cpu_availability, cpu_detail,
                 working_set_value, working_set_availability, working_set_detail,
@@ -441,7 +493,7 @@ public sealed class SqliteMetricHistoryStore :
                 gpu_dedicated_value, gpu_dedicated_availability, gpu_dedicated_detail,
                 gpu_shared_value, gpu_shared_availability, gpu_shared_detail)
             VALUES (
-                $id, $lifetime, $timestamp, $sample_kind, $bucket_seconds, $completeness,
+                $id, $session_id, NULL, $timestamp, $sample_kind, $bucket_seconds, $completeness,
                 $cpu_value, $cpu_availability, $cpu_detail,
                 $working_set_value, $working_set_availability, $working_set_detail,
                 $process_io_read_value, $process_io_read_availability, $process_io_read_detail,
@@ -452,21 +504,26 @@ public sealed class SqliteMetricHistoryStore :
                 $network_upload_value, $network_upload_availability, $network_upload_detail,
                 $gpu_util_value, $gpu_util_availability, $gpu_util_detail,
                 $gpu_dedicated_value, $gpu_dedicated_availability, $gpu_dedicated_detail,
-                $gpu_shared_value, $gpu_shared_availability, $gpu_shared_detail);
+                $gpu_shared_value, $gpu_shared_availability, $gpu_shared_detail)
+            ON CONFLICT DO NOTHING;
             """;
 
-        foreach (ApplicationMetricSnapshot snapshot in snapshots)
+        int written = 0;
+        foreach (ApplicationMetricSnapshot snapshot in distinctApplications)
         {
             DateTimeOffset timestamp = snapshot.CapturedAt.ToUniversalTime();
-            string lifetime = ProcessLifetimeKey(snapshot);
-            SetApplicationParameters(applicationCommand, snapshot, timestamp);
-            await applicationCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-            SetSampleParameters(sampleCommand, snapshot, lifetime, timestamp);
-            await sampleCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            SetSampleParameters(
+                sampleCommand,
+                snapshot,
+                reconciliation.SessionIds[snapshot.Application.LogicalApplicationId],
+                timestamp);
+            written += await sampleCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        _sessionReconciler.Accept(reconciliation);
         Interlocked.Exchange(ref _databaseBytes, DatabaseBytes());
+        return written;
     }
 
     private async Task RunCleanupIfDueAsync(CancellationToken cancellationToken)
@@ -508,7 +565,7 @@ public sealed class SqliteMetricHistoryStore :
         downsample.Transaction = transaction;
         downsample.CommandText = """
             INSERT INTO metric_samples (
-                logical_application_id, process_lifetime_key, timestamp_utc,
+                logical_application_id, application_session_id, legacy_continuity_key, timestamp_utc,
                 sample_kind, bucket_seconds, completeness_availability,
                 cpu_value, cpu_availability, cpu_detail,
                 working_set_value, working_set_availability, working_set_detail,
@@ -521,7 +578,7 @@ public sealed class SqliteMetricHistoryStore :
                 gpu_util_value, gpu_util_availability, gpu_util_detail,
                 gpu_dedicated_value, gpu_dedicated_availability, gpu_dedicated_detail,
                 gpu_shared_value, gpu_shared_availability, gpu_shared_detail)
-            SELECT logical_application_id, process_lifetime_key,
+            SELECT logical_application_id, application_session_id, legacy_continuity_key,
                 MIN(timestamp_utc),
                 $sample_kind, $bucket_seconds, MAX(completeness_availability),
                 AVG(cpu_value), MAX(cpu_availability), $detail,
@@ -539,7 +596,7 @@ public sealed class SqliteMetricHistoryStore :
             WHERE sample_kind = $raw_kind
               AND timestamp_utc < $raw_cutoff
               AND timestamp_utc >= $retention_cutoff
-            GROUP BY logical_application_id, process_lifetime_key,
+            GROUP BY logical_application_id, application_session_id, legacy_continuity_key,
                 (CAST(strftime('%s', timestamp_utc) AS INTEGER)
                     / $bucket_seconds);
             """;
@@ -572,6 +629,17 @@ public sealed class SqliteMetricHistoryStore :
             """;
         deleteRetention.Parameters.AddWithValue("$retention_cutoff", retentionCutoff);
         await deleteRetention.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+        await using SqliteCommand pruneSessions = connection.CreateCommand();
+        pruneSessions.Transaction = transaction;
+        pruneSessions.CommandText = """
+            DELETE FROM application_sessions
+            WHERE ended_observed_utc IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM metric_samples
+                  WHERE metric_samples.application_session_id = application_sessions.id);
+            """;
+        await pruneSessions.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
         if (DatabaseBytes() > _options.MaximumDatabaseBytes)
@@ -766,6 +834,135 @@ public sealed class SqliteMetricHistoryStore :
                 VALUES (2, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
                 PRAGMA user_version = 2;
                 """, cancellationToken);
+            version = 2;
+        }
+
+        if (version < 3)
+        {
+            await ExecuteAsync(connection, transaction, """
+                CREATE TABLE application_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    logical_application_id TEXT NOT NULL
+                        REFERENCES applications(logical_application_id) ON DELETE CASCADE,
+                    first_observed_utc TEXT NOT NULL,
+                    last_observed_utc TEXT NOT NULL,
+                    ended_observed_utc TEXT,
+                    end_reason TEXT);
+                CREATE UNIQUE INDEX ux_application_sessions_open
+                    ON application_sessions(logical_application_id)
+                    WHERE ended_observed_utc IS NULL;
+                CREATE INDEX ix_application_sessions_app_time
+                    ON application_sessions(logical_application_id, first_observed_utc);
+
+                CREATE TABLE process_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    application_session_id INTEGER NOT NULL
+                        REFERENCES application_sessions(id) ON DELETE CASCADE,
+                    pid INTEGER NOT NULL,
+                    process_start_utc TEXT NOT NULL,
+                    first_observed_utc TEXT NOT NULL,
+                    last_observed_utc TEXT NOT NULL,
+                    ended_observed_utc TEXT,
+                    process_name TEXT NOT NULL,
+                    executable_path TEXT,
+                    publisher TEXT,
+                    end_reason TEXT,
+                    UNIQUE(pid, process_start_utc));
+                CREATE INDEX ix_process_sessions_application
+                    ON process_sessions(application_session_id, ended_observed_utc);
+                CREATE INDEX ix_process_sessions_pid
+                    ON process_sessions(pid, process_start_utc);
+
+                CREATE TABLE metric_samples_v3 (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    logical_application_id TEXT NOT NULL
+                        REFERENCES applications(logical_application_id) ON DELETE CASCADE,
+                    application_session_id INTEGER
+                        REFERENCES application_sessions(id) ON DELETE SET NULL,
+                    legacy_continuity_key TEXT,
+                    timestamp_utc TEXT NOT NULL,
+                    completeness_availability INTEGER NOT NULL,
+                    cpu_value REAL,
+                    cpu_availability INTEGER NOT NULL,
+                    cpu_detail TEXT,
+                    working_set_value REAL,
+                    working_set_availability INTEGER NOT NULL,
+                    working_set_detail TEXT,
+                    process_io_read_value REAL,
+                    process_io_read_availability INTEGER NOT NULL,
+                    process_io_read_detail TEXT,
+                    process_io_write_value REAL,
+                    process_io_write_availability INTEGER NOT NULL,
+                    process_io_write_detail TEXT,
+                    disk_read_value REAL,
+                    disk_read_availability INTEGER NOT NULL,
+                    disk_read_detail TEXT,
+                    disk_write_value REAL,
+                    disk_write_availability INTEGER NOT NULL,
+                    disk_write_detail TEXT,
+                    network_download_value REAL,
+                    network_download_availability INTEGER NOT NULL,
+                    network_download_detail TEXT,
+                    network_upload_value REAL,
+                    network_upload_availability INTEGER NOT NULL,
+                    network_upload_detail TEXT,
+                    gpu_util_value REAL,
+                    gpu_util_availability INTEGER NOT NULL,
+                    gpu_util_detail TEXT,
+                    gpu_dedicated_value REAL,
+                    gpu_dedicated_availability INTEGER NOT NULL,
+                    gpu_dedicated_detail TEXT,
+                    gpu_shared_value REAL,
+                    gpu_shared_availability INTEGER NOT NULL,
+                    gpu_shared_detail TEXT,
+                    sample_kind INTEGER NOT NULL DEFAULT 0,
+                    bucket_seconds INTEGER NOT NULL DEFAULT 0);
+
+                INSERT INTO metric_samples_v3 (
+                    id, logical_application_id, application_session_id,
+                    legacy_continuity_key, timestamp_utc, completeness_availability,
+                    cpu_value, cpu_availability, cpu_detail,
+                    working_set_value, working_set_availability, working_set_detail,
+                    process_io_read_value, process_io_read_availability, process_io_read_detail,
+                    process_io_write_value, process_io_write_availability, process_io_write_detail,
+                    disk_read_value, disk_read_availability, disk_read_detail,
+                    disk_write_value, disk_write_availability, disk_write_detail,
+                    network_download_value, network_download_availability, network_download_detail,
+                    network_upload_value, network_upload_availability, network_upload_detail,
+                    gpu_util_value, gpu_util_availability, gpu_util_detail,
+                    gpu_dedicated_value, gpu_dedicated_availability, gpu_dedicated_detail,
+                    gpu_shared_value, gpu_shared_availability, gpu_shared_detail,
+                    sample_kind, bucket_seconds)
+                SELECT id, logical_application_id, NULL,
+                    process_lifetime_key, timestamp_utc, completeness_availability,
+                    cpu_value, cpu_availability, cpu_detail,
+                    working_set_value, working_set_availability, working_set_detail,
+                    process_io_read_value, process_io_read_availability, process_io_read_detail,
+                    process_io_write_value, process_io_write_availability, process_io_write_detail,
+                    disk_read_value, disk_read_availability, disk_read_detail,
+                    disk_write_value, disk_write_availability, disk_write_detail,
+                    network_download_value, network_download_availability, network_download_detail,
+                    network_upload_value, network_upload_availability, network_upload_detail,
+                    gpu_util_value, gpu_util_availability, gpu_util_detail,
+                    gpu_dedicated_value, gpu_dedicated_availability, gpu_dedicated_detail,
+                    gpu_shared_value, gpu_shared_availability, gpu_shared_detail,
+                    sample_kind, bucket_seconds
+                FROM metric_samples;
+
+                DROP TABLE metric_samples;
+                ALTER TABLE metric_samples_v3 RENAME TO metric_samples;
+                CREATE INDEX ix_metric_samples_app_time
+                    ON metric_samples(logical_application_id, timestamp_utc);
+                CREATE INDEX ix_metric_samples_raw_time
+                    ON metric_samples(sample_kind, timestamp_utc);
+                CREATE UNIQUE INDEX ux_metric_samples_session_time_kind
+                    ON metric_samples(logical_application_id, application_session_id,
+                                      timestamp_utc, sample_kind)
+                    WHERE application_session_id IS NOT NULL;
+                INSERT INTO schema_migrations(version, applied_utc)
+                VALUES (3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                PRAGMA user_version = 3;
+                """, cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -824,12 +1021,12 @@ public sealed class SqliteMetricHistoryStore :
     private static void SetSampleParameters(
         SqliteCommand command,
         ApplicationMetricSnapshot snapshot,
-        string lifetime,
+        long applicationSessionId,
         DateTimeOffset timestamp)
     {
         command.Parameters.Clear();
         command.Parameters.AddWithValue("$id", snapshot.Application.LogicalApplicationId);
-        command.Parameters.AddWithValue("$lifetime", lifetime);
+        command.Parameters.AddWithValue("$session_id", applicationSessionId);
         command.Parameters.AddWithValue("$timestamp", ToDatabaseTimestamp(timestamp));
         command.Parameters.AddWithValue("$sample_kind", RawSampleKind);
         command.Parameters.AddWithValue("$bucket_seconds", 0);
@@ -896,17 +1093,6 @@ public sealed class SqliteMetricHistoryStore :
         }
 
         return MetricAvailability.Available;
-    }
-
-    private static string ProcessLifetimeKey(ApplicationMetricSnapshot snapshot)
-    {
-        string material = string.Join(
-            "|",
-            snapshot.Processes
-                .Select(process => $"{process.InstanceId.ProcessId}:{process.InstanceId.StartTimeUtc.UtcTicks}")
-                .OrderBy(value => value, StringComparer.Ordinal));
-        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(material)));
     }
 
     private static string MetricColumn(MetricHistoryMetric metric) => metric switch

@@ -202,9 +202,12 @@
   <data name="HistoryCancelled" xml:space="preserve"><value>درخواست تاریخچه لغو شد.</value></data>
   <data name="HistoryQueryFailed" xml:space="preserve"><value>بارگذاری تاریخچه انجام نشد.</value></data>
   <data name="HistoryApplicationNotFound" xml:space="preserve"><value>برنامه پیدا نشد.</value></data>
+  <data name="Range5Minutes" xml:space="preserve"><value>۵ دقیقه</value></data>
   <data name="Range15Minutes" xml:space="preserve"><value>۱۵ دقیقه</value></data>
   <data name="Range1Hour" xml:space="preserve"><value>۱ ساعت</value></data>
+  <data name="Range3Hours" xml:space="preserve"><value>۳ ساعت</value></data>
   <data name="Range6Hours" xml:space="preserve"><value>۶ ساعت</value></data>
+  <data name="Range12Hours" xml:space="preserve"><value>۱۲ ساعت</value></data>
   <data name="Range24Hours" xml:space="preserve"><value>۲۴ ساعت</value></data>
   <data name="MetricCpu" xml:space="preserve"><value>CPU</value></data>
   <data name="MetricWorkingSet" xml:space="preserve"><value>حافظهٔ در حال استفاده (Working Set)</value></data>

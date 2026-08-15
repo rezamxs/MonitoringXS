@@ -43,7 +43,7 @@ public sealed class SqliteMetricHistoryStoreTests
         await connection.OpenAsync(TestCancellation);
         await using SqliteCommand version = connection.CreateCommand();
         version.CommandText = "PRAGMA user_version;";
-        Assert.Equal(2L, (long)(await version.ExecuteScalarAsync(TestCancellation))!);
+        Assert.Equal(3L, (long)(await version.ExecuteScalarAsync(TestCancellation))!);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public sealed class SqliteMetricHistoryStoreTests
     }
 
     [Fact]
-    public async Task RelaunchAndPidReuseHaveSeparateProcessLifetimeKeys()
+    public async Task HelperReplacementKeepsApplicationSessionContinuity()
     {
         using TestDatabase database = new();
         DateTimeOffset captured = DateTimeOffset.UtcNow;
@@ -135,7 +135,7 @@ public sealed class SqliteMetricHistoryStoreTests
             TestCancellation);
 
         Assert.Equal(2, result.Points.Count);
-        Assert.NotEqual(result.Points[0].ProcessLifetimeKey, result.Points[1].ProcessLifetimeKey);
+        Assert.Equal(result.Points[0].ContinuityKey, result.Points[1].ContinuityKey);
     }
 
     [Fact]
@@ -287,7 +287,7 @@ public sealed class SqliteMetricHistoryStoreTests
     }
 
     [Fact]
-    public async Task SplitsCapturesIntoBoundedTransactionalBatches()
+    public async Task QueuesEachAcceptedCaptureAsOneTransactionalBatch()
     {
         using TestDatabase database = new();
         await using SqliteMetricHistoryStore store = new(new(database.Path)
@@ -306,7 +306,7 @@ public sealed class SqliteMetricHistoryStoreTests
         await store.FlushAsync(TestCancellation);
 
         Assert.True(write.Accepted);
-        Assert.Equal(3, store.Diagnostics.BatchesWritten);
+        Assert.Equal(5, store.Diagnostics.BatchesWritten);
         Assert.Equal(5, store.Diagnostics.SamplesWritten);
     }
 

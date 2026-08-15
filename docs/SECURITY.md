@@ -65,9 +65,10 @@ only for the documented kernel ETW operation.
 
 History stays local under `%LOCALAPPDATA%\MonitoringXS\history.db`. SQL is
 parameterized; schema migrations are versioned and transactions are crash-safe.
-Only logical application metadata, PID-plus-`StartTimeUtc` lifetime keys,
-numeric metric values, UTC timestamps, availability, and bounded diagnostic
-detail are stored. Packet payloads, URLs, hosts, IPs, ports, command lines,
+Only logical application metadata, application-session timestamps, process name,
+PID plus `StartTimeUtc`, optional executable path/publisher, numeric metric values,
+UTC timestamps, availability, and bounded diagnostic detail are stored. Executable
+paths are sensitive local metadata and are never required for identity. Packet payloads, URLs, hosts, IPs, ports, command lines,
 secrets, and raw ETW events are excluded. WAL is enabled when supported and
 falls back with a diagnostic when unavailable. Corrupt files are quarantined
 with a `.corrupt-*` suffix before recreation; locked, read-only, full-disk, and

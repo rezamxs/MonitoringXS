@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using MonitoringXS.Core.Abstractions;
+using MonitoringXS.Core.Models;
 
 namespace MonitoringXS.Application;
 
@@ -101,7 +102,12 @@ public sealed class MonitoringRuntime : IAsyncDisposable
                 {
                     try
                     {
-                        await _historyStore.EnqueueAsync(snapshot.Applications, cancellationToken)
+                        await _historyStore.EnqueueAsync(
+                            new MetricHistoryCapture(
+                                snapshot.CapturedAt,
+                                snapshot.Discovery,
+                                snapshot.Applications),
+                            cancellationToken)
                             .ConfigureAwait(false);
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -104,9 +104,12 @@ internal static class LocalizationKeys
     public const string HistoryCancelled = nameof(HistoryCancelled);
     public const string HistoryQueryFailed = nameof(HistoryQueryFailed);
     public const string HistoryApplicationNotFound = nameof(HistoryApplicationNotFound);
+    public const string Range5Minutes = nameof(Range5Minutes);
     public const string Range15Minutes = nameof(Range15Minutes);
     public const string Range1Hour = nameof(Range1Hour);
+    public const string Range3Hours = nameof(Range3Hours);
     public const string Range6Hours = nameof(Range6Hours);
+    public const string Range12Hours = nameof(Range12Hours);
     public const string Range24Hours = nameof(Range24Hours);
     public const string MetricCpu = nameof(MetricCpu);
     public const string MetricWorkingSet = nameof(MetricWorkingSet);

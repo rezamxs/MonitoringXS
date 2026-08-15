@@ -106,8 +106,9 @@ public sealed class HistoryPageViewModelTests
         Assert.All(viewModel.Charts, chart => Assert.Single(chart.Samples));
         Assert.Equal(11, store.QueriedMetrics.Count);
         Assert.Equal(
-            [TimeSpan.FromMinutes(15), TimeSpan.FromHours(1), TimeSpan.FromHours(6), TimeSpan.FromHours(24)],
+            [TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromHours(1), TimeSpan.FromHours(3), TimeSpan.FromHours(6), TimeSpan.FromHours(12), TimeSpan.FromHours(24)],
             viewModel.Ranges.Select(range => range.Duration));
+        Assert.Equal(TimeSpan.FromHours(1), viewModel.SelectedRange.Duration);
         Assert.Contains("History loaded", viewModel.StatusText, StringComparison.Ordinal);
     }
 
@@ -156,10 +157,10 @@ public sealed class HistoryPageViewModelTests
         await viewModel.InitializeAsync(CancellationToken.None);
 
         store.DelaySixHourQueries = true;
-        Task stale = viewModel.SelectRangeAsync(viewModel.Ranges[2], CancellationToken.None);
+        Task stale = viewModel.SelectRangeAsync(viewModel.Ranges[4], CancellationToken.None);
         await store.SixHourStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
         store.DelaySixHourQueries = false;
-        Task current = viewModel.SelectRangeAsync(viewModel.Ranges[3], CancellationToken.None);
+        Task current = viewModel.SelectRangeAsync(viewModel.Ranges[6], CancellationToken.None);
         await current;
         store.ReleaseSixHourQueries.SetResult();
         await stale;

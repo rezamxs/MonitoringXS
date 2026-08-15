@@ -115,12 +115,13 @@ public sealed class MonitoringRuntimeTests
     public async Task EveryAcceptedSnapshotUsesExistingHistoryQueuePath()
     {
         RecordingHistoryStore history = new();
+        MonitoringSnapshot accepted = Snapshot(1);
         TaskCompletionSource captured = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using MonitoringRuntime runtime = new(
             cancellationToken =>
             {
                 captured.TrySetResult();
-                return ValueTask.FromResult(Snapshot(1));
+                return ValueTask.FromResult(accepted);
             },
             new MonitoringSnapshotHub(),
             new LiveRefreshCadence(TimeSpan.FromHours(1)),
@@ -132,6 +133,9 @@ public sealed class MonitoringRuntimeTests
         await runtime.StopAsync();
 
         Assert.Equal(1, history.Enqueued);
+        Assert.NotNull(history.Capture);
+        Assert.Same(accepted.Discovery, history.Capture.Discovery);
+        Assert.Equal(accepted.CapturedAt, history.Capture.ObservedAtUtc);
     }
 
     [Fact]
@@ -200,6 +204,7 @@ public sealed class MonitoringRuntimeTests
     private sealed class RecordingHistoryStore : IMetricHistoryStore
     {
         public int Enqueued;
+        public MetricHistoryCapture? Capture { get; private set; }
 
         public MetricHistoryStoreDiagnostics Diagnostics => new(0, 0, 0, 0, 0, 0, 0, 0, 0, null);
 
@@ -207,6 +212,15 @@ public sealed class MonitoringRuntimeTests
             IReadOnlyList<ApplicationMetricSnapshot> snapshots,
             CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref Enqueued);
+            return ValueTask.FromResult(MetricHistoryWriteResult.Success);
+        }
+
+        public ValueTask<MetricHistoryWriteResult> EnqueueAsync(
+            MetricHistoryCapture capture,
+            CancellationToken cancellationToken)
+        {
+            Capture = capture;
             Interlocked.Increment(ref Enqueued);
             return ValueTask.FromResult(MetricHistoryWriteResult.Success);
         }

@@ -7,14 +7,17 @@ memory, Process I/O rates, Physical Disk rates, Network rates, GPU utilization,
 and dedicated/shared GPU memory. Each metric stores its value, availability, and
 diagnostic detail independently; `Partial`, `Unavailable`, and `AccessDenied`
 remain states and missing values remain `NULL`, never zero. The stable logical
-application ID is paired with a process-lifetime key from PID plus
-`StartTimeUtc`, so relaunches do not merge unrelated lifetimes. Raw samples are
+application ID is paired with a real application session. Process-session identity is
+PID plus `StartTimeUtc`; executable path is optional metadata and never part of
+primary identity. Migrated v2 rows retain their old hash as legacy continuity
+metadata with a `NULL` application-session ID; no sessions are inferred. Raw samples are
 kept for one hour, then grouped into five-minute buckets until the default
 24-hour retention limit. Rates and gauges are averaged within a bucket;
-availability is the worst state in that bucket. The History page queries 15
-minutes, 1 hour, 6 hours, or 24 hours by logical application. It shows
+availability is the worst state in that application-session bucket. Legacy
+`NULL`-session rows remain grouped by their legacy continuity key. The History page queries 5
+minutes, 15 minutes, 1 hour, 3 hours, 6 hours, 12 hours, or 24 hours by logical application. It shows
 availability and downsample counts, converts timestamps to local time for
-presentation, and preserves unavailable samples and process-lifetime changes as
+presentation, and preserves unavailable samples and application/legacy continuity changes as
 chart gaps. The earliest raw timestamp represents each downsample bucket.
 
 ## Sampling

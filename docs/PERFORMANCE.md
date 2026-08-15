@@ -13,7 +13,7 @@ Implementation rules:
 - batched SQLite writes with WAL and prepared statements;
 - no permanent elevation or decorative GPU animation;
 - collector timing, dropped samples, queue depth, DB latency, and cache hit rate exposed in internal diagnostics.
-- SQLite history uses a 256-batch bounded queue, 32-snapshot transactions, WAL when supported, one-hour raw retention, five-minute downsampling, and a 64 MiB logical size policy. Queue drops and write failures are diagnostic counters; live collection does not wait on SQLite.
+- SQLite history uses a 256-capture bounded queue, one transaction per accepted application snapshot, WAL when supported, one-hour raw retention, five-minute downsampling, and a 64 MiB logical size policy. Application/process session `last_observed_utc` heartbeats are coalesced to 30 seconds; starts, ends, PID reuse, and metric samples remain transactional. Queue drops and write failures are diagnostic counters; live collection does not wait on SQLite.
 - settings writes are asynchronous, serialized, and limited to selector changes; retention changes only update the policy consumed by future asynchronous maintenance.
 - History range queries run off the UI thread, rapid selection changes cancel and supersede older requests, and each of the 11 chart series is decimated to at most 360 displayed points while retaining endpoints, global extrema, PID/time gaps, and availability gaps where capacity permits. Projection also collapses effectively identical X coordinates before WinUI geometry creation.
 - physical-disk ETW callbacks use a non-blocking bounded queue of 16,384 events; overflow is counted and reported as partial data;

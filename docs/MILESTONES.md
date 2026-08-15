@@ -86,12 +86,13 @@ Status: in progress.
 
 ## Milestone 5 - History
 
-Status: SQLite backend and History page complete; stopped-tab presentation remains open.
+Status: SQLite v3 sessions and History page complete; stopped-tab presentation remains open.
 
-- [x] Version-2 SQLite schema/migrations, WAL fallback, parameterized SQL, UTC timestamps, bounded async batches, crash-safe transactions, recovery, and diagnostics.
+- [x] Transactional version-2 to version-3 migration preserving legacy rows with nullable session identity, WAL fallback, parameterized SQL, UTC timestamps, bounded async captures, recovery, and diagnostics.
+- [x] Logical application sessions and PID-plus-start-time process sessions with helper churn, PID reuse, partial discovery, restart, and sleep/wake reconciliation.
 - [x] 24-hour retention, one-hour raw window, five-minute downsampling, bounded database-size pruning, metric queries, availability/completeness persistence, and PID-lifetime separation.
 - [x] Deterministic storage and coordinator-isolation tests; runtime restart persistence measured in `VALIDATION.md`.
-- [x] Cancellable History page with logical-application selector, 15-minute/1-hour/6-hour/24-hour ranges, bounded charts, local timestamps, and honest unavailable/partial gaps.
+- [x] Cancellable History page with logical-application selector, 5-minute/15-minute/1-hour/3-hour/6-hour/12-hour/24-hour ranges, bounded charts, local timestamps, and honest unavailable/partial gaps.
 - [x] Repair History projection, scale domains, single-point rendering, duplicate/PID/gap handling, stale-result suppression, and extrema-preserving decimation.
 - [ ] Stopped application tabs.
 
