@@ -10,6 +10,12 @@ Thank you for improving Monitoring XS. Keep changes focused, preserve the depend
 - Keep services excluded from application totals unless the user explicitly enables the advanced option.
 - Keep portable and unregistered applications separate from installed applications.
 
+## Reporting issues
+
+- **Bugs** — use the [Bug Report](https://github.com/rezamxs/MonitoringXS/issues/new?template=bug_report.yml) template.
+- **Feature requests** — use the [Feature Request](https://github.com/rezamxs/MonitoringXS/issues/new?template=feature_request.yml) template.
+- **Security vulnerabilities** — see [SECURITY.md](SECURITY.md). Do not report security issues in public GitHub Issues.
+
 ## Getting started
 
 1. Open or reference an issue for behavior changes.

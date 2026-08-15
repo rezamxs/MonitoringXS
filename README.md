@@ -97,6 +97,12 @@ Some monitoring data may be unavailable for protected or higher-integrity proces
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Engineering style](docs/ENGINEERING_STYLE.md)
 
+## Feedback and bug reports
+
+- **Bugs** — open a [Bug Report](https://github.com/rezamxs/MonitoringXS/issues/new?template=bug_report.yml)
+- **Feature ideas** — open a [Feature Request](https://github.com/rezamxs/MonitoringXS/issues/new?template=feature_request.yml)
+- **Security vulnerabilities** — see [SECURITY.md](SECURITY.md) for private reporting instructions. Do not disclose security issues in public issues.
+
 ## Contributing
 
 Issues and focused pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) before submitting.
