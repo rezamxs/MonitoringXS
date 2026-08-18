@@ -26,6 +26,87 @@ public sealed class WindowsProcessDiscoveryServiceTests
     }
 
     [Fact]
+    public async Task StaticDetailsCacheUsesPidAndStartTimeIdentity()
+    {
+        DateTimeOffset firstStart = DateTimeOffset.UtcNow.AddMinutes(-2);
+        DateTimeOffset reusedStart = DateTimeOffset.UtcNow.AddMinutes(-1);
+        int calls = 0;
+        WindowsProcessDiscoveryService service = Service(
+            [new NativeProcessTree.ProcessEntry(42, 1, "example.exe")],
+            (_, cached) =>
+            {
+                calls++;
+                DateTimeOffset start = calls == 3 ? reusedStart : firstStart;
+                if (calls == 2)
+                {
+                    Assert.NotNull(cached);
+                    Assert.Equal(firstStart, cached!.StartTimeUtc);
+                }
+
+                if (calls == 3)
+                {
+                    Assert.NotNull(cached);
+                    Assert.Equal(firstStart, cached!.StartTimeUtc);
+                }
+
+                return NativeProcessDetails.ProcessDetailsReadResult.Success(new(start, @"C:\Apps\example.exe", false));
+            },
+            AvailableMetadata(@"C:\Apps\example.exe"));
+
+        await service.DiscoverAsync(TestContext.Current.CancellationToken);
+        await service.DiscoverAsync(TestContext.Current.CancellationToken);
+        ProcessDiscoverySnapshot reused = await service.DiscoverAsync(TestContext.Current.CancellationToken);
+        await service.DiscoverAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(reusedStart, Assert.Single(reused.Processes).InstanceId.StartTimeUtc);
+        Assert.Equal(4, calls);
+    }
+
+    [Fact]
+    public async Task ParentNameRequiresCurrentParentLifetimeToPrecedeChild()
+    {
+        DateTimeOffset parentStart = DateTimeOffset.UtcNow.AddMinutes(-3);
+        DateTimeOffset childStart = DateTimeOffset.UtcNow.AddMinutes(-2);
+        WindowsProcessDiscoveryService service = Service(
+            [
+                new NativeProcessTree.ProcessEntry(10, 1, "parent.exe"),
+                new NativeProcessTree.ProcessEntry(11, 10, "child.exe")
+            ],
+            (pid, _) => NativeProcessDetails.ProcessDetailsReadResult.Success(new(
+                pid == 10 ? parentStart : childStart,
+                null,
+                false)),
+            AvailableMetadata(@"C:\unused.exe"));
+
+        ProcessDiscoverySnapshot result = await service.DiscoverAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("parent", result.Processes.Single(process => process.InstanceId.ProcessId == 11).ParentProcessName);
+    }
+
+    [Fact]
+    public async Task ReusedParentPidDoesNotSupplyParentName()
+    {
+        DateTimeOffset childStart = DateTimeOffset.UtcNow.AddMinutes(-3);
+        DateTimeOffset reusedParentStart = DateTimeOffset.UtcNow.AddMinutes(-1);
+        WindowsProcessDiscoveryService service = Service(
+            [
+                new NativeProcessTree.ProcessEntry(10, 1, "other.exe"),
+                new NativeProcessTree.ProcessEntry(11, 10, "child.exe")
+            ],
+            (pid, _) => NativeProcessDetails.ProcessDetailsReadResult.Success(new(
+                pid == 10 ? reusedParentStart : childStart,
+                null,
+                false)),
+            AvailableMetadata(@"C:\unused.exe"));
+
+        ProcessDiscoverySnapshot result = await service.DiscoverAsync(TestContext.Current.CancellationToken);
+
+        ProcessDescriptor child = result.Processes.Single(process => process.InstanceId.ProcessId == 11);
+        Assert.Equal(10, child.ParentProcessId);
+        Assert.Null(child.ParentProcessName);
+    }
+
+    [Fact]
     public async Task ProcessExitDuringMaterializationIsPartialNotFatal()
     {
         DateTimeOffset started = DateTimeOffset.UtcNow.AddMinutes(-1);

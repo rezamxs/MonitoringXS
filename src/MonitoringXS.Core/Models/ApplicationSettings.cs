@@ -17,6 +17,7 @@ public enum ApplicationLanguage
 public enum ApplicationSortPreference
 {
     Name,
+    Pid,
     Cpu,
     Memory,
     ProcessIo,

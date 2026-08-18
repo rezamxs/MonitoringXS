@@ -15,6 +15,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private static readonly IReadOnlyList<ApplicationSortOption> AvailableSortOptions =
     [
         new(ApplicationSortField.ApplicationName, "Application name"),
+        new(ApplicationSortField.ProcessId, "PID"),
         new(ApplicationSortField.CpuUsage, "CPU usage"),
         new(ApplicationSortField.MemoryUsage, "Memory usage"),
         new(ApplicationSortField.ProcessIoRate, "Process I/O rate"),
@@ -121,7 +122,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         get
         {
             ApplicationSortField sortField = SelectedSortOption.Field;
-            if (sortField == ApplicationSortField.ApplicationName)
+            if (sortField is ApplicationSortField.ApplicationName or ApplicationSortField.ProcessId)
             {
                 return false;
             }
@@ -416,6 +417,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             Label = option.Field switch
             {
                 ApplicationSortField.ApplicationName => _localization.Get(LocalizationKeys.SortApplicationName),
+                ApplicationSortField.ProcessId => _localization.Get(LocalizationKeys.SortPid),
                 ApplicationSortField.CpuUsage => _localization.Get(LocalizationKeys.SortCpu),
                 ApplicationSortField.MemoryUsage => _localization.Get(LocalizationKeys.SortMemory),
                 ApplicationSortField.ProcessIoRate => _localization.Get(LocalizationKeys.SortProcessIo),
@@ -502,6 +504,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private static ApplicationSortPreference ToPreference(ApplicationSortField field) => field switch
     {
         ApplicationSortField.ApplicationName => ApplicationSortPreference.Name,
+        ApplicationSortField.ProcessId => ApplicationSortPreference.Pid,
         ApplicationSortField.CpuUsage => ApplicationSortPreference.Cpu,
         ApplicationSortField.MemoryUsage => ApplicationSortPreference.Memory,
         ApplicationSortField.ProcessIoRate => ApplicationSortPreference.ProcessIo,
@@ -514,6 +517,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private static ApplicationSortField FromPreference(ApplicationSortPreference preference) => preference switch
     {
         ApplicationSortPreference.Name => ApplicationSortField.ApplicationName,
+        ApplicationSortPreference.Pid => ApplicationSortField.ProcessId,
         ApplicationSortPreference.Cpu => ApplicationSortField.CpuUsage,
         ApplicationSortPreference.Memory => ApplicationSortField.MemoryUsage,
         ApplicationSortPreference.ProcessIo => ApplicationSortField.ProcessIoRate,

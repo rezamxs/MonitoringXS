@@ -196,17 +196,77 @@ public sealed class ProcessActionsViewModelTests
         await context.ViewModel.CopyProcessDetailsCommand.ExecuteAsync(null);
 
         string copied = Assert.Single(context.Clipboard.Values);
-        Assert.Contains("Display name: Sample App", copied, StringComparison.Ordinal);
+        Assert.Contains("Application: Sample App", copied, StringComparison.Ordinal);
+        Assert.Contains("Process Name: sample", copied, StringComparison.Ordinal);
         Assert.Contains("PID: 120", copied, StringComparison.Ordinal);
-        Assert.Contains("CPU (application): 12.5%", copied, StringComparison.Ordinal);
-        Assert.Contains("Metric availability:", copied, StringComparison.Ordinal);
+        Assert.Contains("Status: Running", copied, StringComparison.Ordinal);
+        Assert.Contains("Architecture: x64", copied, StringComparison.Ordinal);
+        Assert.Contains(@"Executable Path: C:\Apps\sample.exe", copied, StringComparison.Ordinal);
+        Assert.Contains("Publisher: Contoso Publisher", copied, StringComparison.Ordinal);
+        Assert.Contains("File Version: 1.0", copied, StringComparison.Ordinal);
+        Assert.Contains("Start Time: 1970-01-01T00:02:00.0000000+00:00", copied, StringComparison.Ordinal);
+        Assert.Matches(@"Running Duration: \d+\.\d{2}:\d{2}:\d{2}", copied);
+        Assert.Contains("CPU: 12.5% (Available)", copied, StringComparison.Ordinal);
+        Assert.Contains("Memory: 128.0 MB (Available)", copied, StringComparison.Ordinal);
+        Assert.Contains("Threads: 4", copied, StringComparison.Ordinal);
+        Assert.Contains("Handles: 12", copied, StringComparison.Ordinal);
+        Assert.Contains("Parent PID: 999", copied, StringComparison.Ordinal);
+        Assert.Contains("Parent Process: parent", copied, StringComparison.Ordinal);
+        Assert.Contains("Process Identity: 120 + 1970-01-01T00:02:00.0000000+00:00", copied, StringComparison.Ordinal);
         Assert.DoesNotContain("Command line", copied, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Environment", copied, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("token", copied, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("session", copied, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("00000000-0000", copied, StringComparison.Ordinal);
 
         context.Clipboard.Success = false;
         await context.ViewModel.CopyProcessDetailsCommand.ExecuteAsync(null);
         Assert.Contains("Clipboard is unavailable", context.ViewModel.StatusText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CopyDetailsRendersUnavailableFieldsInsteadOfFabricatedValues()
+    {
+        Harness context = new();
+        ProcessDescriptor bare = Process(120, "sample", null) with
+        {
+            Architecture = ProcessArchitecture.Unknown,
+            ThreadCount = MetricValue<int>.Unavailable(MetricAvailability.AccessDenied),
+            HandleCount = default,
+            ParentProcessId = null,
+            ParentProcessName = null,
+            FileVersion = null,
+            Publisher = null
+        };
+        ProcessDescriptor sibling = Process(121, "child", @"C:\Apps\child.exe");
+        ApplicationMetricSnapshot snapshot = Snapshot() with
+        {
+            Processes = [bare, sibling],
+            ProcessCount = 2,
+            ProcessMetrics = new Dictionary<ProcessInstanceId, ProcessMetricSample>()
+        };
+        context.ViewModel.Update(snapshot);
+        context.Configure();
+
+        await context.ViewModel.CopyProcessDetailsCommand.ExecuteAsync(null);
+
+        string copied = Assert.Single(context.Clipboard.Values);
+        // Identity and status remain available even when metadata is not.
+        Assert.Contains("PID: 120", copied, StringComparison.Ordinal);
+        Assert.Contains("Status: Running", copied, StringComparison.Ordinal);
+        Assert.Contains("Architecture: Unknown", copied, StringComparison.Ordinal);
+        Assert.Contains("Executable Path: Unavailable", copied, StringComparison.Ordinal);
+        Assert.Contains("Publisher: Unavailable", copied, StringComparison.Ordinal);
+        Assert.Contains("File Version: Unavailable", copied, StringComparison.Ordinal);
+        Assert.Contains("Threads: Unavailable", copied, StringComparison.Ordinal);
+        Assert.Contains("Handles: Unavailable", copied, StringComparison.Ordinal);
+        Assert.Contains("Parent PID: Unavailable", copied, StringComparison.Ordinal);
+        Assert.Contains("Parent Process: Unavailable", copied, StringComparison.Ordinal);
+        // Per-process metrics absent in a multi-process app: no app-level fallback.
+        Assert.Contains("CPU: Unavailable", copied, StringComparison.Ordinal);
+        Assert.Contains("Memory: Unavailable", copied, StringComparison.Ordinal);
+        Assert.DoesNotContain("0.0%", copied, StringComparison.Ordinal);
+        Assert.DoesNotContain("0 B", copied, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -569,7 +629,16 @@ public sealed class ProcessActionsViewModelTests
             null,
             null,
             false,
-            pid == 120);
+            pid == 120)
+        {
+            Architecture = ProcessArchitecture.X64,
+            ThreadCount = MetricValue<int>.Available(4),
+            HandleCount = MetricValue<int>.Available(12),
+            ParentProcessId = 999,
+            ParentProcessName = "parent",
+            FileVersion = "1.0",
+            Publisher = "Contoso Publisher"
+        };
 
     private static string FindRepositoryRoot()
     {

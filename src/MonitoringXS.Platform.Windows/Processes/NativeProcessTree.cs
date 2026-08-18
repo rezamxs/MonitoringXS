@@ -38,7 +38,8 @@ internal static class NativeProcessTree
                 processes.Add(new ProcessEntry(
                     (int)entry.ProcessId,
                     parentId == 0 ? null : parentId,
-                    entry.ExecutableFile));
+                    entry.ExecutableFile,
+                    entry.Threads > int.MaxValue ? int.MaxValue : (int)entry.Threads));
             }
 
             entry.Size = (uint)Marshal.SizeOf<ProcessEntry32>();
@@ -55,7 +56,11 @@ internal static class NativeProcessTree
         return processes;
     }
 
-    internal sealed record ProcessEntry(int ProcessId, int? ParentProcessId, string ExecutableName);
+    internal sealed record ProcessEntry(
+        int ProcessId,
+        int? ParentProcessId,
+        string ExecutableName,
+        int ThreadCount = 0);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern SafeSnapshotHandle CreateToolhelp32Snapshot(uint flags, uint processId);

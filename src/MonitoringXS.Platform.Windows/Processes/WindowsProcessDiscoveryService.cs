@@ -7,13 +7,16 @@ namespace MonitoringXS.Platform.Windows.Processes;
 public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
 {
     private const int MetadataCacheCapacity = 512;
+    // Active-instance cache; entries disappear with their process and new entries stop caching at capacity.
+    private const int ProcessDetailsCacheCapacity = 2048;
     private static readonly TimeSpan MetadataRevalidationInterval = TimeSpan.FromMinutes(10);
     private readonly IExecutableMetadataProvider _metadataProvider;
     private readonly Func<IReadOnlyList<NativeProcessTree.ProcessEntry>> _captureProcesses;
     private readonly Func<IReadOnlyDictionary<int, NativeWindowSnapshot.WindowDescriptor>> _captureWindows;
     private readonly Func<int, NativeProcessDetails.ProcessDetails?, NativeProcessDetails.ProcessDetailsReadResult> _readDetails;
     private readonly object _cacheGate = new();
-    private readonly Dictionary<int, NativeProcessDetails.ProcessDetails> _processDetailsByPid = [];
+    private readonly Dictionary<int, ProcessInstanceId> _instanceByPid = [];
+    private readonly Dictionary<ProcessInstanceId, NativeProcessDetails.ProcessDetails> _processDetailsByInstance = [];
     private readonly Dictionary<string, MetadataCacheEntry> _metadataByPath = new(StringComparer.OrdinalIgnoreCase);
 
     public WindowsProcessDiscoveryService()
@@ -64,7 +67,10 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
             NativeProcessDetails.ProcessDetails? cached;
             lock (_cacheGate)
             {
-                _processDetailsByPid.TryGetValue(process.ProcessId, out cached);
+                cached = _instanceByPid.TryGetValue(process.ProcessId, out ProcessInstanceId instance)
+                    && _processDetailsByInstance.TryGetValue(instance, out NativeProcessDetails.ProcessDetails? existing)
+                    ? existing
+                    : null;
             }
 
             NativeProcessDetails.ProcessDetailsReadResult read = _readDetails(process.ProcessId, cached);
@@ -89,16 +95,36 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
                 basics.Add(descriptor);
                 lock (_cacheGate)
                 {
-                    _processDetailsByPid[process.ProcessId] = details!;
+                    if (_instanceByPid.TryGetValue(process.ProcessId, out ProcessInstanceId previous)
+                        && previous != descriptor.InstanceId)
+                    {
+                        _instanceByPid.Remove(process.ProcessId);
+                        _processDetailsByInstance.Remove(previous);
+                    }
+
+                    if (_processDetailsByInstance.ContainsKey(descriptor.InstanceId)
+                        || _processDetailsByInstance.Count < ProcessDetailsCacheCapacity)
+                    {
+                        _instanceByPid[process.ProcessId] = descriptor.InstanceId;
+                        _processDetailsByInstance[descriptor.InstanceId] = details!;
+                    }
                 }
             }
         }
 
         lock (_cacheGate)
         {
-            foreach (int stalePid in _processDetailsByPid.Keys.Where(pid => !liveProcessIds.Contains(pid)).ToArray())
+            foreach (int stalePid in _instanceByPid.Keys.Where(pid => !liveProcessIds.Contains(pid)).ToArray())
             {
-                _processDetailsByPid.Remove(stalePid);
+                _instanceByPid.Remove(stalePid);
+            }
+
+            HashSet<ProcessInstanceId> liveInstances = _instanceByPid.Values.ToHashSet();
+            foreach (ProcessInstanceId stale in _processDetailsByInstance.Keys
+                .Where(instance => !liveInstances.Contains(instance))
+                .ToArray())
+            {
+                _processDetailsByInstance.Remove(stale);
             }
         }
 
@@ -106,7 +132,7 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
         DateTimeOffset now = DateTimeOffset.UtcNow;
         HashSet<string> liveMetadataPaths = new(StringComparer.OrdinalIgnoreCase);
         foreach (string path in basics
-            .Where(item => !item.IsServiceSession && item.HasVisibleWindow)
+            .Where(item => !item.IsServiceSession)
             .Select(item => item.ExecutablePath)
             .Where(path => !string.IsNullOrWhiteSpace(path))
             .Cast<string>()
@@ -163,8 +189,10 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
             }
         }
 
+        Dictionary<int, BasicProcessDescriptor> basicByPid = basics.ToDictionary(item => item.InstanceId.ProcessId);
         ProcessDescriptor[] processes = basics.Select(item => item.ToProcessDescriptor(
-            item.ExecutablePath is not null ? metadataByPath.GetValueOrDefault(item.ExecutablePath) : null)).ToArray();
+            item.ExecutablePath is not null ? metadataByPath.GetValueOrDefault(item.ExecutablePath) : null,
+            ResolveParentName(item, basicByPid))).ToArray();
         return new(
             liveProcessIds.Order().ToArray(),
             processes,
@@ -204,7 +232,24 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
             window?.Title,
             process.ParentProcessId,
             details.IsServiceSession,
-            window is not null);
+            window is not null,
+            details.Architecture,
+            MetricValue<int>.Available(process.ThreadCount),
+            details.HandleCount);
+    }
+
+    private static string? ResolveParentName(
+        BasicProcessDescriptor process,
+        IReadOnlyDictionary<int, BasicProcessDescriptor> processesByPid)
+    {
+        if (process.ParentProcessId is not int parentPid
+            || !processesByPid.TryGetValue(parentPid, out BasicProcessDescriptor? parent)
+            || parent.InstanceId.StartTimeUtc > process.InstanceId.StartTimeUtc)
+        {
+            return null;
+        }
+
+        return parent.NormalizedProcessName;
     }
 
     private sealed record BasicProcessDescriptor(
@@ -214,9 +259,16 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
         string? MainWindowTitle,
         int? ParentProcessId,
         bool IsServiceSession,
-        bool HasVisibleWindow)
+        bool HasVisibleWindow,
+        ProcessArchitecture Architecture,
+        MetricValue<int> ThreadCount,
+        MetricValue<int> HandleCount)
     {
-        public ProcessDescriptor ToProcessDescriptor(ExecutableMetadata? metadata) => new(
+        public string NormalizedProcessName => ProcessName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+            ? ProcessName[..^4]
+            : ProcessName;
+
+        public ProcessDescriptor ToProcessDescriptor(ExecutableMetadata? metadata, string? parentProcessName) => new(
             InstanceId,
             ProcessName,
             ExecutablePath,
@@ -226,7 +278,14 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
             MainWindowTitle,
             ParentProcessId,
             IsServiceSession,
-            HasVisibleWindow);
+            HasVisibleWindow)
+        {
+            Architecture = Architecture,
+            ThreadCount = ThreadCount,
+            HandleCount = HandleCount,
+            ParentProcessName = parentProcessName,
+            FileVersion = metadata?.FileVersion
+        };
     }
 
     private sealed record MetadataCacheEntry(ExecutableMetadata Metadata, DateTimeOffset RevalidateAt);

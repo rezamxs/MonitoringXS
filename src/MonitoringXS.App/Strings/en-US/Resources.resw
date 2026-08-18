@@ -173,6 +173,7 @@
   <data name="PortableApplications" xml:space="preserve"><value>Portable &amp; unregistered apps</value></data>
   <data name="PortableApplicationsDescription" xml:space="preserve"><value>Executables without catalog-backed installation evidence remain separate.</value></data>
   <data name="SortApplicationName" xml:space="preserve"><value>Application name</value></data>
+  <data name="SortPid" xml:space="preserve"><value>PID</value></data>
   <data name="SortCpu" xml:space="preserve"><value>CPU usage</value></data>
   <data name="SortMemory" xml:space="preserve"><value>Memory usage</value></data>
   <data name="SortProcessIo" xml:space="preserve"><value>Process I/O rate</value></data>
@@ -385,6 +386,28 @@
   <data name="MetricExplanationsAbout" xml:space="preserve"><value>About these metrics</value></data>
   <data name="MetricExplanationsAboutDescription" xml:space="preserve"><value>Each metric shows how this application uses system resources. Expand any metric for technical details.</value></data>
   <data name="SelectedProcessExited" xml:space="preserve"><value>Selected process has exited.</value></data>
+  <data name="ProcessApplication" xml:space="preserve"><value>Application</value></data>
+  <data name="ProcessName" xml:space="preserve"><value>Process Name</value></data>
+  <data name="ProcessId" xml:space="preserve"><value>PID</value></data>
+  <data name="ProcessStatus" xml:space="preserve"><value>Status</value></data>
+  <data name="ProcessArchitecture" xml:space="preserve"><value>Architecture</value></data>
+  <data name="ProcessExecutablePath" xml:space="preserve"><value>Executable Path</value></data>
+  <data name="ProcessPublisher" xml:space="preserve"><value>Publisher</value></data>
+  <data name="ProcessFileVersion" xml:space="preserve"><value>File Version</value></data>
+  <data name="ProcessStartTime" xml:space="preserve"><value>Start Time</value></data>
+  <data name="ProcessRunningDuration" xml:space="preserve"><value>Running Duration</value></data>
+  <data name="ProcessCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="ProcessMemory" xml:space="preserve"><value>Memory</value></data>
+  <data name="ProcessThreads" xml:space="preserve"><value>Threads</value></data>
+  <data name="ProcessHandles" xml:space="preserve"><value>Handles</value></data>
+  <data name="ProcessParentPid" xml:space="preserve"><value>Parent PID</value></data>
+  <data name="ProcessParent" xml:space="preserve"><value>Parent Process</value></data>
+  <data name="ProcessIdentity" xml:space="preserve"><value>Process Identity</value></data>
+  <data name="ProcessArchitectureX86" xml:space="preserve"><value>x86</value></data>
+  <data name="ProcessArchitectureX64" xml:space="preserve"><value>x64</value></data>
+  <data name="ProcessArchitectureArm64" xml:space="preserve"><value>ARM64</value></data>
+  <data name="ProcessArchitectureUnknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="ProcessRunning" xml:space="preserve"><value>Running</value></data>
   <data name="NavAbout.ToolTipService.ToolTip" xml:space="preserve"><value>About Monitoring XS</value></data>
   <data name="AboutPageTitle" xml:space="preserve"><value>About</value></data>
   <data name="AboutDescription" xml:space="preserve"><value>A low-overhead Windows resource monitor that shows logical applications instead of raw process lists.</value></data>

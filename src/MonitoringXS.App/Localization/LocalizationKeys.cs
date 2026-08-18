@@ -75,6 +75,7 @@ internal static class LocalizationKeys
     public const string PortableApplications = nameof(PortableApplications);
     public const string PortableApplicationsDescription = nameof(PortableApplicationsDescription);
     public const string SortApplicationName = nameof(SortApplicationName);
+    public const string SortPid = nameof(SortPid);
     public const string SortCpu = nameof(SortCpu);
     public const string SortMemory = nameof(SortMemory);
     public const string SortProcessIo = nameof(SortProcessIo);
@@ -188,6 +189,28 @@ internal static class LocalizationKeys
     public const string ReasonTemporarilyUnavailable = nameof(ReasonTemporarilyUnavailable);
     public const string ReasonCollectorError = nameof(ReasonCollectorError);
     public const string SelectedProcessExited = nameof(SelectedProcessExited);
+    public const string ProcessApplication = nameof(ProcessApplication);
+    public const string ProcessName = nameof(ProcessName);
+    public const string ProcessId = nameof(ProcessId);
+    public const string ProcessStatus = nameof(ProcessStatus);
+    public const string ProcessArchitecture = nameof(ProcessArchitecture);
+    public const string ProcessExecutablePath = nameof(ProcessExecutablePath);
+    public const string ProcessPublisher = nameof(ProcessPublisher);
+    public const string ProcessFileVersion = nameof(ProcessFileVersion);
+    public const string ProcessStartTime = nameof(ProcessStartTime);
+    public const string ProcessRunningDuration = nameof(ProcessRunningDuration);
+    public const string ProcessCpu = nameof(ProcessCpu);
+    public const string ProcessMemory = nameof(ProcessMemory);
+    public const string ProcessThreads = nameof(ProcessThreads);
+    public const string ProcessHandles = nameof(ProcessHandles);
+    public const string ProcessParentPid = nameof(ProcessParentPid);
+    public const string ProcessParent = nameof(ProcessParent);
+    public const string ProcessIdentity = nameof(ProcessIdentity);
+    public const string ProcessArchitectureX86 = nameof(ProcessArchitectureX86);
+    public const string ProcessArchitectureX64 = nameof(ProcessArchitectureX64);
+    public const string ProcessArchitectureArm64 = nameof(ProcessArchitectureArm64);
+    public const string ProcessArchitectureUnknown = nameof(ProcessArchitectureUnknown);
+    public const string ProcessRunning = nameof(ProcessRunning);
 
     // System Overview
     public const string SystemOverviewPageTitle = nameof(SystemOverviewPageTitle);

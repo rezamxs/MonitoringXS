@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using MonitoringXS.Core.Models;
 
 namespace MonitoringXS.Platform.Windows.Processes;
 
@@ -41,7 +42,7 @@ internal static class NativeProcessDetails
 
         if (cached is not null && cached.StartTimeUtc == startTime)
         {
-            return ProcessDetailsReadResult.Success(cached);
+            return ProcessDetailsReadResult.Success(cached with { HandleCount = QueryHandleCount(process) });
         }
 
         if (!ProcessIdToSessionId((uint)processId, out uint sessionId))
@@ -57,7 +58,9 @@ internal static class NativeProcessDetails
             startTime,
             executablePath.Path,
             isServiceSession,
-            executablePath.Failure));
+            executablePath.Failure,
+            QueryArchitecture(process),
+            QueryHandleCount(process)));
     }
 
     private static unsafe ExecutablePathReadResult QueryExecutablePath(SafeProcessHandle process)
@@ -103,6 +106,44 @@ internal static class NativeProcessDetails
     private static string? NullIfWhitespace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    private static MetricValue<int> QueryHandleCount(SafeProcessHandle process)
+    {
+        if (GetProcessHandleCount(process, out uint count))
+        {
+            return MetricValue<int>.Available(count > int.MaxValue ? int.MaxValue : (int)count);
+        }
+
+        int error = Marshal.GetLastPInvokeError();
+        return MetricValue<int>.Unavailable(
+            error == ErrorAccessDenied ? MetricAvailability.AccessDenied : MetricAvailability.Unavailable,
+            $"GetProcessHandleCount failed with Win32 error {error}.");
+    }
+
+    private static ProcessArchitecture QueryArchitecture(SafeProcessHandle process)
+    {
+        try
+        {
+            if (!IsWow64Process2(process, out ushort processMachine, out ushort nativeMachine))
+            {
+                return ProcessArchitecture.Unknown;
+            }
+
+            return MachineArchitecture(processMachine == 0 ? nativeMachine : processMachine);
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return ProcessArchitecture.Unknown;
+        }
+    }
+
+    private static ProcessArchitecture MachineArchitecture(ushort machine) => machine switch
+    {
+        0x014c => ProcessArchitecture.X86,
+        0x8664 => ProcessArchitecture.X64,
+        0xaa64 => ProcessArchitecture.Arm64,
+        _ => ProcessArchitecture.Unknown
+    };
+
     private static ProcessDetailsReadFailure MapFailure(int error) => error switch
     {
         ErrorAccessDenied => ProcessDetailsReadFailure.AccessDenied,
@@ -114,7 +155,9 @@ internal static class NativeProcessDetails
         DateTimeOffset StartTimeUtc,
         string? ExecutablePath,
         bool IsServiceSession,
-        ProcessDetailsReadFailure ExecutablePathFailure = ProcessDetailsReadFailure.None);
+        ProcessDetailsReadFailure ExecutablePathFailure = ProcessDetailsReadFailure.None,
+        ProcessArchitecture Architecture = ProcessArchitecture.Unknown,
+        MetricValue<int> HandleCount = default);
 
     internal readonly record struct ProcessDetailsReadResult(
         ProcessDetails? Details,
@@ -165,6 +208,17 @@ internal static class NativeProcessDetails
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool ProcessIdToSessionId(uint processId, out uint sessionId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetProcessHandleCount(SafeProcessHandle process, out uint handleCount);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWow64Process2(
+        SafeProcessHandle process,
+        out ushort processMachine,
+        out ushort nativeMachine);
 
     [StructLayout(LayoutKind.Sequential)]
     private readonly struct FileTime

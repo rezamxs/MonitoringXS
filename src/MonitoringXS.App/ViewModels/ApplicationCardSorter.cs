@@ -23,7 +23,7 @@ public static class ApplicationCardSorter
     {
         ArgumentNullException.ThrowIfNull(cards);
         return cards.Any(card =>
-            field == ApplicationSortField.ApplicationName
+            field is ApplicationSortField.ApplicationName or ApplicationSortField.ProcessId
             || GetMetricValue(card, field).HasValue);
     }
 
@@ -113,6 +113,12 @@ public static class ApplicationCardSorter
         return field switch
         {
             ApplicationSortField.CpuUsage => FromMetric(snapshot.CpuPercent),
+            ApplicationSortField.ProcessId => snapshot.Processes.Count == 0
+                ? default
+                : new MetricSortValue(
+                    true,
+                    snapshot.Processes.Min(process => process.InstanceId.ProcessId),
+                    MetricAvailability.Available),
             ApplicationSortField.MemoryUsage => FromMetric(snapshot.WorkingSetBytes),
             ApplicationSortField.ProcessIoRate => CombineRates(
                 snapshot.IoReadBytesPerSecond,

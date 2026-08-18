@@ -27,6 +27,25 @@ public sealed class ApplicationSearchMatcherTests
         Assert.True(ApplicationSearchMatcher.Matches(Card(), query, English));
     }
 
+    [Theory]
+    [InlineData("42")]
+    [InlineData("C:\\Apps\\sample")]
+    [InlineData("SAMPLE.EXE")]
+    public void MatchesCapturedPidAndExecutablePathOnlyInMemory(string query)
+    {
+        ApplicationCardViewModel card = CardWithPath();
+
+        Assert.True(ApplicationSearchMatcher.Matches(card, query, English));
+    }
+
+    [Fact]
+    public void MissingExecutablePathDoesNotMatchOrThrow()
+    {
+        ApplicationCardViewModel card = Card();
+
+        Assert.False(ApplicationSearchMatcher.Matches(card, @"C:\\Apps", English));
+    }
+
     [Fact]
     public void MatchesPersianTextWithPersianCulture()
     {
@@ -84,6 +103,19 @@ public sealed class ApplicationSearchMatcherTests
             Disposition = disposition
         };
         card.Update(Snapshot(displayName, disposition, logicalId), []);
+        return card;
+    }
+
+    private static ApplicationCardViewModel CardWithPath()
+    {
+        ApplicationCardViewModel card = new()
+        {
+            LogicalApplicationId = "sample",
+            Disposition = ApplicationDisposition.Installed
+        };
+        ApplicationMetricSnapshot snapshot = Snapshot("Sample App");
+        ProcessDescriptor process = snapshot.Processes[0] with { ExecutablePath = @"C:\Apps\sample.exe" };
+        card.Update(snapshot with { Processes = [process] }, []);
         return card;
     }
 

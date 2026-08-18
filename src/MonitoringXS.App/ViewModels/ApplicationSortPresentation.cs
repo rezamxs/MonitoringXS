@@ -5,7 +5,7 @@ using MonitoringXS.App.Localization;
 internal static class ApplicationSortPresentation
 {
     public static bool DefaultDescending(ApplicationSortField field) =>
-        field != ApplicationSortField.ApplicationName;
+        field is not ApplicationSortField.ApplicationName and not ApplicationSortField.ProcessId;
 
     public static string DirectionLabel(
         ApplicationSortField field,

@@ -183,6 +183,11 @@
                                     TextWrapping="Wrap"
                                     ToolTipService.ToolTip="{Binding ExecutablePathText, Mode=OneWay}" />
                             </StackPanel>
+                            <TextBlock
+                                AutomationProperties.Name="Selected process metadata"
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="{Binding ProcessDetailsText, Mode=OneWay}"
+                                TextWrapping="Wrap" />
                             <Grid ColumnSpacing="8" RowSpacing="8">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />

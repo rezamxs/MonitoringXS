@@ -3,6 +3,7 @@ namespace MonitoringXS.App.ViewModels;
 public enum ApplicationSortField
 {
     ApplicationName,
+    ProcessId,
     CpuUsage,
     MemoryUsage,
     ProcessIoRate,

@@ -173,6 +173,7 @@
   <data name="PortableApplications" xml:space="preserve"><value>برنامه‌های قابل‌حمل و ثبت‌نشده</value></data>
   <data name="PortableApplicationsDescription" xml:space="preserve"><value>فایل‌های اجرایی بدون شواهد نصب، جداگانه فهرست می‌شوند.</value></data>
   <data name="SortApplicationName" xml:space="preserve"><value>نام برنامه</value></data>
+  <data name="SortPid" xml:space="preserve"><value>شناسهٔ پردازش</value></data>
   <data name="SortCpu" xml:space="preserve"><value>مصرف CPU</value></data>
   <data name="SortMemory" xml:space="preserve"><value>مصرف حافظه</value></data>
   <data name="SortProcessIo" xml:space="preserve"><value>نرخ I/O پردازش</value></data>
@@ -385,6 +386,28 @@
   <data name="MetricExplanationsAbout" xml:space="preserve"><value>دربارهٔ سنجه‌ها</value></data>
   <data name="MetricExplanationsAboutDescription" xml:space="preserve"><value>هر سنجه نشان می‌دهد این برنامه چگونه از منابع سیستم استفاده می‌کند. برای دیدن جزئیات فنی، سنجه را گسترش دهید.</value></data>
   <data name="SelectedProcessExited" xml:space="preserve"><value>پردازش انتخاب‌شده بسته شده است.</value></data>
+  <data name="ProcessApplication" xml:space="preserve"><value>برنامه</value></data>
+  <data name="ProcessName" xml:space="preserve"><value>نام پردازش</value></data>
+  <data name="ProcessId" xml:space="preserve"><value>شناسهٔ پردازش</value></data>
+  <data name="ProcessStatus" xml:space="preserve"><value>وضعیت</value></data>
+  <data name="ProcessArchitecture" xml:space="preserve"><value>معماری</value></data>
+  <data name="ProcessExecutablePath" xml:space="preserve"><value>مسیر فایل اجرایی</value></data>
+  <data name="ProcessPublisher" xml:space="preserve"><value>ناشر</value></data>
+  <data name="ProcessFileVersion" xml:space="preserve"><value>نسخهٔ فایل</value></data>
+  <data name="ProcessStartTime" xml:space="preserve"><value>زمان شروع</value></data>
+  <data name="ProcessRunningDuration" xml:space="preserve"><value>مدت اجرا</value></data>
+  <data name="ProcessCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="ProcessMemory" xml:space="preserve"><value>حافظه</value></data>
+  <data name="ProcessThreads" xml:space="preserve"><value>رشته‌ها</value></data>
+  <data name="ProcessHandles" xml:space="preserve"><value>دسته‌ها</value></data>
+  <data name="ProcessParentPid" xml:space="preserve"><value>شناسهٔ پردازش والد</value></data>
+  <data name="ProcessParent" xml:space="preserve"><value>پردازش والد</value></data>
+  <data name="ProcessIdentity" xml:space="preserve"><value>هویت پردازش</value></data>
+  <data name="ProcessArchitectureX86" xml:space="preserve"><value>x86</value></data>
+  <data name="ProcessArchitectureX64" xml:space="preserve"><value>x64</value></data>
+  <data name="ProcessArchitectureArm64" xml:space="preserve"><value>ARM64</value></data>
+  <data name="ProcessArchitectureUnknown" xml:space="preserve"><value>نامشخص</value></data>
+  <data name="ProcessRunning" xml:space="preserve"><value>در حال اجرا</value></data>
   <data name="NavAbout.ToolTipService.ToolTip" xml:space="preserve"><value>دربارهٔ Monitoring XS</value></data>
   <data name="AboutPageTitle" xml:space="preserve"><value>درباره</value></data>
   <data name="AboutDescription" xml:space="preserve"><value>پایشگر سبک منابع ویندوز که مصرف منابع را بر اساس برنامه‌ها نمایش می‌دهد، نه فهرست خام پردازش‌ها.</value></data>

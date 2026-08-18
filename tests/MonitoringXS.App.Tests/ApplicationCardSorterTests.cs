@@ -25,6 +25,24 @@ public sealed class ApplicationCardSorterTests
     }
 
     [Fact]
+    public void SortsPidsNumericallyWithDeterministicNameTieBreak()
+    {
+        ApplicationCardViewModel high = CardWithPid("high", "Zulu", 120);
+        ApplicationCardViewModel low = CardWithPid("low", "Beta", 9);
+        ApplicationCardViewModel middle = CardWithPid("middle", "Alpha", 80);
+        ApplicationCardViewModel tied = CardWithPid("tied", "Alpha", 80);
+
+        IReadOnlyList<ApplicationCardViewModel> ascending = ApplicationCardSorter.Sort(
+            [high, low, middle, tied], ApplicationSortField.ProcessId, descending: false);
+        IReadOnlyList<ApplicationCardViewModel> descending = ApplicationCardSorter.Sort(
+            [low, middle, tied, high], ApplicationSortField.ProcessId, descending: true);
+
+        Assert.Equal(["Beta", "Alpha", "Alpha", "Zulu"], ascending.Select(card => card.DisplayName));
+        Assert.Equal(["Zulu", "Alpha", "Alpha", "Beta"], descending.Select(card => card.DisplayName));
+        Assert.Equal("middle", ascending[1].LogicalApplicationId);
+    }
+
+    [Fact]
     public void MetricSortKeepsUnavailableValuesAfterValidValuesInBothDirections()
     {
         ApplicationCardViewModel unavailable = Card(
@@ -271,6 +289,25 @@ public sealed class ApplicationCardSorterTests
             networkDownload: MetricValue<double>.Unavailable(availability),
             networkUpload: MetricValue<double>.Unavailable(availability),
             gpuUsage: MetricValue<double>.Unavailable(availability));
+
+    private static ApplicationCardViewModel CardWithPid(string id, string name, int pid)
+    {
+        ApplicationCardViewModel card = Card(id, name);
+        ApplicationMetricSnapshot snapshot = card.LatestSnapshot!;
+        ProcessDescriptor process = new(
+            new ProcessInstanceId(pid, DateTimeOffset.UnixEpoch),
+            name + ".exe",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            true);
+        card.Update(snapshot with { Processes = [process] }, []);
+        return card;
+    }
 
     private static ApplicationCardViewModel Card(
         string id,

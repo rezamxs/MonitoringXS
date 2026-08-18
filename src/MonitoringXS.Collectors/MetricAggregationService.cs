@@ -55,7 +55,10 @@ public sealed class MetricAggregationService : IMetricAggregationService
             ioReadOperations,
             ioWriteOperations,
             processes.Length,
-            processes);
+            processes)
+        {
+            ProcessMetrics = samples.ToDictionary(sample => sample.Process)
+        };
     }
 
     private static MetricValue<double> SumDouble(

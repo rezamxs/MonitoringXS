@@ -21,9 +21,19 @@ public sealed class ProcessActionChoice
 
     public string Label { get; }
 
-    public ProcessActionTarget Target { get; }
+    public ProcessActionTarget Target { get; private set; }
 
-    public ProcessDescriptor Process { get; }
+    public ProcessDescriptor Process { get; private set; }
+
+    public void Update(ProcessDescriptor process, string displayName)
+    {
+        Process = process;
+        Target = new ProcessActionTarget(
+            process.InstanceId,
+            displayName,
+            process.NormalizedProcessName,
+            process.ExecutablePath);
+    }
 }
 
 public sealed record ProcessActionConfirmation(
@@ -72,6 +82,9 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
     [ObservableProperty]
     public partial string StartTimeText { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial string ProcessDetailsText { get; set; } = string.Empty;
+
     public ProcessActionsViewModel(
         IProcessActionService actions,
         IClipboardService clipboard,
@@ -84,6 +97,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
         IdentityText = _localization.Get(LocalizationKeys.NoProcessSelected);
         ExecutablePathText = _localization.Get(LocalizationKeys.Unavailable);
         StartTimeText = _localization.Get(LocalizationKeys.Unavailable);
+        ProcessDetailsText = _localization.Get(LocalizationKeys.NoProcessSelected);
         _localization.LanguageChanged += Localization_LanguageChanged;
     }
 
@@ -112,7 +126,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
             .ThenBy(process => process.InstanceId.ProcessId)
             .Select(process =>
                 existing.TryGetValue(process.InstanceId, out ProcessActionChoice? choice)
-                    ? choice
+                    ? Update(choice, process, snapshot.Application.DisplayName)
                     : new ProcessActionChoice(
                         $"{process.NormalizedProcessName} (PID {process.InstanceId.ProcessId})",
                         new ProcessActionTarget(
@@ -150,6 +164,17 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
             // Initial load with no prior selection: auto-select first.
             SelectedProcess = sorted[0];
         }
+
+        RefreshSelectedPresentation();
+    }
+
+    private static ProcessActionChoice Update(
+        ProcessActionChoice choice,
+        ProcessDescriptor process,
+        string displayName)
+    {
+        choice.Update(process, displayName);
+        return choice;
     }
 
     /// <summary>
@@ -227,6 +252,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
                     IdentityText = _localization.Get(LocalizationKeys.NoProcessSelected);
                     ExecutablePathText = _localization.Get(LocalizationKeys.Unavailable);
                     StartTimeText = _localization.Get(LocalizationKeys.Unavailable);
+                    ProcessDetailsText = _localization.Get(LocalizationKeys.NoProcessSelected);
                 }
             }
         }
@@ -248,6 +274,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
             IdentityText = _localization.Get(LocalizationKeys.NoProcessSelected);
             ExecutablePathText = _localization.Get(LocalizationKeys.Unavailable);
             StartTimeText = _localization.Get(LocalizationKeys.Unavailable);
+            ProcessDetailsText = _localization.Get(LocalizationKeys.NoProcessSelected);
             if (identityChanged)
             {
                 StatusText = _localization.Get(LocalizationKeys.SelectProcess);
@@ -261,6 +288,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
         StartTimeText = newValue.Target.InstanceId.StartTimeUtc
             .ToLocalTime()
             .ToString("G", System.Globalization.CultureInfo.CurrentCulture);
+        RefreshSelectedPresentation();
         if (identityChanged)
         {
             StatusText = _lastActionFeedback is null
@@ -404,7 +432,8 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
             string details = ProcessDetailsTextFormatter.Format(
                 snapshot,
                 selected.Process,
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow,
+                _localization);
             bool copied = await _clipboard.CopyTextAsync(details, _shutdownToken);
             SetCurrentStatus(
                 version,
@@ -501,12 +530,12 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
             IdentityText = _localization.Get(LocalizationKeys.NoProcessSelected);
             ExecutablePathText = _localization.Get(LocalizationKeys.Unavailable);
             StartTimeText = _localization.Get(LocalizationKeys.Unavailable);
+            ProcessDetailsText = _localization.Get(LocalizationKeys.NoProcessSelected);
             StatusText = _localization.Get(LocalizationKeys.SelectProcess);
             return;
         }
 
-        ExecutablePathText = selected.Process.ExecutablePath
-            ?? _localization.Get(LocalizationKeys.Unavailable);
+        RefreshSelectedPresentation();
         if (!IsBusy)
         {
             StatusText = _lastActionFeedback is null
@@ -516,4 +545,23 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
     }
 
     public void Dispose() => _localization.LanguageChanged -= Localization_LanguageChanged;
+
+    private void RefreshSelectedPresentation()
+    {
+        ProcessActionChoice? selected = SelectedProcess;
+        if (selected is null || _snapshot is null)
+        {
+            return;
+        }
+
+        ExecutablePathText = ProcessDetailsTextFormatter.Value(selected.Process.ExecutablePath, _localization);
+        StartTimeText = selected.Target.InstanceId.StartTimeUtc
+            .ToLocalTime()
+            .ToString("G", _localization.Culture);
+        ProcessDetailsText = ProcessDetailsTextFormatter.Format(
+            _snapshot,
+            selected.Process,
+            DateTimeOffset.UtcNow,
+            _localization);
+    }
 }

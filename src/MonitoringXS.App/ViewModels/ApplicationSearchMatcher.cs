@@ -23,6 +23,8 @@ internal static class ApplicationSearchMatcher
             || Matches(snapshot?.Application.Publisher, search, culture)
             || snapshot?.Processes.Any(process =>
                 Matches(process.ProcessName, search, culture)
+                || Matches(process.InstanceId.ProcessId.ToString(CultureInfo.InvariantCulture), search, culture)
+                || Matches(process.ExecutablePath, search, culture)
                 || Matches(process.ProductName, search, culture)
                 || Matches(process.FileDescription, search, culture)
                 || Matches(process.Publisher, search, culture)) == true)
