@@ -13,6 +13,53 @@ namespace MonitoringXS.Application;
 /// </summary>
 public sealed class SystemOverviewService
 {
+    /// <summary>
+    /// Typed metadata for the system CPU metric. Logical scope is the whole
+    /// operating system, sampled as an instantaneous percent over a short window.
+    /// </summary>
+    public static MetricMetadata CpuMetadata { get; } = new(
+        MetricUnit.Percent,
+        MetricScope.System,
+        MetricSource.WindowsPerformanceCounters,
+        MetricSamplingKind.CurrentSnapshot);
+
+    /// <summary>
+    /// Typed metadata for the system memory utilization metric.
+    /// </summary>
+    public static MetricMetadata MemoryMetadata { get; } = new(
+        MetricUnit.Percent,
+        MetricScope.System,
+        MetricSource.OperatingSystem,
+        MetricSamplingKind.CurrentSnapshot);
+
+    /// <summary>
+    /// Typed metadata for the physical-disk read/write rate metrics. Rates are
+    /// aggregated over the sampling interval from the advanced monitoring engine.
+    /// </summary>
+    public static MetricMetadata DiskMetadata { get; } = new(
+        MetricUnit.BytesPerSecond,
+        MetricScope.System,
+        MetricSource.AdvancedMonitoringEngine,
+        MetricSamplingKind.AggregatedOverInterval);
+
+    /// <summary>
+    /// Typed metadata for the network receive/send rate metrics.
+    /// </summary>
+    public static MetricMetadata NetworkMetadata { get; } = new(
+        MetricUnit.BytesPerSecond,
+        MetricScope.System,
+        MetricSource.AdvancedMonitoringEngine,
+        MetricSamplingKind.AggregatedOverInterval);
+
+    /// <summary>
+    /// Typed metadata for the system GPU utilization metric.
+    /// </summary>
+    public static MetricMetadata GpuMetadata { get; } = new(
+        MetricUnit.Percent,
+        MetricScope.System,
+        MetricSource.WindowsPerformanceCounters,
+        MetricSamplingKind.CurrentSnapshot);
+
     private const int OneMinuteCapacity = 60;
     private readonly ISystemOverviewProvider _provider;
     private readonly BoundedTimeSeries<SystemOverviewHistoryPoint> _history = new(OneMinuteCapacity);

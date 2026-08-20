@@ -45,7 +45,23 @@ public sealed class MonitoringRuntime : IAsyncDisposable
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            StartedAt ??= DateTimeOffset.UtcNow;
             return _loop ??= RunAsync(_shutdown.Token);
+        }
+    }
+
+    /// <summary>When the monitoring loop was first started, or null if it has not started.</summary>
+    public DateTimeOffset? StartedAt { get; private set; }
+
+    /// <summary>True while the monitoring loop is started and not disposed.</summary>
+    public bool IsRunning
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _loop is not null && !_disposed;
+            }
         }
     }
 

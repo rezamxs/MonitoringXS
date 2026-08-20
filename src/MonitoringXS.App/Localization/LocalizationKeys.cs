@@ -126,6 +126,25 @@ internal static class LocalizationKeys
     public const string UnitPercent = nameof(UnitPercent);
     public const string UnitBytes = nameof(UnitBytes);
     public const string UnitBytesPerSecond = nameof(UnitBytesPerSecond);
+    public const string UnitCount = nameof(UnitCount);
+    public const string UnitTime = nameof(UnitTime);
+    public const string UnitUnknown = nameof(UnitUnknown);
+    public const string ScopeSystem = nameof(ScopeSystem);
+    public const string ScopeLogicalApplication = nameof(ScopeLogicalApplication);
+    public const string ScopeProcess = nameof(ScopeProcess);
+    public const string ScopeCollector = nameof(ScopeCollector);
+    public const string SourceWindowsPerformanceCounters = nameof(SourceWindowsPerformanceCounters);
+    public const string SourceOperatingSystem = nameof(SourceOperatingSystem);
+    public const string SourceAdvancedMonitoring = nameof(SourceAdvancedMonitoring);
+    public const string SourceCalculated = nameof(SourceCalculated);
+    public const string SourceLocalHistory = nameof(SourceLocalHistory);
+    public const string SourceUnknown = nameof(SourceUnknown);
+    public const string SamplingCurrentSnapshot = nameof(SamplingCurrentSnapshot);
+    public const string SamplingPeriodically = nameof(SamplingPeriodically);
+    public const string SamplingAggregated = nameof(SamplingAggregated);
+    public const string SamplingCumulative = nameof(SamplingCumulative);
+    public const string SamplingUnknown = nameof(SamplingUnknown);
+    public const string MetricMetadataFormat = nameof(MetricMetadataFormat);
     public const string SelectedRangeFormat = nameof(SelectedRangeFormat);
     public const string SelectProcess = nameof(SelectProcess);
     public const string NoProcessSelected = nameof(NoProcessSelected);
@@ -240,6 +259,25 @@ internal static class LocalizationKeys
     public const string SystemOverviewChartSummary = nameof(SystemOverviewChartSummary);
     public const string SystemOverviewChartEmpty = nameof(SystemOverviewChartEmpty);
     public const string SystemOverviewChartAutomationName = nameof(SystemOverviewChartAutomationName);
+
+    // Diagnostics center
+    public const string DiagnosticsRuntimeState = nameof(DiagnosticsRuntimeState);
+    public const string DiagnosticsRuntimeRunning = nameof(DiagnosticsRuntimeRunning);
+    public const string DiagnosticsRuntimeIdle = nameof(DiagnosticsRuntimeIdle);
+    public const string DiagnosticsRuntimeSession = nameof(DiagnosticsRuntimeSession);
+    public const string DiagnosticsLastSnapshot = nameof(DiagnosticsLastSnapshot);
+    public const string DiagnosticsNeverSampled = nameof(DiagnosticsNeverSampled);
+    public const string DiagnosticsProcesses = nameof(DiagnosticsProcesses);
+    public const string DiagnosticsProcessesPartial = nameof(DiagnosticsProcessesPartial);
+    public const string DiagnosticsSystemOverview = nameof(DiagnosticsSystemOverview);
+    public const string DiagnosticsSystemOverviewAvailable = nameof(DiagnosticsSystemOverviewAvailable);
+    public const string DiagnosticsSystemOverviewUnavailable = nameof(DiagnosticsSystemOverviewUnavailable);
+    public const string DiagnosticsSelfCpu = nameof(DiagnosticsSelfCpu);
+    public const string DiagnosticsSelfMemory = nameof(DiagnosticsSelfMemory);
+    public const string DiagnosticsStatusWorking = nameof(DiagnosticsStatusWorking);
+    public const string DiagnosticsStatusUnavailable = nameof(DiagnosticsStatusUnavailable);
+    public const string DiagnosticsStatusAttention = nameof(DiagnosticsStatusAttention);
+    public const string DiagnosticsDuration = nameof(DiagnosticsDuration);
 
     // About page
     public const string AboutPageTitle = nameof(AboutPageTitle);

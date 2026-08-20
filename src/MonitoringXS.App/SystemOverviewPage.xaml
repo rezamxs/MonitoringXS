@@ -23,7 +23,8 @@
                 Background="{StaticResource SurfaceBrush}"
                 BorderBrush="{StaticResource SubtleBorderBrush}"
                 BorderThickness="1"
-                CornerRadius="10">
+                CornerRadius="10"
+                ToolTipService.ToolTip="{Binding Explanation}">
                 <StackPanel Spacing="6">
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
@@ -111,7 +112,8 @@
                 Background="{StaticResource SurfaceBrush}"
                 BorderBrush="{StaticResource SubtleBorderBrush}"
                 BorderThickness="1"
-                CornerRadius="12">
+                CornerRadius="12"
+                ToolTipService.ToolTip="{Binding Explanation}">
                 <StackPanel Spacing="10">
                     <Grid ColumnSpacing="12">
                         <Grid.ColumnDefinitions>

@@ -87,6 +87,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _iconProvider = iconProvider;
         SystemOverview = new SystemOverviewPageViewModel(_localization);
         BuildLocalizedPresentation();
+        ApplySystemMetricMetadata();
         StatusMessage = _localization.Get(LocalizationKeys.DiscoveringApplications);
         _localization.LanguageChanged += Localization_LanguageChanged;
         ApplicationItems.Add(_installedSection);
@@ -106,6 +107,17 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public MonitoringSnapshot? LatestDashboardSnapshot { get; private set; }
 
     public SystemOverviewPageViewModel SystemOverview { get; }
+
+    /// <summary>
+    /// Applies shared typed metric metadata (unit, scope, source, sampling) to the
+    /// system overview cards. Called on every localization rebuild.
+    /// </summary>
+    public void ApplySystemMetricMetadata() => SystemOverview.ApplyMetadata(
+        SystemMetricMetadataCatalog.Cpu,
+        SystemMetricMetadataCatalog.Memory,
+        SystemMetricMetadataCatalog.Disk,
+        SystemMetricMetadataCatalog.Network,
+        SystemMetricMetadataCatalog.Gpu);
 
     public string SortDirectionLabel => ApplicationSortPresentation.DirectionLabel(
         SelectedSortOption.Field,
@@ -450,6 +462,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         BuildLocalizedPresentation();
         SystemOverview.Relocalize();
+        ApplySystemMetricMetadata();
         foreach (ApplicationCardViewModel card in _cards.Values)
         {
             card.Relocalize();

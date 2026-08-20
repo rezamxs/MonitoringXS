@@ -139,6 +139,7 @@
   <data name="RunningAppsTab.Header" xml:space="preserve"><value>برنامه‌های در حال اجرا</value></data>
   <data name="RunningAppsTitle.Text" xml:space="preserve"><value>برنامه‌های در حال اجرا</value></data>
   <data name="SortBy.Text" xml:space="preserve"><value>مرتب‌سازی بر اساس</value></data>
+  <data name="NoComparableData.ToolTipService.ToolTip" xml:space="preserve"><value>همه‌ی مقادیر در دسترس نیستند. برنامه‌ها بر اساس نام مرتب شده‌اند.</value></data>
   <data name="NoComparableData.Text" xml:space="preserve"><value>داده‌ای برای مقایسه موجود نیست</value></data>
   <data name="AdvancedToggle.Text" xml:space="preserve"><value>پیشرفته</value></data>
   <data name="AdvancedToggle.AutomationProperties.Name" xml:space="preserve"><value>نمایش اطلاعات پیشرفتهٔ برنامه</value></data>
@@ -147,6 +148,11 @@
   <data name="CardMemoryLabel.Text" xml:space="preserve"><value>حافظه</value></data>
   <data name="CardIoLabel.Text" xml:space="preserve"><value>I/O پردازش</value></data>
   <data name="CardDiskLabel.Text" xml:space="preserve"><value>دیسک فیزیکی</value></data>
+  <data name="NavRunning.ToolTipService.ToolTip" xml:space="preserve"><value>نمایش برنامه‌های در حال اجرا</value></data>
+  <data name="NavHistory.ToolTipService.ToolTip" xml:space="preserve"><value>تاریخچه‌ی برنامه‌ها در طول زمان</value></data>
+  <data name="NavSettings.ToolTipService.ToolTip" xml:space="preserve"><value>پیکربندی نمونه‌برداری، مدت نگهداری، پوسته و زبان</value></data>
+  <data name="CardNetworkLabel.ToolTipService.ToolTip" xml:space="preserve"><value>بایت‌های بسته‌های ارسالی و دریافتی که از طریق موتور پایش پیشرفته دیده شده‌اند. هیچ بار یا مقصدی جمع‌آوری نمی‌شود.</value></data>
+  <data name="CardGpuLabel.ToolTipService.ToolTip" xml:space="preserve"><value>شلوغ‌ترین موتور GPU در سراسر برنامه. حافظه‌ی اختصاصی و اشتراکی مجموع شمارنده‌های GPU فرایندی ویندوز هستند.</value></data>
   <data name="CardNetworkLabel.Text" xml:space="preserve"><value>شبکه</value></data>
   <data name="CardGpuLabel.Text" xml:space="preserve"><value>GPU</value></data>
   <data name="ProcessSelector.AutomationProperties.Name" xml:space="preserve"><value>پردازش برای عملیات برنامه</value></data>
@@ -221,6 +227,25 @@
   <data name="MetricGpuUtilization" xml:space="preserve"><value>مصرف GPU</value></data>
   <data name="MetricGpuDedicated" xml:space="preserve"><value>حافظهٔ اختصاصی GPU</value></data>
   <data name="MetricGpuShared" xml:space="preserve"><value>حافظهٔ اشتراکی GPU</value></data>
+  <data name="UnitCount" xml:space="preserve"><value>تعداد</value></data>
+  <data name="UnitTime" xml:space="preserve"><value>زمان</value></data>
+  <data name="UnitUnknown" xml:space="preserve"><value>نامشخص</value></data>
+  <data name="ScopeSystem" xml:space="preserve"><value>کل سیستم</value></data>
+  <data name="ScopeLogicalApplication" xml:space="preserve"><value>این برنامه</value></data>
+  <data name="ScopeProcess" xml:space="preserve"><value>فرایند</value></data>
+  <data name="ScopeCollector" xml:space="preserve"><value>زیرسیستم پایش</value></data>
+  <data name="SourceWindowsPerformanceCounters" xml:space="preserve"><value>شمارنده‌های کارایی ویندوز</value></data>
+  <data name="SourceOperatingSystem" xml:space="preserve"><value>سیستم‌عامل</value></data>
+  <data name="SourceAdvancedMonitoring" xml:space="preserve"><value>موتور پایش پیشرفته</value></data>
+  <data name="SourceCalculated" xml:space="preserve"><value>محاسبه‌ی Monitoring XS</value></data>
+  <data name="SourceLocalHistory" xml:space="preserve"><value>پایگاه‌داده‌ی تاریخچه‌ی محلی</value></data>
+  <data name="SourceUnknown" xml:space="preserve"><value>منبع نامشخص</value></data>
+  <data name="SamplingCurrentSnapshot" xml:space="preserve"><value>مقدار لحظه‌ای</value></data>
+  <data name="SamplingPeriodically" xml:space="preserve"><value>نمونه‌برداری دوره‌ای</value></data>
+  <data name="SamplingAggregated" xml:space="preserve"><value>جمع‌آوری‌شده در بازه‌ی نمونه‌برداری</value></data>
+  <data name="SamplingCumulative" xml:space="preserve"><value>تجمعی از زمان شروع</value></data>
+  <data name="SamplingUnknown" xml:space="preserve"><value>نحوه‌ی نمونه‌برداری نامشخص</value></data>
+  <data name="MetricMetadataFormat" xml:space="preserve"><value>{0} · {1} · {2} · {3}</value></data>
   <data name="UnitPercent" xml:space="preserve"><value>٪</value></data>
   <data name="UnitBytes" xml:space="preserve"><value>بایت</value></data>
   <data name="UnitBytesPerSecond" xml:space="preserve"><value>بایت/ثانیه</value></data>
@@ -378,6 +403,19 @@
   <data name="DiagnosticsBeginnerHistory" xml:space="preserve"><value>ذخیره‌سازی تاریخچه</value></data>
   <data name="DiagnosticsStatusWorking" xml:space="preserve"><value>در حال کار</value></data>
   <data name="DiagnosticsStatusAttention" xml:space="preserve"><value>نیازمند بررسی</value></data>
+  <data name="DiagnosticsRuntimeState" xml:space="preserve"><value>وضعیت موتور پایش</value></data>
+  <data name="DiagnosticsRuntimeRunning" xml:space="preserve"><value>در حال نمونه‌برداری</value></data>
+  <data name="DiagnosticsRuntimeIdle" xml:space="preserve"><value>آماده (در انتظار شروع)</value></data>
+  <data name="DiagnosticsRuntimeSession" xml:space="preserve"><value>مدت جلسه‌ی پایش</value></data>
+  <data name="DiagnosticsLastSnapshot" xml:space="preserve"><value>آخرین نمونه‌ی زنده</value></data>
+  <data name="DiagnosticsNeverSampled" xml:space="preserve"><value>هنوز نمونه‌ای گرفته نشده</value></data>
+  <data name="DiagnosticsProcesses" xml:space="preserve"><value>فرایندهای شناسایی‌شده</value></data>
+  <data name="DiagnosticsProcessesPartial" xml:space="preserve"><value>برخی فرایندها به‌طور کامل شناسایی نشدند</value></data>
+  <data name="DiagnosticsSystemOverview" xml:space="preserve"><value>نمای کلی سیستم</value></data>
+  <data name="DiagnosticsSystemOverviewAvailable" xml:space="preserve"><value>شاخص‌های زنده‌ی سیستم موجودند</value></data>
+  <data name="DiagnosticsSystemOverviewUnavailable" xml:space="preserve"><value>در انتظار اولین نمونه‌ی سیستم</value></data>
+  <data name="DiagnosticsSelfCpu" xml:space="preserve"><value>مصرف پردازنده‌ی Monitoring XS</value></data>
+  <data name="DiagnosticsSelfMemory" xml:space="preserve"><value>حافظه‌ی کاری Monitoring XS</value></data>
   <data name="DiagnosticsStatusUnavailable" xml:space="preserve"><value>در دسترس نیست</value></data>
   <data name="DiagnosticsExplanationMonitoringXS" xml:space="preserve"><value>برنامه در حال اجراست و داده‌ها را جمع‌آوری می‌کند.</value></data>
   <data name="DiagnosticsExplanationResourceMonitoring" xml:space="preserve"><value>سنجه‌های CPU، حافظه و I/O پردازش در حال جمع‌آوری‌اند.</value></data>

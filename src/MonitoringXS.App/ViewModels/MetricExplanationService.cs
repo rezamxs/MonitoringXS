@@ -23,7 +23,8 @@ public sealed record MetricExplanationItem(
     string StatusText,
     string AdvancedText,
     string ProviderName,
-    bool IsHealthy = false);
+    bool IsHealthy = false,
+    MetricMetadata? Metadata = null);
 
 public sealed class MetricExplanationService
 {

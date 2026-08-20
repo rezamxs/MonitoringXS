@@ -14,6 +14,46 @@ using MonitoringXS.Storage.History;
 
 namespace MonitoringXS.App.ViewModels;
 
+/// <summary>
+/// Bounded self-observation for the Diagnostics center. Samples this process
+/// only when diagnostics are rebuilt (refresh, language switch, page open) —
+/// there is deliberately no background loop.
+/// </summary>
+internal sealed class SelfProcessSampler
+{
+    private readonly object _gate = new();
+    private long _previousTotalProcessorTicks = -1;
+    private long _previousElapsedTicks = -1;
+
+    public long WorkingSetBytes { get; private set; }
+
+    /// <summary>CPU percent since the previous sample, or -1 when no delta is known yet.</summary>
+    public double Sample()
+    {
+        Process process = Process.GetCurrentProcess();
+        long totalProcessorTicks = process.TotalProcessorTime.Ticks;
+        long elapsedTicks = Stopwatch.GetTimestamp();
+        WorkingSetBytes = process.WorkingSet64;
+        lock (_gate)
+        {
+            if (_previousTotalProcessorTicks < 0 || elapsedTicks <= _previousElapsedTicks)
+            {
+                _previousTotalProcessorTicks = totalProcessorTicks;
+                _previousElapsedTicks = elapsedTicks;
+                return -1;
+            }
+
+            double processorDelta = totalProcessorTicks - _previousTotalProcessorTicks;
+            double elapsedDelta = elapsedTicks - _previousElapsedTicks;
+            _previousTotalProcessorTicks = totalProcessorTicks;
+            _previousElapsedTicks = elapsedTicks;
+            double elapsedSeconds = elapsedDelta / Stopwatch.Frequency;
+            double processorSeconds = processorDelta / TimeSpan.TicksPerSecond;
+            return processorSeconds / elapsedSeconds * 100.0;
+        }
+    }
+}
+
 public sealed record DiagnosticItem(
     string Label,
     string Value,
@@ -42,7 +82,9 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
     private readonly IClipboardService _clipboard;
     private readonly LocalizationService _localization;
     private readonly MetricExplanationService _metricExplanations;
-    private readonly long _startedAt = Stopwatch.GetTimestamp();
+    private readonly MonitoringRuntime _runtime;
+    private readonly SelfProcessSampler _self = new();
+    private DateTimeOffset _appStartedAt;
     private bool _disposed;
 
     public DiagnosticsPageViewModel(
@@ -52,7 +94,8 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
         LiveRefreshCadence cadence,
         IClipboardService clipboard,
         LocalizationService localization,
-        MetricExplanationService metricExplanations)
+        MetricExplanationService metricExplanations,
+        MonitoringRuntime runtime)
     {
         _main = main;
         _settings = settings;
@@ -61,6 +104,8 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
         _clipboard = clipboard;
         _localization = localization;
         _metricExplanations = metricExplanations;
+        _runtime = runtime;
+        _appStartedAt = Process.GetCurrentProcess().StartTime.ToUniversalTime();
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         CopySafeSummaryCommand = new AsyncRelayCommand(CopySafeSummaryAsync);
         _localization.LanguageChanged += Localization_LanguageChanged;
@@ -230,6 +275,9 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
                 storageHealthy ? greenBrush : orangeBrush)
         ];
 
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        TimeSpan appUptime = now - _appStartedAt;
+        MonitoringSnapshot? latest = dashboard;
         Replace(ApplicationItems,
         [
             Item("DiagnosticsVersion", DisplayVersion(), technical: true),
@@ -241,7 +289,25 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
             Item("DiagnosticsLanguage", _localization.Culture.Name, technical: true),
             Item("DiagnosticsFlowDirection", _localization.Direction.ToString(), technical: true),
             Item("DiagnosticsSampling", _localization.Format("DiagnosticsSeconds", _cadence.Interval.TotalSeconds)),
-            Item("DiagnosticsUptime", FormatDuration(Stopwatch.GetElapsedTime(_startedAt)))
+            Item("DiagnosticsUptime", FormatDuration(appUptime)),
+            Item("DiagnosticsRuntimeState", _runtime.IsRunning
+                ? _localization.Get(LocalizationKeys.DiagnosticsRuntimeRunning)
+                : _localization.Get(LocalizationKeys.DiagnosticsRuntimeIdle)),
+            Item("DiagnosticsRuntimeSession", _runtime.StartedAt is DateTimeOffset started
+                ? FormatDuration(now - started)
+                : _localization.Get(LocalizationKeys.DiagnosticsNeverSampled)),
+            Item("DiagnosticsLastSnapshot", latest is null
+                ? _localization.Get(LocalizationKeys.DiagnosticsNeverSampled)
+                : FormatTimestamp(latest.CapturedAt)),
+            Item("DiagnosticsProcesses", latest is null
+                ? _localization.Get(LocalizationKeys.Unavailable)
+                : latest.Discovery.Processes.Count.ToString(CultureInfo.InvariantCulture),
+                latest?.Discovery.IsPartial == true ? _localization.Get(LocalizationKeys.DiagnosticsProcessesPartial) : null),
+            Item("DiagnosticsSystemOverview", latest?.SystemOverview is null
+                ? _localization.Get(LocalizationKeys.DiagnosticsSystemOverviewUnavailable)
+                : _localization.Get(LocalizationKeys.DiagnosticsSystemOverviewAvailable)),
+            Item("DiagnosticsSelfCpu", FormatSelfCpu(), technical: true),
+            Item("DiagnosticsSelfMemory", FormatSelfMemory(_self.WorkingSetBytes), technical: true)
         ]);
 
         Replace(CollectorItems,
@@ -392,6 +458,16 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
 
     private string FormatDuration(TimeSpan value) =>
         _localization.Format("DiagnosticsDuration", (int)value.TotalHours, value.Minutes, value.Seconds);
+
+    private string FormatSelfCpu()
+    {
+        double percent = _self.Sample();
+        return percent < 0
+            ? _localization.Get(LocalizationKeys.Unavailable)
+            : $"{percent.ToString("0.0", CultureInfo.InvariantCulture)} %";
+    }
+
+    private string FormatSelfMemory(long bytes) => FormatBytes(bytes);
 
     private static string FormatBytes(long bytes) => bytes >= 1024 * 1024
         ? $"{bytes / (1024d * 1024d):0.0} MB"

@@ -139,6 +139,7 @@
   <data name="RunningAppsTab.Header" xml:space="preserve"><value>Running Apps</value></data>
   <data name="RunningAppsTitle.Text" xml:space="preserve"><value>Running applications</value></data>
   <data name="SortBy.Text" xml:space="preserve"><value>Sort by</value></data>
+  <data name="NoComparableData.ToolTipService.ToolTip" xml:space="preserve"><value>All values are unavailable. Applications are ordered by name.</value></data>
   <data name="NoComparableData.Text" xml:space="preserve"><value>No comparable data</value></data>
   <data name="AdvancedToggle.Text" xml:space="preserve"><value>Advanced</value></data>
   <data name="AdvancedToggle.AutomationProperties.Name" xml:space="preserve"><value>Show advanced application information</value></data>
@@ -147,6 +148,11 @@
   <data name="CardMemoryLabel.Text" xml:space="preserve"><value>Memory</value></data>
   <data name="CardIoLabel.Text" xml:space="preserve"><value>Process I/O</value></data>
   <data name="CardDiskLabel.Text" xml:space="preserve"><value>Physical disk</value></data>
+  <data name="NavRunning.ToolTipService.ToolTip" xml:space="preserve"><value>Show running applications</value></data>
+  <data name="NavHistory.ToolTipService.ToolTip" xml:space="preserve"><value>Application history over time</value></data>
+  <data name="NavSettings.ToolTipService.ToolTip" xml:space="preserve"><value>Configure sampling, retention, theme, and language</value></data>
+  <data name="CardNetworkLabel.ToolTipService.ToolTip" xml:space="preserve"><value>Send and receive packet throughput observed by the Advanced Monitoring engine. No payloads or destinations are collected.</value></data>
+  <data name="CardGpuLabel.ToolTipService.ToolTip" xml:space="preserve"><value>Busiest GPU engine across the application. Dedicated and shared memory are sums of Windows per-process GPU counters.</value></data>
   <data name="CardNetworkLabel.Text" xml:space="preserve"><value>Network</value></data>
   <data name="CardGpuLabel.Text" xml:space="preserve"><value>GPU</value></data>
   <data name="ProcessSelector.AutomationProperties.Name" xml:space="preserve"><value>Process for application actions</value></data>
@@ -221,6 +227,25 @@
   <data name="MetricGpuUtilization" xml:space="preserve"><value>GPU utilization</value></data>
   <data name="MetricGpuDedicated" xml:space="preserve"><value>Dedicated GPU memory</value></data>
   <data name="MetricGpuShared" xml:space="preserve"><value>Shared GPU memory</value></data>
+  <data name="UnitCount" xml:space="preserve"><value>count</value></data>
+  <data name="UnitTime" xml:space="preserve"><value>time</value></data>
+  <data name="UnitUnknown" xml:space="preserve"><value>unknown</value></data>
+  <data name="ScopeSystem" xml:space="preserve"><value>Whole system</value></data>
+  <data name="ScopeLogicalApplication" xml:space="preserve"><value>This application</value></data>
+  <data name="ScopeProcess" xml:space="preserve"><value>Process</value></data>
+  <data name="ScopeCollector" xml:space="preserve"><value>Monitoring subsystem</value></data>
+  <data name="SourceWindowsPerformanceCounters" xml:space="preserve"><value>Windows performance counters</value></data>
+  <data name="SourceOperatingSystem" xml:space="preserve"><value>Operating system</value></data>
+  <data name="SourceAdvancedMonitoring" xml:space="preserve"><value>Advanced monitoring engine</value></data>
+  <data name="SourceCalculated" xml:space="preserve"><value>Monitoring XS calculation</value></data>
+  <data name="SourceLocalHistory" xml:space="preserve"><value>Local history database</value></data>
+  <data name="SourceUnknown" xml:space="preserve"><value>Unknown source</value></data>
+  <data name="SamplingCurrentSnapshot" xml:space="preserve"><value>current value</value></data>
+  <data name="SamplingPeriodically" xml:space="preserve"><value>sampled periodically</value></data>
+  <data name="SamplingAggregated" xml:space="preserve"><value>aggregated over the sampling interval</value></data>
+  <data name="SamplingCumulative" xml:space="preserve"><value>cumulative since start</value></data>
+  <data name="SamplingUnknown" xml:space="preserve"><value>unknown sampling</value></data>
+  <data name="MetricMetadataFormat" xml:space="preserve"><value>{0} · {1} · {2} · {3}</value></data>
   <data name="UnitPercent" xml:space="preserve"><value>%</value></data>
   <data name="UnitBytes" xml:space="preserve"><value>bytes</value></data>
   <data name="UnitBytesPerSecond" xml:space="preserve"><value>bytes/s</value></data>
@@ -378,6 +403,19 @@
   <data name="DiagnosticsBeginnerHistory" xml:space="preserve"><value>History storage</value></data>
   <data name="DiagnosticsStatusWorking" xml:space="preserve"><value>Working</value></data>
   <data name="DiagnosticsStatusAttention" xml:space="preserve"><value>Needs attention</value></data>
+  <data name="DiagnosticsRuntimeState" xml:space="preserve"><value>Monitoring runtime state</value></data>
+  <data name="DiagnosticsRuntimeRunning" xml:space="preserve"><value>Sampling</value></data>
+  <data name="DiagnosticsRuntimeIdle" xml:space="preserve"><value>Idle (awaiting start)</value></data>
+  <data name="DiagnosticsRuntimeSession" xml:space="preserve"><value>Monitoring session duration</value></data>
+  <data name="DiagnosticsLastSnapshot" xml:space="preserve"><value>Last live snapshot</value></data>
+  <data name="DiagnosticsNeverSampled" xml:space="preserve"><value>Never sampled</value></data>
+  <data name="DiagnosticsProcesses" xml:space="preserve"><value>Processes discovered</value></data>
+  <data name="DiagnosticsProcessesPartial" xml:space="preserve"><value>Some processes could not be fully attributed</value></data>
+  <data name="DiagnosticsSystemOverview" xml:space="preserve"><value>System overview</value></data>
+  <data name="DiagnosticsSystemOverviewAvailable" xml:space="preserve"><value>Live system metrics present</value></data>
+  <data name="DiagnosticsSystemOverviewUnavailable" xml:space="preserve"><value>Awaiting the first system snapshot</value></data>
+  <data name="DiagnosticsSelfCpu" xml:space="preserve"><value>Monitoring XS CPU usage</value></data>
+  <data name="DiagnosticsSelfMemory" xml:space="preserve"><value>Monitoring XS working set</value></data>
   <data name="DiagnosticsStatusUnavailable" xml:space="preserve"><value>Unavailable</value></data>
   <data name="DiagnosticsExplanationMonitoringXS" xml:space="preserve"><value>The application is running and collecting data.</value></data>
   <data name="DiagnosticsExplanationResourceMonitoring" xml:space="preserve"><value>CPU, memory, and process I/O metrics are being collected.</value></data>

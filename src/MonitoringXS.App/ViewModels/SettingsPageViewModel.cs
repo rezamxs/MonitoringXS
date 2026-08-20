@@ -135,6 +135,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly LiveRefreshCadence _cadence;
     private readonly LocalizationService _localization;
     private readonly SemaphoreSlim _saveGate = new(1, 1);
+    private readonly SemaphoreSlim _brokerRefreshGate = new(1, 1);
     private readonly object _settingsGate = new();
     private ApplicationSettings _settings = ApplicationSettings.Default;
     private int _saveVersion;
@@ -328,6 +329,21 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             cancellationToken);
 
     public async Task RefreshBrokerStatusAsync(CancellationToken cancellationToken)
+    {
+        // Bounded: concurrent callers (Diagnostics refresh + Settings test connection)
+        // share one in-flight probe instead of opening parallel service queries.
+        await _brokerRefreshGate.WaitAsync(cancellationToken);
+        try
+        {
+            await RefreshBrokerStatusCoreAsync(cancellationToken);
+        }
+        finally
+        {
+            _brokerRefreshGate.Release();
+        }
+    }
+
+    private async Task RefreshBrokerStatusCoreAsync(CancellationToken cancellationToken)
     {
         IsBrokerRefreshing = true;
         BrokerStateText = _localization.Get(LocalizationKeys.Checking);
@@ -538,6 +554,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     {
         _localization.LanguageChanged -= Localization_LanguageChanged;
         RefreshBrokerStatusCommand.Cancel();
+        _saveGate.Dispose();
+        _brokerRefreshGate.Dispose();
     }
 }
 #pragma warning restore CA1001

@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using MonitoringXS.App.ViewModels;
+using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
 
 namespace MonitoringXS.App.Tests;
@@ -56,6 +57,39 @@ public sealed class DiagnosticsPresentationTests
         };
 
         Assert.Equal(FlowDirection.LeftToRight, item.ValueFlowDirection);
+    }
+
+    [Fact]
+    public void SelfProcessSamplerReportsWorkingSetAndEventuallyCpu()
+    {
+        SelfProcessSampler sampler = new();
+        double first = sampler.Sample();
+        Assert.Equal(-1, first);
+        Assert.True(sampler.WorkingSetBytes > 0);
+
+        double second = sampler.Sample();
+        Assert.InRange(second, 0, 1000);
+        Assert.True(sampler.WorkingSetBytes > 0);
+    }
+
+    [Fact]
+    public void MetricMetadataDistinguishesScopesAndSamplingKinds()
+    {
+        MetricMetadata cpu = SystemOverviewService.CpuMetadata;
+        Assert.Equal(MetricUnit.Percent, cpu.Unit);
+        Assert.Equal(MetricScope.System, cpu.Scope);
+        Assert.Equal(MetricSource.WindowsPerformanceCounters, cpu.Source);
+        Assert.Equal(MetricSamplingKind.CurrentSnapshot, cpu.Sampling);
+
+        MetricMetadata disk = SystemOverviewService.DiskMetadata;
+        Assert.Equal(MetricUnit.BytesPerSecond, disk.Unit);
+        Assert.Equal(MetricSource.AdvancedMonitoringEngine, disk.Source);
+        Assert.Equal(MetricSamplingKind.AggregatedOverInterval, disk.Sampling);
+
+        Assert.Equal(MetricUnit.Unknown, MetricMetadata.Unknown.Unit);
+        Assert.Equal(MetricScope.Collector, MetricMetadata.Unknown.Scope);
+        Assert.Equal(MetricSource.Unknown, MetricMetadata.Unknown.Source);
+        Assert.Equal(MetricSamplingKind.Unknown, MetricMetadata.Unknown.Sampling);
     }
 
     [Fact]

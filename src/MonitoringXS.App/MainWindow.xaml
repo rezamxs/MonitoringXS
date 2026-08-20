@@ -771,9 +771,7 @@
                                     Spacing="4"
                                     ToolTipService.ToolTip="{x:Bind NetworkStatusText, Mode=OneWay}">
                                     <TextBlock x:Uid="CardNetworkLabel"
-                                        Style="{StaticResource CardMetricLabelStyle}"
-                                        Text="Network"
-                                        ToolTipService.ToolTip="Send and receive packet bytes observed through kernel Network ETW. No payloads or destinations are collected." />
+                                        Style="{StaticResource CardMetricLabelStyle}" />
                                     <TextBlock
                                         Style="{StaticResource CardMetricValueStyle}"
                                         Text="{x:Bind NetworkText, Mode=OneWay}"
@@ -790,9 +788,7 @@
                                     Spacing="4"
                                     ToolTipService.ToolTip="{x:Bind GpuStatusText, Mode=OneWay}">
                                     <TextBlock x:Uid="CardGpuLabel"
-                                        Style="{StaticResource CardMetricLabelStyle}"
-                                        Text="GPU"
-                                        ToolTipService.ToolTip="Busiest GPU engine across the application. Dedicated and shared memory are sums of Windows per-process GPU counters." />
+                                        Style="{StaticResource CardMetricLabelStyle}" />
                                     <TextBlock
                                         Style="{StaticResource CardMetricValueStyle}"
                                         Text="{x:Bind GpuText, Mode=OneWay}"
@@ -882,27 +878,23 @@
                 <x:Double x:Key="NavigationViewSelectionIndicatorWidth">4</x:Double>
             </NavigationView.Resources>
             <NavigationView.MenuItems>
-                <NavigationViewItem x:Uid="NavDashboard" Content="Dashboard" Icon="Home" IsEnabled="False" Tag="dashboard" ToolTipService.ToolTip="Dashboard" />
+                <NavigationViewItem x:Uid="NavDashboard" Icon="Home" IsEnabled="False" Tag="dashboard" />
                 <NavigationViewItem x:Uid="NavRunning"
                     x:Name="RunningNavigationItem"
-                    Content="Running Apps"
                     Icon="AllApps"
                     IsSelected="True"
                     Tag="running"
-                    ToolTipService.ToolTip="Running Apps"
                     UseSystemFocusVisuals="True" />
                 <NavigationViewItem x:Uid="NavSystemOverview"
                     x:Name="SystemOverviewNavigationItem"
                     Icon="ViewAll"
                     Tag="system-overview"
                     UseSystemFocusVisuals="True" />
-                <NavigationViewItem x:Uid="NavPortable" Content="Portable Apps" Icon="OpenFile" IsEnabled="False" Tag="portable" ToolTipService.ToolTip="Portable Apps" />
+                <NavigationViewItem x:Uid="NavPortable" Icon="OpenFile" IsEnabled="False" Tag="portable" />
                 <NavigationViewItem x:Uid="NavHistory"
                     x:Name="HistoryNavigationItem"
-                    Content="History"
                     Icon="Clock"
                     Tag="history"
-                    ToolTipService.ToolTip="History"
                     UseSystemFocusVisuals="True" />
                 <NavigationViewItem x:Uid="NavDiagnostics"
                     x:Name="DiagnosticsNavigationItem"
@@ -911,17 +903,13 @@
                     UseSystemFocusVisuals="True" />
                 <NavigationViewItem x:Uid="NavSettings"
                     x:Name="SettingsNavigationItem"
-                    Content="Settings"
                     Icon="Setting"
                     Tag="settings"
-                    ToolTipService.ToolTip="Settings"
                     UseSystemFocusVisuals="True" />
                 <NavigationViewItem x:Uid="NavAbout"
                     x:Name="AboutNavigationItem"
-                    Content="About"
                     Icon="Help"
                     Tag="about"
-                    ToolTipService.ToolTip="About"
                     UseSystemFocusVisuals="True" />
             </NavigationView.MenuItems>
             <Grid>
@@ -1055,9 +1043,7 @@
                                         DataContext="{x:Bind ViewModel, Mode=OneTime}"
                                         FontFamily="Segoe UI Variable"
                                         Foreground="{StaticResource SecondaryTextBrush}"
-                                        Text="No comparable data"
                                         TextTrimming="CharacterEllipsis"
-                                        ToolTipService.ToolTip="All values are unavailable. Applications are ordered by name."
                                         Visibility="{Binding HasNoComparableData, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                                     <StackPanel

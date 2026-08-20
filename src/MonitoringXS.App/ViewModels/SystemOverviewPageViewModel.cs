@@ -24,6 +24,7 @@ public sealed partial class SystemOverviewMetricCardViewModel : ObservableObject
     [ObservableProperty] public partial string ChartEmptyText { get; set; } = string.Empty;
     [ObservableProperty] public partial string PrimaryChartAutomationName { get; set; } = string.Empty;
     [ObservableProperty] public partial string SecondaryChartAutomationName { get; set; } = string.Empty;
+    [ObservableProperty] public partial string Explanation { get; set; } = string.Empty;
 
     public string IconGlyph { get; init; } = string.Empty;
 
@@ -34,6 +35,24 @@ public sealed partial class SystemOverviewMetricCardViewModel : ObservableObject
     public MetricSparklineScale ChartScale { get; init; }
 
     public string UnitText { get; init; } = string.Empty;
+}
+
+/// <summary>
+/// Binds typed system metric metadata (unit, scope, source, sampling) to a
+/// system metric card. Backing metadata constants live in
+/// <see cref="SystemOverviewService"/> so all consumers share one definition.
+/// </summary>
+public static class SystemMetricMetadataCatalog
+{
+    public static MetricMetadata Cpu => SystemOverviewService.CpuMetadata;
+
+    public static MetricMetadata Memory => SystemOverviewService.MemoryMetadata;
+
+    public static MetricMetadata Disk => SystemOverviewService.DiskMetadata;
+
+    public static MetricMetadata Network => SystemOverviewService.NetworkMetadata;
+
+    public static MetricMetadata Gpu => SystemOverviewService.GpuMetadata;
 }
 
 public sealed partial class SystemOverviewPageViewModel : ObservableObject
@@ -147,6 +166,73 @@ public sealed partial class SystemOverviewPageViewModel : ObservableObject
         ConfigureCard(_gpu, LocalizationKeys.SystemOverviewGpu, LocalizationKeys.SystemOverviewUtilization, null);
         Update(_lastSnapshot, _lastHistory);
     }
+
+    /// <summary>
+    /// Applies typed metric metadata from the shared system metric catalog.
+    /// Call during localization rebuild; metadata strings are localized resources.
+    /// </summary>
+    public void ApplyMetadata(MetricMetadata cpu, MetricMetadata memory, MetricMetadata disk, MetricMetadata network, MetricMetadata gpu)
+    {
+        _cpu.Explanation = FormatMetadata(cpu);
+        _memory.Explanation = FormatMetadata(memory);
+        _disk.Explanation = FormatMetadata(disk);
+        _network.Explanation = FormatMetadata(network);
+        _gpu.Explanation = FormatMetadata(gpu);
+    }
+
+    /// <summary>
+    /// Concise user-facing metadata line: unit, scope, source, sampling.
+    /// </summary>
+    public string FormatMetadata(MetricMetadata metadata)
+    {
+        string unit = _localization.Get(UnitKey(metadata.Unit));
+        string scope = _localization.Get(ScopeKey(metadata.Scope));
+        string source = _localization.Get(SourceKey(metadata.Source));
+        string sampling = _localization.Get(SamplingKey(metadata.Sampling));
+        return _localization.Format(
+            LocalizationKeys.MetricMetadataFormat,
+            unit,
+            scope,
+            source,
+            sampling);
+    }
+
+    private static string UnitKey(MetricUnit unit) => unit switch
+    {
+        MetricUnit.Percent => LocalizationKeys.UnitPercent,
+        MetricUnit.Bytes => LocalizationKeys.UnitBytes,
+        MetricUnit.BytesPerSecond => LocalizationKeys.UnitBytesPerSecond,
+        MetricUnit.Count => LocalizationKeys.UnitCount,
+        MetricUnit.Time => LocalizationKeys.UnitTime,
+        _ => LocalizationKeys.UnitUnknown
+    };
+
+    private static string ScopeKey(MetricScope scope) => scope switch
+    {
+        MetricScope.System => LocalizationKeys.ScopeSystem,
+        MetricScope.LogicalApplication => LocalizationKeys.ScopeLogicalApplication,
+        MetricScope.Process => LocalizationKeys.ScopeProcess,
+        _ => LocalizationKeys.ScopeCollector
+    };
+
+    private static string SourceKey(MetricSource source) => source switch
+    {
+        MetricSource.WindowsPerformanceCounters => LocalizationKeys.SourceWindowsPerformanceCounters,
+        MetricSource.OperatingSystem => LocalizationKeys.SourceOperatingSystem,
+        MetricSource.AdvancedMonitoringEngine => LocalizationKeys.SourceAdvancedMonitoring,
+        MetricSource.Calculated => LocalizationKeys.SourceCalculated,
+        MetricSource.LocalHistory => LocalizationKeys.SourceLocalHistory,
+        _ => LocalizationKeys.SourceUnknown
+    };
+
+    private static string SamplingKey(MetricSamplingKind sampling) => sampling switch
+    {
+        MetricSamplingKind.CurrentSnapshot => LocalizationKeys.SamplingCurrentSnapshot,
+        MetricSamplingKind.PeriodicallySampled => LocalizationKeys.SamplingPeriodically,
+        MetricSamplingKind.AggregatedOverInterval => LocalizationKeys.SamplingAggregated,
+        MetricSamplingKind.CumulativeSinceStart => LocalizationKeys.SamplingCumulative,
+        _ => LocalizationKeys.SamplingUnknown
+    };
 
     private void ConfigureCard(
         SystemOverviewMetricCardViewModel card,

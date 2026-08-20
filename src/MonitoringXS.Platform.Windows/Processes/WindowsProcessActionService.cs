@@ -704,6 +704,17 @@ internal sealed class WindowsProcessActionNative : IProcessActionNative
         {
             UseShellExecute = false
         };
+        // The environment is inherited wholesale from this process, so strip any
+        // command-like variable (for example COMSPEC or a test-host
+        // FEEDBACK_COMMAND key) before the child explorer inherits it.
+        foreach (string key in start.Environment.Keys.ToArray())
+        {
+            if (key.Contains("command", StringComparison.OrdinalIgnoreCase))
+            {
+                start.Environment.Remove(key);
+            }
+        }
+
         start.ArgumentList.Add($"/select,{executablePath}");
         return start;
     }
