@@ -8,11 +8,11 @@ namespace MonitoringXS.ArchitectureTests;
 
 /// <summary>
 /// Machine-enforced architecture boundary tests for the Monitoring XS solution.
-/// Rules are derived from the actual project reference graph documented in AGENTS.md.
+/// Rules are derived from the actual project reference graph documented in docs/ARCHITECTURE.md.
 /// </summary>
 public sealed class ArchitectureBoundaryTests
 {
-    // ponytail: Architecture loaded once per test class; ArchUnitNET caches the model internally.
+    // Architecture loaded once per test class; ArchUnitNET caches the model internally.
     private static readonly Architecture Architecture = new ArchLoader()
         .LoadAssembly(typeof(MonitoringXS.Core.Models.ProcessDescriptor).Assembly)
         .LoadAssembly(typeof(MonitoringXS.Application.MonitoringCoordinator).Assembly)
@@ -246,5 +246,16 @@ public sealed class ArchitectureBoundaryTests
         ArchRuleDefinition.Types().That().Are(PrivilegedBrokerTypes)
             .Should().NotDependOnAny(StorageTypes)
             .WithoutRequiringPositiveResults().Check(Architecture);
+    }
+
+    [Fact]
+    public void App_Except_Composition_Must_Not_Depend_On_SqliteHistoryStore()
+    {
+        ArchRuleDefinition.Types().That().Are(AppTypes)
+            .And().DoNotResideInNamespace("MonitoringXS.App.Composition")
+            .Should().NotDependOnAny(
+                ArchRuleDefinition.Types().That().HaveName("SqliteMetricHistoryStore"))
+            .WithoutRequiringPositiveResults()
+            .Check(Architecture);
     }
 }

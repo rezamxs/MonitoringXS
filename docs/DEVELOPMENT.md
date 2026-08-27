@@ -4,7 +4,7 @@
 2. Enable Windows Developer Mode for local deployment if prompted.
 3. Clone the repository to a normal user-writable path.
 4. Run `dotnet restore MonitoringXS.sln`.
-5. Run the Release build and tests documented in `AGENTS.md`.
+5. Run the Release build and tests documented in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 The app targets x64 first. Use direct Visual Studio launch for WinUI debugging. Core and classification tests do not require elevation. Per-process access failures are expected and must not make tests depend on the developer's current process list.
 

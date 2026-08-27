@@ -20,9 +20,6 @@ All tools listed here are **development-only** unless explicitly marked as runti
 
 # Run tests with coverage
 .\scripts\tooling\Invoke-Coverage.ps1
-
-# Generate AI agent context pack
-.\scripts\tooling\New-AgentContext.ps1 -ContextName Broker
 ```
 
 ---
@@ -39,7 +36,7 @@ All tools listed here are **development-only** unless explicitly marked as runti
 | Scope | Development (test project only) |
 | Runtime Impact | **ZERO** |
 
-Enforces architecture boundaries defined in AGENTS.md. Rules verify that Core, Application, Collectors, Storage, Platform.Windows, DesignSystem, and PrivilegedBroker maintain correct dependency directions.
+Enforces architecture boundaries defined in [`ARCHITECTURE.md`](ARCHITECTURE.md). Rules verify that Core, Application, Collectors, Storage, Platform.Windows, DesignSystem, and PrivilegedBroker maintain correct dependency directions.
 
 ```powershell
 dotnet test tests/MonitoringXS.ArchitectureTests/ -c Release
@@ -245,11 +242,7 @@ These tools are **NOT** mandatory. They are evaluation candidates.
 | Config | `repomix.config.json` |
 | Status | KEEP EXPERIMENTAL |
 
-Generates focused context packs for AI agents. Excludes binaries, secrets, build artifacts.
-
-```powershell
-.\scripts\tooling\New-AgentContext.ps1 -ContextName Broker
-```
+Generates focused context packs from repository sources. Excludes binaries, secrets, build artifacts.
 
 ### LikeC4 — Architecture Visualization
 
@@ -343,50 +336,7 @@ It provides:
 - Key validation scripts
 - Important documentation paths
 
-This reduces AI agent discovery cost without duplicating existing documentation.
-
----
-
-## Codex Context Workflow
-
-Recommended flow for AI-assisted development:
-
-```
-Task
-↓
-Read .tooling/repository-map.yml
-↓
-Symbol/graph query (MCP or IDE)
-↓
-Identify relevant files
-↓
-Generate context pack: New-AgentContext.ps1 -ContextName <scope>
-↓
-Provide context pack + task to Codex/Qwen
-↓
-Source fallback only when needed
-```
-
-**Critical rule:** Full repository source is NOT default context.
-
----
-
-## Qwen Review Evidence Pack
-
-For code review, generate a compact evidence package:
-
-```powershell
-# Generate scoped context
-.\scripts\tooling\New-AgentContext.ps1 -ContextName Broker
-
-# Run static analysis
-.\scripts\tooling\Invoke-StaticAnalysis.ps1
-
-# Run tests with coverage
-.\scripts\tooling\Invoke-Coverage.ps1
-```
-
-Combine: git diff + context pack + static analysis results + coverage summary + relevant ADR paths.
+This reduces discovery cost without duplicating existing documentation.
 
 ---
 

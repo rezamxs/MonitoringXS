@@ -30,4 +30,10 @@ context-packs/
 *.cobertura.xml
 TestResults/Coverage/
 .artifacts/sbom/
-/.agents/skills/ui-styling/scripts/tests/coverage-ui.json
+
+# Removed agent-only artifacts; keep them out of the public tree
+/.agents/
+/AGENTS.md
+/skills/
+/skills-lock.json
+/docs/SKILLS_USAGE.md
