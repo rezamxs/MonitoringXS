@@ -54,6 +54,8 @@ public sealed partial class HistoryMetricSeries : ObservableObject
 
     public bool UsesPercentScale { get; }
 
+    public bool UsesRateUnit => Definition.ValueKind == HistoryValueKind.BytesPerSecond;
+
     public MetricSparklineScale Scale =>
         UsesPercentScale ? MetricSparklineScale.Percent : MetricSparklineScale.Dynamic;
 

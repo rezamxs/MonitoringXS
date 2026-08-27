@@ -16,7 +16,6 @@ internal static class ChartTooltipBuilder
         int index,
         string metricName,
         HistoryValueKind valueKind,
-        string unitText,
         string availableText,
         string partialText,
         string unavailableText,
@@ -40,7 +39,7 @@ internal static class ChartTooltipBuilder
             _ => unavailableText
         };
         string value = sample.Value is { } measured && double.IsFinite(measured)
-            ? $"{FormatValue(measured, valueKind, unitText)}"
+            ? HistorySeriesPresentation.Format(measured, valueKind)
             : unavailableText;
         string? reason = sample.Value.HasValue ? null : sample.Reason;
         string third = health;
@@ -49,16 +48,6 @@ internal static class ChartTooltipBuilder
             third = $"{third} · {reasonText}: {reason}";
         }
 
-        return string.Join(
-            "\n",
-            new[] { nameLine, $"{valueLabel}: {value}", third });
+        return string.Join('\n', nameLine, $"{valueLabel}: {value}", third);
     }
-
-    private static string FormatValue(double value, HistoryValueKind kind, string unitText) =>
-        kind switch
-        {
-            HistoryValueKind.Percent => string.Create(CultureInfo.InvariantCulture, $"{value:0.0}%"),
-            HistoryValueKind.Bytes => $"{value:0.#} {unitText}",
-            _ => $"{value:0.#} {unitText}"
-        };
 }

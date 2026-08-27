@@ -179,11 +179,11 @@
                                     <StackPanel Spacing="1">
                                         <TextBlock
                                             Style="{StaticResource SectionTitleStyle}"
-                                            Text="{Binding Title, Mode=OneTime}" />
+                                            Text="{Binding Title, Mode=OneWay}" />
                                         <TextBlock
                                             FontSize="11"
                                             Foreground="{StaticResource SecondaryTextBrush}"
-                                            Text="{Binding UnitText, Mode=OneTime}" />
+                                            Text="{Binding UnitText, Mode=OneWay}" />
                                     </StackPanel>
                                     <TextBlock
                                         Grid.Column="1"
@@ -204,8 +204,9 @@
                                     SummaryText="{Binding Summary, Mode=OneWay}"
                                     TooltipMetricName="{Binding Title, Mode=OneWay}"
                                     TooltipUsesPercentUnit="{Binding UsesPercentScale, Mode=OneWay}"
+                                    TooltipUsesRateUnit="{Binding UsesRateUnit, Mode=OneWay}"
                                     TooltipValueUnit="{Binding UnitText, Mode=OneWay}"
-                                    UnitText="{Binding UnitText, Mode=OneTime}"
+                                    UnitText="{Binding UnitText, Mode=OneWay}"
                                     UseSystemFocusVisuals="True" />
                             </Grid>
                         </Border>

@@ -30,7 +30,7 @@ Status: complete and validated; see `VALIDATION.md` for the successful smoke run
 
 ## Milestone 2 - Core metrics
 
-Status: in progress.
+Status: implementation complete on the current integration line; the remaining open item is a live OS PID-reuse capture exercise. See `VALIDATION.md`.
 
 - [x] Real normalized CPU deltas and working-set memory.
 - [x] Real process-wide I/O counters, read/write rates, cumulative bytes, and operation counts.
@@ -94,6 +94,7 @@ Status: SQLite v3 sessions and History page complete; stopped-tab presentation r
 - [x] Deterministic storage and coordinator-isolation tests; runtime restart persistence measured in `VALIDATION.md`.
 - [x] Cancellable History page with logical-application selector, 5-minute/15-minute/1-hour/3-hour/6-hour/12-hour/24-hour ranges, bounded charts, local timestamps, and honest unavailable/partial gaps.
 - [x] Repair History projection, scale domains, single-point rendering, duplicate/PID/gap handling, stale-result suppression, and extrema-preserving decimation.
+- [x] Phase E1 History UX: timestamp-based chart hover mapping, availability/reason tooltips, all-unavailable empty presentation, range persistence on the History view-model, and EN/FA tooltip labels.
 - [ ] Stopped application tabs.
 
 ## Milestone 6 - Application actions

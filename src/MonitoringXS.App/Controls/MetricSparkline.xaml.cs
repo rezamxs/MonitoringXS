@@ -87,6 +87,12 @@ public sealed partial class MetricSparkline : UserControl
         typeof(MetricSparkline),
         new PropertyMetadata(false));
 
+    public static readonly DependencyProperty TooltipUsesRateUnitProperty = DependencyProperty.Register(
+        nameof(TooltipUsesRateUnit),
+        typeof(bool),
+        typeof(MetricSparkline),
+        new PropertyMetadata(false));
+
     private INotifyCollectionChanged? _observableSamples;
     private bool _redrawPending;
     private readonly Brush? _defaultBackground;
@@ -97,8 +103,6 @@ public sealed partial class MetricSparkline : UserControl
         _defaultBackground = ChartRoot.Background;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
-        PointerMoved += OnPointerMoved;
-        PointerExited += OnPointerExited;
     }
 
     public IList<CpuHistorySample>? Samples
@@ -171,6 +175,12 @@ public sealed partial class MetricSparkline : UserControl
     {
         get => (bool)GetValue(TooltipUsesPercentUnitProperty);
         set => SetValue(TooltipUsesPercentUnitProperty, value);
+    }
+
+    public bool TooltipUsesRateUnit
+    {
+        get => (bool)GetValue(TooltipUsesRateUnitProperty);
+        set => SetValue(TooltipUsesRateUnitProperty, value);
     }
 
     private static void OnEmbeddedChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
@@ -398,17 +408,26 @@ public sealed partial class MetricSparkline : UserControl
         }
 
         _hoverIndex = index;
+        LocalizationService localization =
+            (Microsoft.UI.Xaml.Application.Current as global::MonitoringXS.App.App)?.Localization
+            ?? _localization;
+        IReadOnlyList<CpuHistorySample> displayed = samples as IReadOnlyList<CpuHistorySample>
+            ?? samples.ToArray();
+        HistoryValueKind valueKind = TooltipUsesPercentUnit
+            ? HistoryValueKind.Percent
+            : TooltipUsesRateUnit
+                ? HistoryValueKind.BytesPerSecond
+                : HistoryValueKind.Bytes;
         string? tooltip = ChartTooltipBuilder.Build(
-            samples.ToArray(),
+            displayed,
             index,
             metricName,
-            TooltipUsesPercentUnit ? HistoryValueKind.Percent : HistoryValueKind.Bytes,
-            TooltipValueUnit ?? string.Empty,
-            _localization.Get(LocalizationKeys.Available),
-            _localization.Get(LocalizationKeys.PartialLowerBound),
-            _localization.Get(LocalizationKeys.Unavailable),
-            _localization.Get(LocalizationKeys.TooltipReason),
-            _localization.Get(LocalizationKeys.TooltipValue));
+            valueKind,
+            localization.Get(LocalizationKeys.Available),
+            localization.Get(LocalizationKeys.PartialLowerBound),
+            localization.Get(LocalizationKeys.Unavailable),
+            localization.Get(LocalizationKeys.TooltipReason),
+            localization.Get(LocalizationKeys.TooltipValue));
         if (string.IsNullOrEmpty(tooltip))
         {
             _hoverIndex = -1;

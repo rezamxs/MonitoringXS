@@ -1367,3 +1367,48 @@ diagnostic full suite completed without reproducing the earlier transient stall:
 506 passed, 0 failed, and 0 skipped (Core 11, Application 36, Collectors 86,
 Storage 35, Integration 137, and App 201). All test hosts exited normally and
 blame-hang produced no sequence file because every test completed.
+
+## 2026-08-27 Phase E1 History UX checkpoint
+
+Environment: Windows 10 x64, .NET SDK 10.0.302, repository branch `feature/history-ux` based on `2ab8131` (Phase D).
+
+Commands and observed results:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release -p:Platform=x64 --no-restore -m:1
+```
+
+Succeeded with 0 warnings and 0 errors. A solution build without `-p:Platform=x64` can leave the WinUI XAML compiler in a locked/partial `obj` state; the x64 platform is the configuration recorded in `MonitoringXS.sln`.
+
+```powershell
+dotnet test MonitoringXS.sln -c Release --no-build --logger "console;verbosity=minimal"
+```
+
+Projects that completed under that invocation:
+
+- Core 11 passed
+- Collectors 86 passed
+- Application 50 passed
+- Storage 40 passed
+- Architecture 26 passed
+- Integration 151 passed
+
+`MonitoringXS.App.Tests` did not finish when launched in parallel with the rest of the solution (two `MonitoringXS.App.Tests.exe` testhosts remained running with no result). The same assembly run alone completed:
+
+```powershell
+dotnet test tests\MonitoringXS.App.Tests\bin\Release\net10.0-windows10.0.26100.0\MonitoringXS.App.Tests.dll
+```
+
+208 passed, 0 failed, 0 skipped. Focused History/tooltip/localization filter: 22 passed.
+
+Combined completed total: 572 passed, 0 failed, 0 skipped (11+86+50+40+26+151+208).
+
+```powershell
+git diff --check
+```
+
+Passed (CRLF normalization warnings only).
+
+Release UI Automation against `src\MonitoringXS.App\bin\x64\Release\net10.0-windows10.0.26100.0\MonitoringXS.App.exe` opened History, showed honest empty chart states (`No history in the selected range`, `Empty history`, 0 chart points), changed range 1 hour → 24 hours, refreshed, navigated away and back with the 24-hour selection preserved, opened Diagnostics and Settings, and switched language to Persian. The process did not crash. Local history had no measured samples, so live tooltip values were not observed; tooltip availability/reason/non-zero behavior is covered by `ChartTooltipBuilder` tests. Working set was approximately 170 MB at start and 237 MB after History/Diagnostics/Settings navigation on this machine. User settings language was restored to English after the Persian check.
+

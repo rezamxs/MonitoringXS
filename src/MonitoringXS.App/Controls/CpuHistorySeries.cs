@@ -44,8 +44,8 @@ public sealed record MetricSparklinePoint(double X, double Y);
 /// timestamps are irregular or gap markers shift spacing; this mapper
 /// reproduces the same time-to-X projection used while drawing.
 /// </summary>
-// ponytail: single O(n) scan per hover index change over the displayed
-// (decimated) sample set, ~<=360 points; no allocation, no storage access.
+// Hover mapping scans only the displayed decimated sample set (~<=360
+// points) per index change; single pass, no allocation, no storage access.
 public static class ChartHoverMapper
 {
     private const double LeftInset = 54;

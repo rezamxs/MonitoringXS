@@ -163,7 +163,6 @@ public sealed class HistoryPageViewModelTests
             0,
             "CPU",
             HistoryValueKind.Percent,
-            "%",
             "Available",
             "Partial",
             "Unavailable",
@@ -175,7 +174,6 @@ public sealed class HistoryPageViewModelTests
             1,
             "CPU",
             HistoryValueKind.Percent,
-            "%",
             "Available",
             "Partial",
             "Unavailable",
@@ -190,7 +188,46 @@ public sealed class HistoryPageViewModelTests
         Assert.Contains("Unavailable", unavailable, StringComparison.Ordinal);
         Assert.Contains("access denied by provider", unavailable, StringComparison.Ordinal);
         Assert.DoesNotContain("Value: 0", unavailable, StringComparison.Ordinal);
-        Assert.Equal(string.Empty, ChartTooltipBuilder.Build(samples, 99, "CPU", HistoryValueKind.Percent, "%", "Available", "Partial", "Unavailable", "Reason", "Value", TestContext.Current.CancellationToken));
+        Assert.Equal(string.Empty, ChartTooltipBuilder.Build(samples, 99, "CPU", HistoryValueKind.Percent, "Available", "Partial", "Unavailable", "Reason", "Value", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void TooltipFormatsBytesWithoutRawUnscaledValues()
+    {
+        DateTimeOffset now = new(2026, 7, 29, 10, 0, 0, TimeSpan.Zero);
+        CpuHistorySample[] samples =
+        [
+            new(now, 1536, MetricAvailability.Available, null),
+            new(now.AddMinutes(1), 2048, MetricAvailability.Available, null)
+        ];
+
+        string workingSet = ChartTooltipBuilder.Build(
+            samples,
+            0,
+            "Working set",
+            HistoryValueKind.Bytes,
+            "Available",
+            "Partial",
+            "Unavailable",
+            "Reason",
+            "Value",
+            TestContext.Current.CancellationToken);
+        string rate = ChartTooltipBuilder.Build(
+            samples,
+            1,
+            "Disk read",
+            HistoryValueKind.BytesPerSecond,
+            "Available",
+            "Partial",
+            "Unavailable",
+            "Reason",
+            "Value",
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains("1.5 KB", workingSet, StringComparison.Ordinal);
+        Assert.DoesNotContain("1536", workingSet, StringComparison.Ordinal);
+        Assert.Contains("2 KB/s", rate, StringComparison.Ordinal);
+        Assert.DoesNotContain("2048", rate, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -231,6 +268,7 @@ public sealed class HistoryPageViewModelTests
 
         Assert.Equal(TimeSpan.FromHours(24), viewModel.SelectedRange.Duration);
         Assert.Equal("Selected range: 24 hours", viewModel.SelectedRangeText);
+        Assert.StartsWith("Last updated ", viewModel.LastUpdatedText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -294,8 +332,6 @@ public sealed class HistoryPageViewModelTests
 
     private sealed class StaleHistoryStore(DateTimeOffset now) : IMetricHistoryStore
     {
-        private int _sixHourCalls;
-
         public bool DelaySixHourQueries { get; set; }
 
         public TaskCompletionSource SixHourStarted { get; } =
@@ -318,9 +354,9 @@ public sealed class HistoryPageViewModelTests
 
         public ValueTask FlushAsync(CancellationToken cancellationToken) => ValueTask.CompletedTask;
 
-        public async ValueTask<MetricHistoryQueryResult> QueryAsync(
+        public async ValueTask<IReadOnlyDictionary<MetricHistoryMetric, MetricHistoryQueryResult>> QueryManyAsync(
             string logicalApplicationId,
-            MetricHistoryMetric metric,
+            IReadOnlyList<MetricHistoryMetric> metrics,
             DateTimeOffset fromUtc,
             DateTimeOffset toUtc,
             CancellationToken cancellationToken)
@@ -328,17 +364,36 @@ public sealed class HistoryPageViewModelTests
             int hours = (int)Math.Round((toUtc - fromUtc).TotalHours);
             if (hours == 6 && DelaySixHourQueries)
             {
-                if (Interlocked.Increment(ref _sixHourCalls) == 11)
-                {
-                    SixHourStarted.SetResult();
-                }
-
-                await ReleaseSixHourQueries.Task;
+                SixHourStarted.TrySetResult();
+                await ReleaseSixHourQueries.Task.WaitAsync(cancellationToken);
             }
 
-            return new(
+            Dictionary<MetricHistoryMetric, MetricHistoryQueryResult> results = [];
+            foreach (MetricHistoryMetric metric in metrics.Distinct())
+            {
+                results[metric] = await QueryAsync(
+                    logicalApplicationId,
+                    metric,
+                    fromUtc,
+                    toUtc,
+                    cancellationToken);
+            }
+
+            return results;
+        }
+
+        public ValueTask<MetricHistoryQueryResult> QueryAsync(
+            string logicalApplicationId,
+            MetricHistoryMetric metric,
+            DateTimeOffset fromUtc,
+            DateTimeOffset toUtc,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int hours = (int)Math.Round((toUtc - fromUtc).TotalHours);
+            return ValueTask.FromResult(new MetricHistoryQueryResult(
                 [new("app", "lifetime", now.AddMinutes(-1), metric, hours, MetricAvailability.Available, null, false)],
-                true);
+                true));
         }
 
         public void Dispose()

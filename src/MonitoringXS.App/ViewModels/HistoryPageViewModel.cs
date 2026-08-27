@@ -31,6 +31,7 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _activeRequest;
     private int _requestVersion;
     private bool _disposed;
+    private DateTimeOffset? _lastUpdatedLocal;
 
     public HistoryPageViewModel(
         IMetricHistoryStore store,
@@ -193,8 +194,17 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
             HistoryPageState.Loading => _localization.Get(LocalizationKeys.HistoryLoading),
             HistoryPageState.DatabaseUnavailable => _localization.Get(LocalizationKeys.HistoryDatabaseUnavailable),
             HistoryPageState.Empty => _localization.Get(LocalizationKeys.HistoryNoRange),
+            HistoryPageState.Cancelled => _localization.Get(LocalizationKeys.HistoryCancelled),
+            HistoryPageState.QueryError => _localization.Get(LocalizationKeys.HistoryQueryFailed),
+            HistoryPageState.ApplicationNotFound => _localization.Get(LocalizationKeys.HistoryApplicationNotFound),
             _ => StatusText
         };
+        if (_lastUpdatedLocal is { } updated)
+        {
+            LastUpdatedText = _localization.Format(
+                LocalizationKeys.HistoryLastUpdatedFormat,
+                updated.ToString("g", _localization.Culture));
+        }
         OnPropertyChanged(nameof(SelectedRangeText));
     }
 
@@ -229,25 +239,29 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
             DateTimeOffset toUtc = _utcNow().ToUniversalTime();
             DateTimeOffset fromUtc = toUtc - range.Duration;
             Stopwatch stopwatch = Stopwatch.StartNew();
-            IReadOnlyDictionary<MetricHistoryMetric, MetricHistoryQueryResult> queryResults =
-                await _store.QueryManyAsync(
-                    application.LogicalApplicationId,
-                    Definitions.Select(definition => definition.Metric).ToArray(),
-                    fromUtc,
-                    toUtc,
-                    request.Token);
-            MetricHistoryQueryResult[] results = Definitions
-                .Select(definition => queryResults[definition.Metric])
-                .ToArray();
-            var presentations = await Task.Run(
-                () => Definitions
-                    .Select((definition, index) => HistorySeriesPresentation.CreateDetailed(
-                        definition,
-                        results[index],
-                        range,
-                        _maximumPoints,
-                        _localization))
-                    .ToArray(),
+            (MetricHistoryQueryResult[] results, var presentations) = await Task.Run(
+                async () =>
+                {
+                    IReadOnlyDictionary<MetricHistoryMetric, MetricHistoryQueryResult> queryResults =
+                        await _store.QueryManyAsync(
+                            application.LogicalApplicationId,
+                            Definitions.Select(definition => definition.Metric).ToArray(),
+                            fromUtc,
+                            toUtc,
+                            request.Token);
+                    MetricHistoryQueryResult[] loaded = Definitions
+                        .Select(definition => queryResults[definition.Metric])
+                        .ToArray();
+                    var presented = Definitions
+                        .Select((definition, index) => HistorySeriesPresentation.CreateDetailed(
+                            definition,
+                            loaded[index],
+                            range,
+                            _maximumPoints,
+                            _localization))
+                        .ToArray();
+                    return (loaded, presented);
+                },
                 request.Token);
             stopwatch.Stop();
             if (version != Volatile.Read(ref _requestVersion))
@@ -286,7 +300,10 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
                         ? _localization.Get(LocalizationKeys.Unavailable)
                         : _localization.Get(LocalizationKeys.HistoryNoRange);
             DateTimeOffset localUpdated = toUtc.ToLocalTime();
-            LastUpdatedText = $"Last updated {localUpdated:g}";
+            _lastUpdatedLocal = localUpdated;
+            LastUpdatedText = _localization.Format(
+                LocalizationKeys.HistoryLastUpdatedFormat,
+                localUpdated.ToString("g", _localization.Culture));
             SelectedRangeText = _localization.Format(LocalizationKeys.SelectedRangeFormat, range.Label);
             QueryPerformanceText = $"{stopwatch.Elapsed.TotalMilliseconds:0.0} ms · {Charts.Sum(chart => chart.Samples.Count)} chart points";
         }
@@ -296,7 +313,7 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
                 && cancellationToken.IsCancellationRequested)
             {
                 State = HistoryPageState.Cancelled;
-                StatusText = "History request cancelled.";
+                StatusText = _localization.Get(LocalizationKeys.HistoryCancelled);
             }
         }
         catch
@@ -304,7 +321,7 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
             if (version == Volatile.Read(ref _requestVersion))
             {
                 State = HistoryPageState.QueryError;
-                StatusText = "History query failed.";
+                StatusText = _localization.Get(LocalizationKeys.HistoryQueryFailed);
             }
         }
         finally
