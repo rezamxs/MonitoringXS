@@ -143,14 +143,7 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            if (File.Exists(_path))
-            {
-                File.Replace(temporaryPath, _path, null, ignoreMetadataErrors: true);
-            }
-            else
-            {
-                File.Move(temporaryPath, _path);
-            }
+            await ReplaceAtomicallyWithRetryAsync(temporaryPath, cancellationToken);
 
             return ApplicationSettingsSaveResult.Success;
         }
@@ -204,6 +197,43 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
             return new(ApplicationSettings.Default, false, false, error);
         }
     }
+
+    // Bounded retry for transient sharing/lock violations from antivirus or
+    // indexers. Parallel tests can exceed a 500 ms budget; worst case is ~3 s.
+    private async ValueTask ReplaceAtomicallyWithRetryAsync(
+        string temporaryPath,
+        CancellationToken cancellationToken)
+    {
+        for (int attempt = 1; ; ++attempt)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                if (File.Exists(_path))
+                {
+                    File.Replace(temporaryPath, _path, null, ignoreMetadataErrors: true);
+                }
+                else
+                {
+                    File.Move(temporaryPath, _path);
+                }
+
+                return;
+            }
+            catch (Exception exception) when (attempt < 8 && IsTransient(exception))
+            {
+                await Task.Delay(Math.Min(50 * (1 << attempt), 800), cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    // Transient locks from antivirus/indexers appear as sharing/lock violations
+    // or momentary access-denied on freshly written files.
+    private static bool IsTransient(Exception exception) =>
+        exception is UnauthorizedAccessException
+        || exception.HResult is unchecked((int)0x80070020)   // ERROR_SHARING_VIOLATION
+            or unchecked((int)0x80070021)                    // ERROR_LOCK_VIOLATION
+            or unchecked((int)0x80070005);                   // ERROR_ACCESS_DENIED
 
     private static bool IsStorageFailure(Exception exception) =>
         exception is IOException

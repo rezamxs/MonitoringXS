@@ -1224,32 +1224,39 @@ public sealed partial class WindowsGpuPerformanceCounterSource : IGpuCounterSour
         string normalized = DuplicateInstanceSuffixPattern().Replace(
             instanceName.Trim(),
             string.Empty);
-        MatchCollection matches = InstanceFieldPattern().Matches(normalized);
-        if (matches.Count == 0)
+        try
+        {
+            MatchCollection matches = InstanceFieldPattern().Matches(normalized);
+            if (matches.Count == 0)
+            {
+                return false;
+            }
+
+            int consumed = 0;
+            foreach (Match match in matches)
+            {
+                if (match.Index != consumed)
+                {
+                    return false;
+                }
+
+                string key = match.Groups["key"].Value;
+                string value = match.Groups["value"].Value;
+                if (string.IsNullOrWhiteSpace(value)
+                    || !fields.TryAdd(key, value))
+                {
+                    return false;
+                }
+
+                consumed = match.Index + match.Length;
+            }
+
+            return consumed == normalized.Length;
+        }
+        catch (RegexMatchTimeoutException)
         {
             return false;
         }
-
-        int consumed = 0;
-        foreach (Match match in matches)
-        {
-            if (match.Index != consumed)
-            {
-                return false;
-            }
-
-            string key = match.Groups["key"].Value;
-            string value = match.Groups["value"].Value;
-            if (string.IsNullOrWhiteSpace(value)
-                || !fields.TryAdd(key, value))
-            {
-                return false;
-            }
-
-            consumed = match.Index + match.Length;
-        }
-
-        return consumed == normalized.Length;
     }
 
     private static bool TryParsePositiveInt(
@@ -1549,7 +1556,7 @@ public sealed partial class WindowsGpuPerformanceCounterSource : IGpuCounterSour
     [GeneratedRegex(
         @"(?:^|_)(?<key>pid|luid|phys|eng|engtype)_(?<value>.*?)(?=_(?:pid|luid|phys|eng|engtype)_|$)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-        100)]
+        1000)]
     private static partial Regex InstanceFieldPattern();
 
     [GeneratedRegex(

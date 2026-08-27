@@ -1370,45 +1370,32 @@ blame-hang produced no sequence file because every test completed.
 
 ## 2026-08-27 Phase E1 History UX checkpoint
 
-Environment: Windows 10 x64, .NET SDK 10.0.302, repository branch `feature/history-ux` based on `2ab8131` (Phase D).
-
-Commands and observed results:
+Environment: Windows 10 x64, .NET SDK 10.0.302, branch `feature/history-ux` (Phase D base `2ab8131`).
 
 ```powershell
 dotnet restore MonitoringXS.sln
-dotnet build MonitoringXS.sln -c Release -p:Platform=x64 --no-restore -m:1
-```
-
-Succeeded with 0 warnings and 0 errors. A solution build without `-p:Platform=x64` can leave the WinUI XAML compiler in a locked/partial `obj` state; the x64 platform is the configuration recorded in `MonitoringXS.sln`.
-
-```powershell
-dotnet test MonitoringXS.sln -c Release --no-build --logger "console;verbosity=minimal"
-```
-
-Projects that completed under that invocation:
-
-- Core 11 passed
-- Collectors 86 passed
-- Application 50 passed
-- Storage 40 passed
-- Architecture 26 passed
-- Integration 151 passed
-
-`MonitoringXS.App.Tests` did not finish when launched in parallel with the rest of the solution (two `MonitoringXS.App.Tests.exe` testhosts remained running with no result). The same assembly run alone completed:
-
-```powershell
-dotnet test tests\MonitoringXS.App.Tests\bin\Release\net10.0-windows10.0.26100.0\MonitoringXS.App.Tests.dll
-```
-
-208 passed, 0 failed, 0 skipped. Focused History/tooltip/localization filter: 22 passed.
-
-Combined completed total: 572 passed, 0 failed, 0 skipped (11+86+50+40+26+151+208).
-
-```powershell
+dotnet build MonitoringXS.sln -c Release --no-restore /nr:false
+dotnet test MonitoringXS.sln -c Release --no-build
 git diff --check
 ```
 
-Passed (CRLF normalization warnings only).
+Restore: all projects up to date.
 
-Release UI Automation against `src\MonitoringXS.App\bin\x64\Release\net10.0-windows10.0.26100.0\MonitoringXS.App.exe` opened History, showed honest empty chart states (`No history in the selected range`, `Empty history`, 0 chart points), changed range 1 hour → 24 hours, refreshed, navigated away and back with the 24-hour selection preserved, opened Diagnostics and Settings, and switched language to Persian. The process did not crash. Local history had no measured samples, so live tooltip values were not observed; tooltip availability/reason/non-zero behavior is covered by `ChartTooltipBuilder` tests. Working set was approximately 170 MB at start and 237 MB after History/Diagnostics/Settings navigation on this machine. User settings language was restored to English after the Persian check.
+Build (`MSBUILDDISABLENODEREUSE=1`): succeeded, 0 warnings, 0 errors.
+
+Tests: 575 passed, 0 failed, 0 skipped (Core 11, Collectors 86, Application 50, App 211, Storage 40, Architecture 26, Integration 151).
+
+`git diff --check`: passed (CRLF normalization warnings only).
+
+Release UI Automation against `src\MonitoringXS.App\bin\x64\Release\net10.0-windows10.0.26100.0\MonitoringXS.App.exe`:
+
+- Opened History (`Application metric history page`, `History metric charts`).
+- Honest empty presentation: `No history in the selected range`, per-metric `No … history in the selected 1 hour range`, `Empty history`. No fabricated zeros.
+- Legend present: `Line = measured; gap = unavailable/partial`.
+- Changed range to `24 hours`, invoked Refresh, hovered multiple X positions on the chart host.
+- Navigated to Running Apps and back; History charts remained present.
+- Opened Settings; Persian language option is present. Full Persian/RTL page interaction was not completed in this pass (EN/FA resource parity is covered by automated localization tests).
+- Process remained alive and exited cleanly through the main window close path.
+
+Local SQLite history had no measured samples, so live tooltip value/unit/reason text was not observed on-screen. Tooltip availability, byte formatting, and unavailable-is-not-zero behavior are covered by `ChartTooltipBuilder` tests. Database-unavailable and stale-range overwrite are covered by `HistoryPageViewModel` tests. GPU instance-name regex timeouts now fail closed as unparsed rather than throwing.
 
