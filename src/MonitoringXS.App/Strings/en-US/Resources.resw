@@ -210,6 +210,13 @@
   <data name="HistoryQueryFailed" xml:space="preserve"><value>History query failed.</value></data>
   <data name="HistoryApplicationNotFound" xml:space="preserve"><value>Application not found.</value></data>
   <data name="HistoryLastUpdatedFormat" xml:space="preserve"><value>Last updated {0}</value></data>
+  <data name="HistoryEmptyState" xml:space="preserve"><value>Empty history</value></data>
+  <data name="HistoryPartialState" xml:space="preserve"><value>Partial</value></data>
+  <data name="HistoryDatabaseUnavailableState" xml:space="preserve"><value>Database unavailable</value></data>
+  <data name="HistoryEmptySummary" xml:space="preserve"><value>No {0} history in the selected {1} range.</value></data>
+  <data name="HistoryNoMeasuredSummary" xml:space="preserve"><value>{0} has no measured values; unavailable samples remain chart gaps.</value></data>
+  <data name="HistoryPartialAvailability" xml:space="preserve"><value>Partial; {0} lower-bound and {1} unavailable samples</value></data>
+  <data name="HistoryMeasuredSummary" xml:space="preserve"><value>{0}; min {1}, max {2}, latest {3}; {4}; {5} downsampled; {6} displayed of {7} points.</value></data>
   <data name="Range5Minutes" xml:space="preserve"><value>5 minutes</value></data>
   <data name="Range15Minutes" xml:space="preserve"><value>15 minutes</value></data>
   <data name="Range1Hour" xml:space="preserve"><value>1 hour</value></data>

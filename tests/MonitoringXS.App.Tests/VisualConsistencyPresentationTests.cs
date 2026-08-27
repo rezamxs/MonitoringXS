@@ -126,7 +126,14 @@ public sealed class VisualConsistencyPresentationTests
         Assert.Contains("<value>Network receive</value>", english, StringComparison.Ordinal);
         Assert.Contains("<value>خواندن دیسک</value>", persian, StringComparison.Ordinal);
         Assert.Contains("<value>دریافت شبکه</value>", persian, StringComparison.Ordinal);
-        Assert.DoesNotContain("ناقص", persian, StringComparison.Ordinal);
+        string[] overviewPersian = XDocument.Parse(persian).Root!
+            .Elements("data")
+            .Where(element => (element.Attribute("name")?.Value ?? string.Empty)
+                .StartsWith("SystemOverview", StringComparison.Ordinal))
+            .Select(element => element.Element("value")?.Value ?? string.Empty)
+            .ToArray();
+        Assert.NotEmpty(overviewPersian);
+        Assert.All(overviewPersian, value => Assert.DoesNotContain("ناقص", value, StringComparison.Ordinal));
     }
 
     [Fact]

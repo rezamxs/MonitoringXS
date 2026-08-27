@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
 using MonitoringXS.App.Localization;
+using MonitoringXS.App.ViewModels;
 using MonitoringXS.Core.Models;
 
 namespace MonitoringXS.App.Tests;
@@ -87,6 +88,56 @@ public sealed class LocalizationTests
 
         Assert.True(automationKeys.Length >= 15);
         Assert.All(automationKeys, key => Assert.True(persian.ContainsKey(key)));
+    }
+
+    [Fact]
+    public void HistorySeriesSummariesLocalizeInPersianAndKeepTechnicalValues()
+    {
+        LocalizationService service = CreateService("en-US");
+        service.SetLanguage(ApplicationLanguage.Persian);
+        HistoryMetricDefinition definition = new(
+            MetricHistoryMetric.CpuPercent,
+            LocalizationKeys.MetricCpu,
+            HistoryValueKind.Percent);
+        HistoryRangeOption range = new(service.Get(LocalizationKeys.Range1Hour), TimeSpan.FromHours(1));
+        DateTimeOffset start = new(2026, 8, 27, 12, 0, 0, TimeSpan.Zero);
+
+        var empty = HistorySeriesPresentation.Create(
+            definition,
+            new([], true),
+            range,
+            20,
+            service);
+        var unavailable = HistorySeriesPresentation.Create(
+            definition,
+            new(
+            [
+                new("app", "lifetime", start, definition.Metric, null, MetricAvailability.Unavailable, "counter timeout", false)
+            ],
+            true),
+            range,
+            20,
+            service);
+        var measured = HistorySeriesPresentation.Create(
+            definition,
+            new(
+            [
+                new("app", "lifetime", start, definition.Metric, 12.5, MetricAvailability.Available, null, false),
+                new("app", "lifetime", start.AddMinutes(2), definition.Metric, null, MetricAvailability.Unavailable, "counter timeout", false)
+            ],
+            true),
+            range,
+            20,
+            service);
+
+        Assert.Equal(service.Get(LocalizationKeys.HistoryEmptyState), empty.State);
+        Assert.DoesNotContain("No ", empty.Summary, StringComparison.Ordinal);
+        Assert.Contains(service.Get(LocalizationKeys.Range1Hour), empty.Summary, StringComparison.Ordinal);
+        Assert.Equal(service.Get(LocalizationKeys.Unavailable), unavailable.State);
+        Assert.DoesNotContain("no measured values", unavailable.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(service.Get(LocalizationKeys.HistoryPartialState), measured.State);
+        Assert.Contains("12.5%", measured.Summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("lower-bound", measured.Summary, StringComparison.Ordinal);
     }
 
     [Fact]

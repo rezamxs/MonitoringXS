@@ -210,6 +210,13 @@
   <data name="HistoryQueryFailed" xml:space="preserve"><value>بارگذاری تاریخچه انجام نشد.</value></data>
   <data name="HistoryApplicationNotFound" xml:space="preserve"><value>برنامه پیدا نشد.</value></data>
   <data name="HistoryLastUpdatedFormat" xml:space="preserve"><value>آخرین به‌روزرسانی {0}</value></data>
+  <data name="HistoryEmptyState" xml:space="preserve"><value>تاریخچه خالی</value></data>
+  <data name="HistoryPartialState" xml:space="preserve"><value>ناقص</value></data>
+  <data name="HistoryDatabaseUnavailableState" xml:space="preserve"><value>پایگاه‌داده در دسترس نیست</value></data>
+  <data name="HistoryEmptySummary" xml:space="preserve"><value>در بازهٔ {1} تاریخچه‌ای برای {0} وجود ندارد.</value></data>
+  <data name="HistoryNoMeasuredSummary" xml:space="preserve"><value>{0} مقدار اندازه‌گیری‌شده ندارد؛ نمونه‌های ناموجود به‌صورت شکاف باقی می‌مانند.</value></data>
+  <data name="HistoryPartialAvailability" xml:space="preserve"><value>ناقص؛ {0} حد پایین و {1} نمونهٔ ناموجود</value></data>
+  <data name="HistoryMeasuredSummary" xml:space="preserve"><value>{0}; حداقل {1}، حداکثر {2}، آخرین {3}؛ {4}؛ {5} کاهش‌نمونه‌شده؛ {6} از {7} نقطه نمایش داده شد.</value></data>
   <data name="Range5Minutes" xml:space="preserve"><value>۵ دقیقه</value></data>
   <data name="Range15Minutes" xml:space="preserve"><value>۱۵ دقیقه</value></data>
   <data name="Range1Hour" xml:space="preserve"><value>۱ ساعت</value></data>

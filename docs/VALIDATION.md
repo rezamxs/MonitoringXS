@@ -1399,3 +1399,36 @@ Release UI Automation against `src\MonitoringXS.App\bin\x64\Release\net10.0-wind
 
 Local SQLite history had no measured samples, so live tooltip value/unit/reason text was not observed on-screen. Tooltip availability, byte formatting, and unavailable-is-not-zero behavior are covered by `ChartTooltipBuilder` tests. Database-unavailable and stale-range overwrite are covered by `HistoryPageViewModel` tests. GPU instance-name regex timeouts now fail closed as unparsed rather than throwing.
 
+## 2026-08-27 Phase E1 validation closeout
+
+Environment: Windows 10 x64, .NET SDK 10.0.302, branch `feature/history-ux`.
+
+Official solution test gate after an x64 Release build:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release -p:Platform=x64 --no-restore -m:1
+dotnet test MonitoringXS.sln -c Release --no-build
+```
+
+Do not keep a leftover AnyCPU `tests/MonitoringXS.App.Tests/bin/Release` copy beside `bin/x64/Release`. Parallel `dotnet test` on the solution previously started two `MonitoringXS.App.Tests.exe` testhosts from those two outputs (xunit v3 also emits an MTP `.exe`). App.Tests and ArchitectureTests now force `Platform=x64` and `IsTestingPlatformApplication=false` so the solution run discovers each project once.
+
+Actual closeout results:
+
+- Restore: all projects up to date.
+- Build (`-p:Platform=x64 -m:1`): succeeded, 0 errors. Analyzer still reports the existing Storage CA1822 and CA1859 warnings; no new compiler warnings.
+- `dotnet test MonitoringXS.sln -c Release --no-build`: completed with no hung testhosts.
+
+| Project | Passed | Failed | Skipped | Total |
+| --- | ---: | ---: | ---: | ---: |
+| MonitoringXS.Core.Tests | 11 | 0 | 0 | 11 |
+| MonitoringXS.Application.Tests | 50 | 0 | 0 | 50 |
+| MonitoringXS.Collectors.Tests | 86 | 0 | 0 | 86 |
+| MonitoringXS.App.Tests | 212 | 0 | 0 | 212 |
+| MonitoringXS.ArchitectureTests | 26 | 0 | 0 | 26 |
+| MonitoringXS.Storage.Tests | 40 | 0 | 0 | 40 |
+| MonitoringXS.IntegrationTests | 151 | 0 | 0 | 151 |
+| **All** | **576** | **0** | **0** | **576** |
+
+Live History (Google Chrome, 1 hour) showed measured CPU and working-set series, percent and byte units, `Partial` state, lower-bound counts, and `2 unavailable samples` without fabricating zeros. Chart-point hover tooltips were not captured: WinUI `ToolTipService` needs a real `PointerMoved` on the sparkline, and synthetic cursor moves did not raise that event. Tooltip text, unavailable-is-not-zero, and irregular timestamp mapping remain covered by `ChartTooltipBuilder` and `ChartHoverMapper` tests. Visible History series summaries now go through localization resources (English and Persian).
+

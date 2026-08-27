@@ -137,7 +137,11 @@ internal static class HistorySeriesPresentation
         {
             string unavailableMessage = result.Error
                 ?? localization.Get(LocalizationKeys.HistoryDatabaseUnavailable);
-            return (Array.Empty<CpuHistorySample>(), unavailableMessage, "Database unavailable", unavailableMessage);
+            return (
+                Array.Empty<CpuHistorySample>(),
+                unavailableMessage,
+                localization.Get(LocalizationKeys.HistoryDatabaseUnavailableState),
+                unavailableMessage);
         }
 
         MetricHistoryPoint[] ordered = result.Points
@@ -191,10 +195,12 @@ internal static class HistorySeriesPresentation
         IList<CpuHistorySample> display = HistoryPointDecimator.Decimate(samples, maximumPoints);
         if (real.Length == 0)
         {
-            string state = ordered.Length == 0 ? "Empty history" : "Unavailable";
+            string state = ordered.Length == 0
+                ? localization.Get(LocalizationKeys.HistoryEmptyState)
+                : localization.Get(LocalizationKeys.Unavailable);
             string summary = ordered.Length == 0
-                ? $"No {title} history in the selected {range.Label} range."
-                : $"{title} has no measured values; unavailable samples remain chart gaps.";
+                ? localization.Format(LocalizationKeys.HistoryEmptySummary, title, range.Label)
+                : localization.Format(LocalizationKeys.HistoryNoMeasuredSummary, title);
             return (display, summary, state, summary);
         }
 
@@ -202,12 +208,25 @@ internal static class HistorySeriesPresentation
         double maximum = real.Max(sample => sample.Value!.Value);
         double latest = real[^1].Value!.Value;
         string availability = partial > 0 || unavailableCount > 0
-            ? $"Partial; {partial} lower-bound and {unavailableCount} unavailable samples"
-            : "Available";
-        string summaryText = string.Create(
-            CultureInfo.InvariantCulture,
-            $"{range.Label}; min {Format(minimum, definition.ValueKind)}, max {Format(maximum, definition.ValueKind)}, latest {Format(latest, definition.ValueKind)}; {availability}; {downsampled} downsampled; {display.Count} displayed of {samples.Count} points.");
-        return (display, summaryText, partial > 0 || unavailableCount > 0 ? "Partial" : "Available", $"{title}. {summaryText}");
+            ? localization.Format(
+                LocalizationKeys.HistoryPartialAvailability,
+                partial,
+                unavailableCount)
+            : localization.Get(LocalizationKeys.Available);
+        string summaryText = localization.Format(
+            LocalizationKeys.HistoryMeasuredSummary,
+            range.Label,
+            Format(minimum, definition.ValueKind),
+            Format(maximum, definition.ValueKind),
+            Format(latest, definition.ValueKind),
+            availability,
+            downsampled,
+            display.Count,
+            samples.Count);
+        string stateText = partial > 0 || unavailableCount > 0
+            ? localization.Get(LocalizationKeys.HistoryPartialState)
+            : localization.Get(LocalizationKeys.Available);
+        return (display, summaryText, stateText, $"{title}. {summaryText}");
     }
 
     private static string TryGet(LocalizationService localization, string key)

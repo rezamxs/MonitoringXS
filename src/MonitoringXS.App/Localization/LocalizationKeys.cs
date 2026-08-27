@@ -106,6 +106,13 @@ internal static class LocalizationKeys
     public const string HistoryQueryFailed = nameof(HistoryQueryFailed);
     public const string HistoryApplicationNotFound = nameof(HistoryApplicationNotFound);
     public const string HistoryLastUpdatedFormat = nameof(HistoryLastUpdatedFormat);
+    public const string HistoryEmptyState = nameof(HistoryEmptyState);
+    public const string HistoryPartialState = nameof(HistoryPartialState);
+    public const string HistoryDatabaseUnavailableState = nameof(HistoryDatabaseUnavailableState);
+    public const string HistoryEmptySummary = nameof(HistoryEmptySummary);
+    public const string HistoryNoMeasuredSummary = nameof(HistoryNoMeasuredSummary);
+    public const string HistoryPartialAvailability = nameof(HistoryPartialAvailability);
+    public const string HistoryMeasuredSummary = nameof(HistoryMeasuredSummary);
     public const string Range5Minutes = nameof(Range5Minutes);
     public const string Range15Minutes = nameof(Range15Minutes);
     public const string Range1Hour = nameof(Range1Hour);

@@ -5,6 +5,8 @@
     <IsTestProject>true</IsTestProject>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
+    <Platform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
   </PropertyGroup>
   <ItemGroup>
     <Using Include="Xunit" />
