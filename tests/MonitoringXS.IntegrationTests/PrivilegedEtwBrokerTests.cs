@@ -244,6 +244,56 @@ public sealed class PrivilegedEtwBrokerTests
     }
 
     [Fact]
+    public void EndpointAuthorizationRejectsSameNamedExecutableFromAnotherPath()
+    {
+        const string expectedPath = @"C:\Program Files\Monitoring XS\App\MonitoringXS.App.exe";
+        BrokerPipeEndpoint endpoint = BrokerPipeEndpoint.Create("S-1-5-21-1-2-3-100", 7);
+        BrokerClientAuthorizer authorizer = new(
+            new FakeIdentityReader(),
+            endpoint.UserSid,
+            endpoint.SessionId,
+            expectedPath,
+            _ => true);
+        BrokerObservedProcess spoof = new(
+            10,
+            DateTimeOffset.UtcNow,
+            endpoint.UserSid,
+            endpoint.SessionId,
+            "MonitoringXS.App.exe",
+            @"C:\Users\Public\MonitoringXS.App.exe");
+
+        Assert.False(authorizer.IsClientAllowedForEndpoint(spoof));
+        Assert.True(authorizer.IsClientAllowedForEndpoint(spoof with { ExecutablePath = expectedPath }));
+    }
+
+    [Fact]
+    public void EndpointAuthorizationRequiresPublisherValidation()
+    {
+        const string expectedPath = @"C:\Program Files\Monitoring XS\App\MonitoringXS.App.exe";
+        BrokerPipeEndpoint endpoint = BrokerPipeEndpoint.Create("S-1-5-21-1-2-3-100", 7);
+        BrokerObservedProcess client = new(
+            10,
+            DateTimeOffset.UtcNow,
+            endpoint.UserSid,
+            endpoint.SessionId,
+            "MonitoringXS.App.exe",
+            expectedPath);
+        BrokerClientAuthorizer authorizer = new(
+            new FakeIdentityReader(),
+            endpoint.UserSid,
+            endpoint.SessionId,
+            expectedPath,
+            _ => false);
+
+        Assert.False(authorizer.IsClientAllowedForEndpoint(client));
+#if DEBUG
+        Assert.False(BrokerClientExecutableValidator.RequiresTrustedPublisher);
+#else
+        Assert.True(BrokerClientExecutableValidator.RequiresTrustedPublisher);
+#endif
+    }
+
+    [Fact]
     public async Task MatchingEndpointCompletesVersionOneHandshakeWithoutElevation()
     {
         if (!OperatingSystem.IsWindows())

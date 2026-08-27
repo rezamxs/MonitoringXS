@@ -14,6 +14,8 @@ public sealed class MonitoringRuntime : IAsyncDisposable
     private readonly object _gate = new();
     private Task? _loop;
     private TaskCompletionSource? _requestedCapture;
+    private TaskCompletionSource? _activeRequest;
+    private RuntimeState _state;
     private bool _disposed;
 
     public MonitoringRuntime(
@@ -45,8 +47,33 @@ public sealed class MonitoringRuntime : IAsyncDisposable
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_state is RuntimeState.Stopped or RuntimeState.Faulted)
+            {
+                throw new InvalidOperationException("A stopped monitoring runtime cannot be restarted.");
+            }
+
             StartedAt ??= DateTimeOffset.UtcNow;
-            return _loop ??= RunAsync(_shutdown.Token);
+            _state = RuntimeState.Started;
+            if (_loop is null)
+            {
+                _loop = RunAsync(_shutdown.Token);
+                _ = _loop.ContinueWith(
+                    completed =>
+                    {
+                        if (completed.IsFaulted)
+                        {
+                            lock (_gate)
+                            {
+                                _state = RuntimeState.Faulted;
+                            }
+                        }
+                    },
+                    CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+            }
+
+            return _loop;
         }
     }
 
@@ -60,7 +87,7 @@ public sealed class MonitoringRuntime : IAsyncDisposable
         {
             lock (_gate)
             {
-                return _loop is not null && !_disposed;
+                return _state == RuntimeState.Started && !_disposed;
             }
         }
     }
@@ -72,6 +99,11 @@ public sealed class MonitoringRuntime : IAsyncDisposable
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_state != RuntimeState.Started)
+            {
+                throw new InvalidOperationException("The monitoring runtime is not running.");
+            }
+
             _requestedCapture ??= new TaskCompletionSource(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             requested = _requestedCapture.Task;
@@ -90,6 +122,12 @@ public sealed class MonitoringRuntime : IAsyncDisposable
             _shutdown.Cancel();
             _requestedCapture?.TrySetCanceled(_shutdown.Token);
             _requestedCapture = null;
+            _activeRequest?.TrySetCanceled(_shutdown.Token);
+            _activeRequest = null;
+            if (_state != RuntimeState.Faulted)
+            {
+                _state = RuntimeState.Stopped;
+            }
         }
 
         if (loop is null)
@@ -104,6 +142,13 @@ public sealed class MonitoringRuntime : IAsyncDisposable
         catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
         {
         }
+        finally
+        {
+            lock (_gate)
+            {
+                _loop = null;
+            }
+        }
     }
 
     private async Task RunAsync(CancellationToken cancellationToken)
@@ -111,6 +156,14 @@ public sealed class MonitoringRuntime : IAsyncDisposable
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            TaskCompletionSource? cycleRequest;
+            lock (_gate)
+            {
+                cycleRequest = _requestedCapture;
+                _requestedCapture = null;
+                _activeRequest = cycleRequest;
+            }
+
             try
             {
                 MonitoringSnapshot snapshot = await _captureAsync(cancellationToken);
@@ -139,14 +192,7 @@ public sealed class MonitoringRuntime : IAsyncDisposable
                 }
 
                 _hub.Publish(snapshot);
-                TaskCompletionSource? requested;
-                lock (_gate)
-                {
-                    requested = _requestedCapture;
-                    _requestedCapture = null;
-                }
-
-                requested?.TrySetResult();
+                cycleRequest?.TrySetResult();
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -154,13 +200,33 @@ public sealed class MonitoringRuntime : IAsyncDisposable
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
+                cycleRequest?.TrySetException(exception);
                 Trace.TraceError(
                     "Monitoring cycle failed ({0}); sampling will continue.",
                     exception.GetType().Name);
             }
 
+            finally
+            {
+                lock (_gate)
+                {
+                    if (ReferenceEquals(_activeRequest, cycleRequest))
+                    {
+                        _activeRequest = null;
+                    }
+                }
+            }
+
             await _cadence.WaitForNextCaptureAsync(cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private enum RuntimeState
+    {
+        Created,
+        Started,
+        Stopped,
+        Faulted
     }
 
     public async ValueTask DisposeAsync()

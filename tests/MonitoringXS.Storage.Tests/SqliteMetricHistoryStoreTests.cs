@@ -184,8 +184,7 @@ public sealed class SqliteMetricHistoryStoreTests
             Retention = TimeSpan.FromMinutes(1),
             RawSampleRetention = TimeSpan.FromMilliseconds(1),
             DownsampleBucket = TimeSpan.FromSeconds(10),
-            CleanupInterval = TimeSpan.FromMilliseconds(1),
-            BatchSize = 2
+            CleanupInterval = TimeSpan.FromMilliseconds(1)
         };
         await using SqliteMetricHistoryStore store = new(options);
         await Task.Delay(10, TestCancellation);
@@ -223,7 +222,9 @@ public sealed class SqliteMetricHistoryStoreTests
         {
             Retention = TimeSpan.FromSeconds(1),
             RawSampleRetention = TimeSpan.FromMilliseconds(1),
-            DownsampleBucket = TimeSpan.FromMilliseconds(100),
+            // Downsample buckets are whole seconds by option validation because
+            // downsampling groups by integer seconds in SQL.
+            DownsampleBucket = TimeSpan.FromSeconds(1),
             CleanupInterval = TimeSpan.FromMilliseconds(1)
         });
         await Task.Delay(10, TestCancellation);
@@ -290,10 +291,7 @@ public sealed class SqliteMetricHistoryStoreTests
     public async Task QueuesEachAcceptedCaptureAsOneTransactionalBatch()
     {
         using TestDatabase database = new();
-        await using SqliteMetricHistoryStore store = new(new(database.Path)
-        {
-            BatchSize = 2
-        });
+        await using SqliteMetricHistoryStore store = new(new(database.Path));
         DateTimeOffset captured = DateTimeOffset.UtcNow;
         ApplicationMetricSnapshot[] snapshots = Enumerable.Range(0, 5)
             .Select(index => Snapshot(

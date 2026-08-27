@@ -102,7 +102,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
 
         Interlocked.Exchange(ref _etwEventsLost, eventsLost);
         int depthBeforeDrain = _events.Reader.Count;
-        List<PhysicalDiskIoEvent> events = new(EventQueueCapacity);
+        List<PhysicalDiskIoEvent> events = CreateDrainBuffer<PhysicalDiskIoEvent>(depthBeforeDrain);
         while (_events.Reader.TryRead(out PhysicalDiskIoEvent? diskEvent))
         {
             events.Add(diskEvent);
@@ -171,7 +171,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
 
         Interlocked.Exchange(ref _etwEventsLost, eventsLost);
         int depthBeforeDrain = _networkEvents.Reader.Count;
-        List<NetworkTrafficEvent> events = new(NetworkEventQueueCapacity);
+        List<NetworkTrafficEvent> events = CreateDrainBuffer<NetworkTrafficEvent>(depthBeforeDrain);
         while (_networkEvents.Reader.TryRead(out NetworkTrafficEvent? networkEvent))
         {
             events.Add(networkEvent);
@@ -246,6 +246,9 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             CollectorStatus = availability
         };
     }
+
+    internal static List<T> CreateDrainBuffer<T>(int depthBeforeDrain) =>
+        new(Math.Max(0, depthBeforeDrain));
 
     public void Dispose()
     {

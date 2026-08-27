@@ -202,6 +202,9 @@
                                     Samples="{Binding Samples, Mode=OneWay}"
                                     ChartScale="{Binding Scale, Mode=OneTime}"
                                     SummaryText="{Binding Summary, Mode=OneWay}"
+                                    TooltipMetricName="{Binding Title, Mode=OneWay}"
+                                    TooltipUsesPercentUnit="{Binding UsesPercentScale, Mode=OneWay}"
+                                    TooltipValueUnit="{Binding UnitText, Mode=OneWay}"
                                     UnitText="{Binding UnitText, Mode=OneTime}"
                                     UseSystemFocusVisuals="True" />
                             </Grid>

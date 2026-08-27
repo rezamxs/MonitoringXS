@@ -250,6 +250,8 @@
   <data name="UnitBytes" xml:space="preserve"><value>بایت</value></data>
   <data name="UnitBytesPerSecond" xml:space="preserve"><value>بایت/ثانیه</value></data>
   <data name="SelectedRangeFormat" xml:space="preserve"><value>بازهٔ انتخاب‌شده: {0}</value></data>
+  <data name="TooltipReason" xml:space="preserve"><value>دلیل</value></data>
+  <data name="TooltipValue" xml:space="preserve"><value>مقدار</value></data>
   <data name="SelectProcess" xml:space="preserve"><value>یک پردازش را انتخاب کنید.</value></data>
   <data name="NoProcessSelected" xml:space="preserve"><value>پردازشی انتخاب نشده است</value></data>
   <data name="Ready" xml:space="preserve"><value>آماده</value></data>

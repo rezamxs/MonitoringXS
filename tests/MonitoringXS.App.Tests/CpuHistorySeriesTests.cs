@@ -61,6 +61,52 @@ public sealed class CpuHistorySeriesTests
     }
 
     [Fact]
+    public void NearestIndexSelectsByTimestampNotByIndexProportion()
+    {
+        DateTimeOffset start = new(2026, 7, 23, 0, 0, 0, TimeSpan.Zero);
+        // Three samples over a one-hour range, clustered at the end: an
+        // index-proportional mapping would pick the middle sample for a pointer
+        // located at the second sample's time position.
+        CpuHistorySample[] samples =
+        [
+            new(start, 1),
+            new(start.AddMinutes(59), 2),
+            new(start.AddHours(1), 3)
+        ];
+        double width = 600;
+        double leftInset = 54;
+        double rightInset = 12;
+        double xAtSecondSample = leftInset + (width - rightInset - leftInset) * ((start.AddMinutes(59).UtcTicks - start.UtcTicks) / (double)(start.AddHours(1).UtcTicks - start.UtcTicks));
+
+        int nearest = ChartHoverMapper.NearestIndex(
+            xAtSecondSample,
+            samples,
+            start,
+            start.AddHours(1),
+            isEmbedded: false,
+            availableWidth: width);
+
+        Assert.Equal(1, nearest);
+    }
+
+    [Fact]
+    public void NearestIndexClampsToPlotEdgesAndHandlesEmptyAndDegenerateRanges()
+    {
+        DateTimeOffset start = new(2026, 7, 23, 0, 0, 0, TimeSpan.Zero);
+        CpuHistorySample[] samples = [new(start, 1), new(start.AddMinutes(1), 2)];
+        double width = 454;
+
+        Assert.Equal(-1, ChartHoverMapper.NearestIndex(
+            100, [], null, null, isEmbedded: false, availableWidth: width));
+        Assert.Equal(0, ChartHoverMapper.NearestIndex(
+            0, samples, start, start.AddMinutes(10), isEmbedded: false, availableWidth: width));
+        Assert.Equal(1, ChartHoverMapper.NearestIndex(
+            width, samples, start, start.AddMinutes(10), isEmbedded: false, availableWidth: width));
+        Assert.Equal(0, ChartHoverMapper.NearestIndex(
+            200, samples, start, start, isEmbedded: false, availableWidth: width));
+    }
+
+    [Fact]
     public void LayoutKeepsUnavailableIntervalsAsSeparateSegments()
     {
         DateTimeOffset start = new(2026, 7, 23, 0, 0, 0, TimeSpan.Zero);

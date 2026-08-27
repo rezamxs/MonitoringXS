@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
 
@@ -5,6 +6,26 @@ namespace MonitoringXS.Application.Tests;
 
 public sealed class MonitoringCapturePipelineTests
 {
+    [Fact]
+    public async Task NonCooperativeStageCannotHoldPipelinePastHardDeadline()
+    {
+        TaskCompletionSource<MetricCaptureContribution> never =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        NonCooperativeStage stage = new(never.Task);
+        MonitoringCapturePipeline pipeline = new([stage]);
+        Stopwatch elapsed = Stopwatch.StartNew();
+
+        MonitoringMetricCaptureResult result = await pipeline.CaptureAsync(
+            new(DateTimeOffset.UtcNow, [], []),
+            [],
+            TestContext.Current.CancellationToken);
+        never.TrySetResult(new NetworkMetricContribution(new Dictionary<string, NetworkMetricSet>(), null));
+
+        Assert.True(elapsed.Elapsed < TimeSpan.FromSeconds(2));
+        Assert.NotNull(stage.Failure);
+        Assert.Empty(result.Applications);
+    }
+
     [Fact]
     public void DuplicateMetricFamilyIsRejected()
     {
@@ -81,6 +102,23 @@ public sealed class MonitoringCapturePipelineTests
 
         public MetricCaptureContribution Failed(Exception exception) =>
             Contribution(Family);
+    }
+
+    private sealed class NonCooperativeStage(Task<MetricCaptureContribution> capture) : IMetricCaptureStage
+    {
+        public Exception? Failure { get; private set; }
+
+        public MetricFamily Family => MetricFamily.Network;
+
+        public async ValueTask<MetricCaptureContribution> CaptureAsync(
+            MetricCaptureContext context,
+            CancellationToken cancellationToken) => await capture;
+
+        public MetricCaptureContribution Failed(Exception exception)
+        {
+            Failure = exception;
+            return new NetworkMetricContribution(new Dictionary<string, NetworkMetricSet>(), null);
+        }
     }
 
     private static MetricCaptureContribution Contribution(MetricFamily family) => family switch

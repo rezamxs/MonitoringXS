@@ -345,12 +345,16 @@ internal sealed class BrokerClientAuthorizer
     private readonly IBrokerProcessIdentityReader _identityReader;
     private readonly string? _expectedUserSid;
     private readonly int? _expectedSessionId;
+    private readonly string? _expectedExecutablePath;
+    private readonly Func<string, bool>? _executableValidator;
 
     public BrokerClientAuthorizer(BrokerPipeEndpoint endpoint)
         : this(
             new WindowsBrokerProcessIdentityReader(),
             endpoint.UserSid,
-            endpoint.SessionId)
+            endpoint.SessionId,
+            BrokerClientExecutableValidator.InstalledApplicationPath,
+            BrokerClientExecutableValidator.IsAllowed)
     {
     }
 
@@ -362,11 +366,15 @@ internal sealed class BrokerClientAuthorizer
     internal BrokerClientAuthorizer(
         IBrokerProcessIdentityReader identityReader,
         string? expectedUserSid,
-        int? expectedSessionId)
+        int? expectedSessionId,
+        string? expectedExecutablePath = null,
+        Func<string, bool>? executableValidator = null)
     {
         _identityReader = identityReader;
         _expectedUserSid = expectedUserSid;
         _expectedSessionId = expectedSessionId;
+        _expectedExecutablePath = expectedExecutablePath;
+        _executableValidator = executableValidator;
     }
 
     public BrokerObservedProcess? TryReadClient(NamedPipeServerStream pipe) =>
@@ -387,7 +395,24 @@ internal sealed class BrokerClientAuthorizer
         IsClientAllowed(client)
         && (_expectedSessionId is null || client.SessionId == _expectedSessionId)
         && (_expectedUserSid is null
-            || string.Equals(client.UserSid, _expectedUserSid, StringComparison.Ordinal));
+            || string.Equals(client.UserSid, _expectedUserSid, StringComparison.Ordinal))
+        && (_expectedExecutablePath is null
+            || PathsEqual(client.ExecutablePath, _expectedExecutablePath))
+        && (_executableValidator is null
+            || client.ExecutablePath is not null && _executableValidator(client.ExecutablePath));
+
+    private static bool PathsEqual(string? left, string right)
+    {
+        try
+        {
+            return left is not null
+                && string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return false;
+        }
+    }
 
     public bool AreProcessesAllowed(
         BrokerObservedProcess client,
@@ -438,7 +463,8 @@ internal sealed record BrokerObservedProcess(
     DateTimeOffset StartTimeUtc,
     string UserSid,
     int SessionId,
-    string ExecutableName);
+    string ExecutableName,
+    string? ExecutablePath = null);
 
 internal sealed class WindowsBrokerProcessIdentityReader : IBrokerProcessIdentityReader
 {
@@ -483,13 +509,15 @@ internal sealed class WindowsBrokerProcessIdentityReader : IBrokerProcessIdentit
                 return null;
             }
 
-            string executableName = Path.GetFileName(new string(imagePath, 0, length));
+            string executablePath = Path.GetFullPath(new string(imagePath, 0, length));
+            string executableName = Path.GetFileName(executablePath);
             return new BrokerObservedProcess(
                 processId,
                 DateTimeOffset.FromFileTime(creation.ToLong()).ToUniversalTime(),
                 userSid,
                 (int)sessionId,
-                executableName);
+                executableName,
+                executablePath);
         }
     }
 

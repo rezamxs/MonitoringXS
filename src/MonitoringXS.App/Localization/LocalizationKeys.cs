@@ -146,6 +146,8 @@ internal static class LocalizationKeys
     public const string SamplingUnknown = nameof(SamplingUnknown);
     public const string MetricMetadataFormat = nameof(MetricMetadataFormat);
     public const string SelectedRangeFormat = nameof(SelectedRangeFormat);
+    public const string TooltipReason = nameof(TooltipReason);
+    public const string TooltipValue = nameof(TooltipValue);
     public const string SelectProcess = nameof(SelectProcess);
     public const string NoProcessSelected = nameof(NoProcessSelected);
     public const string Ready = nameof(Ready);

@@ -167,6 +167,36 @@ public sealed class MonitoringRuntimeTests
         Assert.True(calls >= 2);
     }
 
+    [Fact]
+    public async Task RequestedCaptureFailsWithItsCaptureAndStopClearsRunningState()
+    {
+        TaskCompletionSource first = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int calls = 0;
+        await using MonitoringRuntime runtime = new(
+            cancellationToken =>
+            {
+                int call = Interlocked.Increment(ref calls);
+                if (call == 1)
+                {
+                    first.TrySetResult();
+                    return ValueTask.FromResult(Snapshot(call));
+                }
+
+                throw new InvalidOperationException("permanent capture failure");
+            },
+            new MonitoringSnapshotHub(),
+            new LiveRefreshCadence(TimeSpan.FromHours(1)));
+
+        _ = runtime.Start();
+        await first.Task.WaitAsync(TestContext.Current.CancellationToken);
+        InvalidOperationException failure = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => runtime.RequestCaptureAsync(TestContext.Current.CancellationToken));
+        await runtime.StopAsync();
+
+        Assert.Contains("permanent", failure.Message, StringComparison.Ordinal);
+        Assert.False(runtime.IsRunning);
+    }
+
     private static MonitoringSnapshot Snapshot(int sequence)
     {
         DateTimeOffset capturedAt = DateTimeOffset.UtcNow.AddTicks(sequence);

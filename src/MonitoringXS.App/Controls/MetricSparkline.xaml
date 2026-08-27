@@ -10,7 +10,16 @@
         BorderBrush="{StaticResource SubtleBorderBrush}"
         BorderThickness="1"
         CornerRadius="8"
-        SizeChanged="ChartRoot_SizeChanged">
+        SizeChanged="ChartRoot_SizeChanged"
+        PointerMoved="OnPointerMoved"
+        PointerExited="OnPointerExited">
+        <ToolTipService.ToolTip>
+            <TextBlock
+                x:Name="TooltipText"
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="Wrap"
+                MaxWidth="320" />
+        </ToolTipService.ToolTip>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />

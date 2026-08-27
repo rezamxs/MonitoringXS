@@ -5,6 +5,28 @@ namespace MonitoringXS.IntegrationTests;
 
 public sealed class EtwKernelMetricEventSourceTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(8)]
+    [InlineData(16_384)]
+    public void DrainBufferCapacityTracksObservedTraffic(int depth)
+    {
+        List<int> buffer = EtwPhysicalDiskEventSource.CreateDrainBuffer<int>(depth);
+
+        Assert.Equal(depth, buffer.Capacity);
+    }
+
+    [Fact]
+    public void EmptyDrainAvoidsLargeObjectHeapAllocation()
+    {
+        _ = EtwPhysicalDiskEventSource.CreateDrainBuffer<int>(0);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+
+        _ = EtwPhysicalDiskEventSource.CreateDrainBuffer<int>(0);
+
+        Assert.InRange(GC.GetAllocatedBytesForCurrentThread() - before, 0, 1_024);
+    }
+
     [Fact]
     public void SharedKernelSessionUsesNeutralVersionedName()
     {

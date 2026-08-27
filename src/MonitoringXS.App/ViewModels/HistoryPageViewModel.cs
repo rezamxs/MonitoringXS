@@ -229,18 +229,19 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
             DateTimeOffset toUtc = _utcNow().ToUniversalTime();
             DateTimeOffset fromUtc = toUtc - range.Duration;
             Stopwatch stopwatch = Stopwatch.StartNew();
-            MetricHistoryQueryResult[] results = await Task.Run(
-                async () => await Task.WhenAll(Definitions.Select(definition =>
-                    _store.QueryAsync(
-                        application.LogicalApplicationId,
-                        definition.Metric,
-                        fromUtc,
-                        toUtc,
-                        request.Token).AsTask())),
-                request.Token);
+            IReadOnlyDictionary<MetricHistoryMetric, MetricHistoryQueryResult> queryResults =
+                await _store.QueryManyAsync(
+                    application.LogicalApplicationId,
+                    Definitions.Select(definition => definition.Metric).ToArray(),
+                    fromUtc,
+                    toUtc,
+                    request.Token);
+            MetricHistoryQueryResult[] results = Definitions
+                .Select(definition => queryResults[definition.Metric])
+                .ToArray();
             var presentations = await Task.Run(
                 () => Definitions
-                    .Select((definition, index) => HistorySeriesPresentation.Create(
+                    .Select((definition, index) => HistorySeriesPresentation.CreateDetailed(
                         definition,
                         results[index],
                         range,
@@ -255,31 +256,35 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
             }
 
             bool databaseUnavailable = results.Any(result => !result.IsAvailable);
+            bool anyMeasured = presentations.Any(presented => presented.Samples.Any(sample => sample.Value.HasValue));
             bool anyPoints = results.Any(result => result.Points.Count > 0);
             bool partial = results.Any(result => result.Points.Any(point =>
-                point.Availability != MetricAvailability.Available));
+                point.Availability == MetricAvailability.Partial));
             for (int index = 0; index < Charts.Count; index++)
             {
                 Charts[index].Samples = presentations[index].Samples;
                 Charts[index].Summary = presentations[index].Summary;
                 Charts[index].StateText = presentations[index].State;
                 Charts[index].AccessibilityText = presentations[index].Accessibility;
+                Charts[index].MeasuredSampleCount = presentations[index].MeasuredSampleCount;
                 Charts[index].RangeStartUtc = fromUtc;
                 Charts[index].RangeEndUtc = toUtc;
             }
 
             State = databaseUnavailable
                 ? HistoryPageState.DatabaseUnavailable
-                : anyPoints
+                : anyMeasured
                     ? HistoryPageState.Ready
                     : HistoryPageState.Empty;
             StatusText = databaseUnavailable
                 ? _localization.Get(LocalizationKeys.HistoryDatabaseUnavailable)
-                : anyPoints
+                : anyMeasured
                     ? partial
                         ? _localization.Get(LocalizationKeys.HistoryLoadedPartial)
                         : _localization.Get(LocalizationKeys.HistoryLoaded)
-                    : _localization.Get(LocalizationKeys.HistoryNoRange);
+                    : anyPoints
+                        ? _localization.Get(LocalizationKeys.Unavailable)
+                        : _localization.Get(LocalizationKeys.HistoryNoRange);
             DateTimeOffset localUpdated = toUtc.ToLocalTime();
             LastUpdatedText = $"Last updated {localUpdated:g}";
             SelectedRangeText = _localization.Format(LocalizationKeys.SelectedRangeFormat, range.Label);

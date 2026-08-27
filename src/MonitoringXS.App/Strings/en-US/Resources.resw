@@ -250,6 +250,8 @@
   <data name="UnitBytes" xml:space="preserve"><value>bytes</value></data>
   <data name="UnitBytesPerSecond" xml:space="preserve"><value>bytes/s</value></data>
   <data name="SelectedRangeFormat" xml:space="preserve"><value>Selected range: {0}</value></data>
+  <data name="TooltipReason" xml:space="preserve"><value>Reason</value></data>
+  <data name="TooltipValue" xml:space="preserve"><value>Value</value></data>
   <data name="SelectProcess" xml:space="preserve"><value>Select a process.</value></data>
   <data name="NoProcessSelected" xml:space="preserve"><value>No process selected</value></data>
   <data name="Ready" xml:space="preserve"><value>Ready.</value></data>

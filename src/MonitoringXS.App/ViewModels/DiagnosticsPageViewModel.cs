@@ -9,8 +9,8 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
 using MonitoringXS.App.Localization;
 using MonitoringXS.Application;
+using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
-using MonitoringXS.Storage.History;
 
 namespace MonitoringXS.App.ViewModels;
 
@@ -77,7 +77,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
 {
     private readonly MainWindowViewModel _main;
     private readonly SettingsPageViewModel _settings;
-    private readonly SqliteMetricHistoryStore _history;
+    private readonly IMetricHistoryDiagnostics _history;
     private readonly LiveRefreshCadence _cadence;
     private readonly IClipboardService _clipboard;
     private readonly LocalizationService _localization;
@@ -90,7 +90,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
     public DiagnosticsPageViewModel(
         MainWindowViewModel main,
         SettingsPageViewModel settings,
-        SqliteMetricHistoryStore history,
+        IMetricHistoryDiagnostics history,
         LiveRefreshCadence cadence,
         IClipboardService clipboard,
         LocalizationService localization,
@@ -467,7 +467,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
             : $"{percent.ToString("0.0", CultureInfo.InvariantCulture)} %";
     }
 
-    private string FormatSelfMemory(long bytes) => FormatBytes(bytes);
+    private static string FormatSelfMemory(long bytes) => FormatBytes(bytes);
 
     private static string FormatBytes(long bytes) => bytes >= 1024 * 1024
         ? $"{bytes / (1024d * 1024d):0.0} MB"

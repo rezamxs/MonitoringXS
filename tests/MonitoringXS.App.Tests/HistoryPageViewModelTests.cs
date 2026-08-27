@@ -149,6 +149,91 @@ public sealed class HistoryPageViewModelTests
     }
 
     [Fact]
+    public void TooltipShowsAvailabilityAndReasonAndNeverZero()
+    {
+        DateTimeOffset now = new(2026, 7, 29, 10, 0, 0, TimeSpan.Zero);
+        CpuHistorySample[] samples =
+        [
+            new(now, 42, MetricAvailability.Available, null),
+            new(now.AddMinutes(1), null, MetricAvailability.AccessDenied, "access denied by provider")
+        ];
+
+        string measured = ChartTooltipBuilder.Build(
+            samples,
+            0,
+            "CPU",
+            HistoryValueKind.Percent,
+            "%",
+            "Available",
+            "Partial",
+            "Unavailable",
+            "Reason",
+            "Value",
+            TestContext.Current.CancellationToken);
+        string unavailable = ChartTooltipBuilder.Build(
+            samples,
+            1,
+            "CPU",
+            HistoryValueKind.Percent,
+            "%",
+            "Available",
+            "Partial",
+            "Unavailable",
+            "Reason",
+            "Value",
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains("CPU", measured, StringComparison.Ordinal);
+        Assert.Contains("42.0%", measured, StringComparison.Ordinal);
+        Assert.Contains("Available", measured, StringComparison.Ordinal);
+        Assert.DoesNotContain("Value: 0", measured, StringComparison.Ordinal);
+        Assert.Contains("Unavailable", unavailable, StringComparison.Ordinal);
+        Assert.Contains("access denied by provider", unavailable, StringComparison.Ordinal);
+        Assert.DoesNotContain("Value: 0", unavailable, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, ChartTooltipBuilder.Build(samples, 99, "CPU", HistoryValueKind.Percent, "%", "Available", "Partial", "Unavailable", "Reason", "Value", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task AllUnavailableRowsReportEmptyStateNotReady()
+    {
+        DateTimeOffset now = new(2026, 7, 29, 9, 0, 0, TimeSpan.Zero);
+        FakeHistoryStore store = new(
+            [new("app", "App", ApplicationDisposition.Installed, now)],
+            _ => new MetricHistoryQueryResult(
+            [
+                new("app", "lifetime", now.AddMinutes(-1), MetricHistoryMetric.CpuPercent, null, MetricAvailability.Unavailable, "provider unavailable", false)
+            ],
+            true));
+        using HistoryPageViewModel viewModel = new(store, () => now, TimeSpan.Zero, 20);
+
+        await viewModel.InitializeAsync(CancellationToken.None);
+
+        Assert.Equal(HistoryPageState.Empty, viewModel.State);
+        Assert.Equal("Unavailable", viewModel.StatusText);
+    }
+
+    [Fact]
+    public async Task SelectedRangeSurvivesRefreshAndReload()
+    {
+        DateTimeOffset now = new(2026, 7, 29, 9, 0, 0, TimeSpan.Zero);
+        FakeHistoryStore store = new(
+            [new("app", "App", ApplicationDisposition.Installed, now)],
+            metric => new MetricHistoryQueryResult(
+            [
+                new("app", "lifetime", now.AddMinutes(-1), metric, 5, MetricAvailability.Available, null, false)
+            ],
+            true));
+        using HistoryPageViewModel viewModel = new(store, () => now, TimeSpan.Zero, 20);
+        await viewModel.InitializeAsync(CancellationToken.None);
+
+        await viewModel.SelectRangeAsync(viewModel.Ranges[6], CancellationToken.None);
+        await viewModel.RefreshAsync(CancellationToken.None);
+
+        Assert.Equal(TimeSpan.FromHours(24), viewModel.SelectedRange.Duration);
+        Assert.Equal("Selected range: 24 hours", viewModel.SelectedRangeText);
+    }
+
+    [Fact]
     public async Task NewSelectionCannotBeReplacedByStaleQueryResults()
     {
         DateTimeOffset now = new(2026, 7, 29, 12, 0, 0, TimeSpan.Zero);

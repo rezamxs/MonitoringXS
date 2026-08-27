@@ -3,9 +3,13 @@ using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using MonitoringXS.App.Localization;
+using MonitoringXS.App.ViewModels;
 using Windows.Foundation;
+using WToolTipService = Microsoft.UI.Xaml.Controls.ToolTipService;
 
 namespace MonitoringXS.App.Controls;
 
@@ -65,6 +69,24 @@ public sealed partial class MetricSparkline : UserControl
         typeof(MetricSparkline),
         new PropertyMetadata(false, OnEmbeddedChanged));
 
+    public static readonly DependencyProperty TooltipMetricNameProperty = DependencyProperty.Register(
+        nameof(TooltipMetricName),
+        typeof(string),
+        typeof(MetricSparkline),
+        new PropertyMetadata(null));
+
+    public static readonly DependencyProperty TooltipValueUnitProperty = DependencyProperty.Register(
+        nameof(TooltipValueUnit),
+        typeof(string),
+        typeof(MetricSparkline),
+        new PropertyMetadata(null));
+
+    public static readonly DependencyProperty TooltipUsesPercentUnitProperty = DependencyProperty.Register(
+        nameof(TooltipUsesPercentUnit),
+        typeof(bool),
+        typeof(MetricSparkline),
+        new PropertyMetadata(false));
+
     private INotifyCollectionChanged? _observableSamples;
     private bool _redrawPending;
     private readonly Brush? _defaultBackground;
@@ -75,6 +97,8 @@ public sealed partial class MetricSparkline : UserControl
         _defaultBackground = ChartRoot.Background;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        PointerMoved += OnPointerMoved;
+        PointerExited += OnPointerExited;
     }
 
     public IList<CpuHistorySample>? Samples
@@ -129,6 +153,24 @@ public sealed partial class MetricSparkline : UserControl
     {
         get => (bool)GetValue(IsEmbeddedProperty);
         set => SetValue(IsEmbeddedProperty, value);
+    }
+
+    public string? TooltipMetricName
+    {
+        get => (string?)GetValue(TooltipMetricNameProperty);
+        set => SetValue(TooltipMetricNameProperty, value);
+    }
+
+    public string? TooltipValueUnit
+    {
+        get => (string?)GetValue(TooltipValueUnitProperty);
+        set => SetValue(TooltipValueUnitProperty, value);
+    }
+
+    public bool TooltipUsesPercentUnit
+    {
+        get => (bool)GetValue(TooltipUsesPercentUnitProperty);
+        set => SetValue(TooltipUsesPercentUnitProperty, value);
     }
 
     private static void OnEmbeddedChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
@@ -329,4 +371,72 @@ public sealed partial class MetricSparkline : UserControl
             _observableSamples = null;
         }
     }
+
+    private void OnPointerMoved(object sender, PointerRoutedEventArgs args) => UpdateHover(args);
+
+    private void OnPointerExited(object sender, PointerRoutedEventArgs args)
+    {
+        _hoverIndex = -1;
+        WToolTipService.SetToolTip(ChartRoot, null);
+    }
+
+    private void UpdateHover(PointerRoutedEventArgs args)
+    {
+        if (Samples is not { Count: > 0 } samples
+            || TooltipMetricName is not { Length: > 0 } metricName)
+        {
+            _hoverIndex = -1;
+            WToolTipService.SetToolTip(ChartRoot, null);
+            return;
+        }
+
+        Point position = args.GetCurrentPoint(ChartRoot).Position;
+        int index = NearestIndex(position.X);
+        if (index < 0 || index >= samples.Count || index == _hoverIndex)
+        {
+            return;
+        }
+
+        _hoverIndex = index;
+        string? tooltip = ChartTooltipBuilder.Build(
+            samples.ToArray(),
+            index,
+            metricName,
+            TooltipUsesPercentUnit ? HistoryValueKind.Percent : HistoryValueKind.Bytes,
+            TooltipValueUnit ?? string.Empty,
+            _localization.Get(LocalizationKeys.Available),
+            _localization.Get(LocalizationKeys.PartialLowerBound),
+            _localization.Get(LocalizationKeys.Unavailable),
+            _localization.Get(LocalizationKeys.TooltipReason),
+            _localization.Get(LocalizationKeys.TooltipValue));
+        if (string.IsNullOrEmpty(tooltip))
+        {
+            _hoverIndex = -1;
+            WToolTipService.SetToolTip(ChartRoot, null);
+            return;
+        }
+
+        TooltipText.Text = tooltip;
+        WToolTipService.SetToolTip(ChartRoot, TooltipText);
+    }
+
+    private int NearestIndex(double x)
+    {
+        IList<CpuHistorySample>? samples = Samples;
+        if (samples is null || samples.Count == 0)
+        {
+            return -1;
+        }
+
+        return ChartHoverMapper.NearestIndex(
+            x,
+            samples,
+            RangeStartUtc,
+            RangeEndUtc,
+            IsEmbedded,
+            PlotArea.ActualWidth);
+    }
+
+    private int _hoverIndex = -1;
+    private readonly LocalizationService _localization = new();
 }

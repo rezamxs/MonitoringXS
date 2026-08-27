@@ -84,7 +84,9 @@ public sealed class MonitoringCapturePipeline
             .ToArray();
         MetricCaptureContribution[] contributions = await Task.WhenAll(captures);
 
-        IReadOnlyList<ApplicationMetricSnapshot> applications = baseApplications;
+        PhysicalDiskMetricContribution? diskContribution = null;
+        NetworkMetricContribution? networkContribution = null;
+        GpuMetricContribution? gpuContribution = null;
         PhysicalDiskCollectorDiagnostics? diskDiagnostics = null;
         NetworkCollectorDiagnostics? networkDiagnostics = null;
         GpuCounterBatch? gpuBatch = null;
@@ -93,30 +95,15 @@ public sealed class MonitoringCapturePipeline
             switch (contribution)
             {
                 case PhysicalDiskMetricContribution disk:
-                    applications = applications.Select(application =>
-                        disk.Metrics.TryGetValue(application.Application.LogicalApplicationId, out PhysicalDiskMetricSet? value)
-                            ? application with { PhysicalDisk = value }
-                            : disk.Failure is not null
-                                ? application with { PhysicalDisk = disk.Failure }
-                                : application).ToArray();
+                    diskContribution = disk;
                     diskDiagnostics = disk.Diagnostics;
                     break;
                 case NetworkMetricContribution network:
-                    applications = applications.Select(application =>
-                        network.Metrics.TryGetValue(application.Application.LogicalApplicationId, out NetworkMetricSet? value)
-                            ? application with { Network = value }
-                            : network.Failure is not null
-                                ? application with { Network = network.Failure }
-                                : application).ToArray();
+                    networkContribution = network;
                     networkDiagnostics = network.Diagnostics;
                     break;
                 case GpuMetricContribution gpu:
-                    applications = applications.Select(application =>
-                        gpu.Metrics.TryGetValue(application.Application.LogicalApplicationId, out GpuMetricSet? value)
-                            ? application with { Gpu = value }
-                            : gpu.Failure is not null
-                                ? application with { Gpu = gpu.Failure }
-                                : application).ToArray();
+                    gpuContribution = gpu;
                     gpuBatch = gpu.LastBatch;
                     break;
                 default:
@@ -125,8 +112,26 @@ public sealed class MonitoringCapturePipeline
             }
         }
 
+        ApplicationMetricSnapshot[] applications = baseApplications.Select(application =>
+        {
+            string id = application.Application.LogicalApplicationId;
+            PhysicalDiskMetricSet? disk = Resolve(diskContribution?.Metrics, id, diskContribution?.Failure);
+            NetworkMetricSet? network = Resolve(networkContribution?.Metrics, id, networkContribution?.Failure);
+            GpuMetricSet? gpu = Resolve(gpuContribution?.Metrics, id, gpuContribution?.Failure);
+            return application with
+            {
+                PhysicalDisk = disk ?? application.PhysicalDisk,
+                Network = network ?? application.Network,
+                Gpu = gpu ?? application.Gpu
+            };
+        }).ToArray();
+
         return new(applications, diskDiagnostics, networkDiagnostics, gpuBatch);
     }
+
+    private static T? Resolve<T>(IReadOnlyDictionary<string, T>? metrics, string id, T? failure)
+        where T : class =>
+        metrics is not null && metrics.TryGetValue(id, out T? value) ? value : failure;
 
     private static async Task<MetricCaptureContribution> CaptureStageAsync(
         IMetricCaptureStage stage,
@@ -139,7 +144,21 @@ public sealed class MonitoringCapturePipeline
         MetricCaptureContribution contribution;
         try
         {
-            contribution = await stage.CaptureAsync(context, timeout.Token);
+            Task<MetricCaptureContribution> capture = stage.CaptureAsync(context, timeout.Token).AsTask();
+            try
+            {
+                contribution = await capture.WaitAsync(CollectorTimeout, cancellationToken).ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                timeout.Cancel();
+                _ = capture.ContinueWith(
+                    static completed => _ = completed.Exception,
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+                throw;
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -18,8 +18,6 @@ public sealed record SqliteMetricHistoryOptions
 
     public int QueueCapacity { get; init; } = 256;
 
-    public int BatchSize { get; init; } = 32;
-
     public TimeSpan CleanupInterval { get; init; } = TimeSpan.FromMinutes(1);
 
     public long MaximumDatabaseBytes { get; init; } = 64 * 1024 * 1024;
@@ -31,7 +29,8 @@ public sealed record SqliteMetricHistoryOptions
             || RawSampleRetention >= Retention
             || DownsampleBucket <= TimeSpan.Zero
             || QueueCapacity < 1
-            || BatchSize < 1
+            || DownsampleBucket.TotalSeconds > int.MaxValue
+            || DownsampleBucket.Ticks % TimeSpan.TicksPerSecond != 0
             || CleanupInterval <= TimeSpan.Zero
             || MaximumDatabaseBytes < 1024 * 1024)
         {

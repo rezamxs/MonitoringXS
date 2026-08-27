@@ -310,6 +310,16 @@ public sealed class MonitoringCoordinatorTests
 
         elapsed.Stop();
         ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
+        // The pipeline aborts the stage via WaitAsync at the 750 ms deadline;
+        // the abandoned collector observes the linked cancellation token
+        // asynchronously afterwards, so poll briefly rather than asserting
+        // synchronously. The bounded-deadline contract itself is checked below.
+        for (int attempts = 0;
+             !physical.CancellationObserved && attempts < 200;
+             attempts++)
+        {
+            await Task.Delay(10, CancellationToken.None);
+        }
         Assert.True(physical.CancellationObserved);
         Assert.True(elapsed.Elapsed < TimeSpan.FromSeconds(2));
         Assert.Equal(1d, snapshot.CpuPercent.Value);

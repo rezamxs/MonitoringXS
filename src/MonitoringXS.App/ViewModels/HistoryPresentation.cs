@@ -75,6 +75,10 @@ public sealed partial class HistoryMetricSeries : ObservableObject
     [ObservableProperty]
     public partial DateTimeOffset? RangeEndUtc { get; set; }
 
+    /// <summary>Measured points in the query window; drives tooltip density estimation.</summary>
+    [ObservableProperty]
+    public partial int MeasuredSampleCount { get; set; }
+
     internal void Relocalize(LocalizationService localization)
     {
         Title = localization.Get(Definition.Title);
@@ -88,6 +92,37 @@ internal static class HistorySeriesPresentation
 {
         public static (IList<CpuHistorySample> Samples, string Summary, string State, string Accessibility)
         Create(
+            HistoryMetricDefinition definition,
+            MetricHistoryQueryResult result,
+            HistoryRangeOption range,
+            int maximumPoints,
+            LocalizationService? localization = null)
+    {
+        return CreateCore(definition, result, range, maximumPoints, localization);
+    }
+
+    /// <summary>
+    /// Same as <see cref="Create"/> but carries per-point availability/reason
+    /// and the count of measured samples over the total query window (used by
+    /// the chart tooltip to estimate point density before hovering).
+    /// </summary>
+    public static (IList<CpuHistorySample> Samples, string Summary, string State, string Accessibility, int MeasuredSampleCount)
+        CreateDetailed(
+            HistoryMetricDefinition definition,
+            MetricHistoryQueryResult result,
+            HistoryRangeOption range,
+            int maximumPoints,
+            LocalizationService? localization = null)
+    {
+        (IList<CpuHistorySample> samples, string summary, string state, string accessibility) =
+            CreateCore(definition, result, range, maximumPoints, localization);
+        int measured = result.Points.Count(point =>
+            point.Value is { } value && double.IsFinite(value) && value >= 0);
+        return (samples, summary, state, accessibility, measured);
+    }
+
+    private static (IList<CpuHistorySample> Samples, string Summary, string State, string Accessibility)
+        CreateCore(
             HistoryMetricDefinition definition,
             MetricHistoryQueryResult result,
             HistoryRangeOption range,
@@ -127,7 +162,7 @@ internal static class HistorySeriesPresentation
                     && timestampUtc > previousTimestamp
                     ? previousTimestamp + ((timestampUtc - previousTimestamp) / 2)
                     : timestampUtc.AddTicks(-1);
-                samples.Add(new(gapTimestamp, null));
+                samples.Add(new(gapTimestamp, null, MetricAvailability.Unavailable, null));
             }
 
             double? value = point.Availability is MetricAvailability.Available or MetricAvailability.Partial
@@ -136,7 +171,11 @@ internal static class HistorySeriesPresentation
                 && measured >= 0
                     ? measured
                     : null;
-            samples.Add(new(timestampUtc, value));
+            samples.Add(new(
+                timestampUtc,
+                value,
+                point.Availability,
+                point.Detail));
                 lifetime = point.ContinuityKey;
             previousTimestampUtc = timestampUtc;
         }

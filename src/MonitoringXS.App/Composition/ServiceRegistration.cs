@@ -53,6 +53,8 @@ internal static class ServiceRegistration
             provider.GetRequiredService<SqliteMetricHistoryStore>());
         services.AddSingleton<IMetricHistoryRetentionController>(provider =>
             provider.GetRequiredService<SqliteMetricHistoryStore>());
+        services.AddSingleton<IMetricHistoryDiagnostics>(provider =>
+            provider.GetRequiredService<SqliteMetricHistoryStore>());
         return services;
     }
 

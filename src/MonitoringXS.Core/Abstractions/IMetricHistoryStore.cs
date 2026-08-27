@@ -26,4 +26,36 @@ public interface IMetricHistoryStore : IDisposable, IAsyncDisposable
         DateTimeOffset fromUtc,
         DateTimeOffset toUtc,
         CancellationToken cancellationToken);
+
+    async ValueTask<IReadOnlyDictionary<MetricHistoryMetric, MetricHistoryQueryResult>> QueryManyAsync(
+        string logicalApplicationId,
+        IReadOnlyList<MetricHistoryMetric> metrics,
+        DateTimeOffset fromUtc,
+        DateTimeOffset toUtc,
+        CancellationToken cancellationToken)
+    {
+        Dictionary<MetricHistoryMetric, MetricHistoryQueryResult> results = [];
+        foreach (MetricHistoryMetric metric in metrics.Distinct())
+        {
+            results[metric] = await QueryAsync(
+                logicalApplicationId,
+                metric,
+                fromUtc,
+                toUtc,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return results;
+    }
+}
+
+public interface IMetricHistoryDiagnostics
+{
+    MetricHistoryStoreDiagnostics Diagnostics { get; }
+
+    string DatabasePath { get; }
+
+    int QueueCapacity { get; }
+
+    TimeSpan Retention { get; }
 }

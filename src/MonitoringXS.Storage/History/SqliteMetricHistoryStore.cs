@@ -8,7 +8,8 @@ namespace MonitoringXS.Storage.History;
 
 public sealed class SqliteMetricHistoryStore :
     IMetricHistoryStore,
-    IMetricHistoryRetentionController
+    IMetricHistoryRetentionController,
+    IMetricHistoryDiagnostics
 {
     public const int SchemaVersion = 3;
     private const int RawSampleKind = 0;
@@ -20,7 +21,9 @@ public sealed class SqliteMetricHistoryStore :
     private readonly SqliteHistorySessionReconciler _sessionReconciler = new();
     private readonly object _queueGate = new();
     private readonly SemaphoreSlim _signal = new(0);
+    private readonly SemaphoreSlim _initializationGate = new(1, 1);
     private readonly CancellationTokenSource _shutdown = new();
+    private readonly Func<MetricHistoryCapture, CancellationToken, Task<int>> _writeBatchAsync;
     private readonly Task _worker;
     private TaskCompletionSource _currentDrain = CompletedSource();
     private bool _disposed;
@@ -36,14 +39,24 @@ public sealed class SqliteMetricHistoryStore :
     private long _retentionTicks;
     private string? _lastError;
     private DateTimeOffset _lastCleanupUtc;
+    private bool _initialized;
+    private Exception? _terminalFailure;
 
     public SqliteMetricHistoryStore(SqliteMetricHistoryOptions options)
+        : this(options, null)
+    {
+    }
+
+    internal SqliteMetricHistoryStore(
+        SqliteMetricHistoryOptions options,
+        Func<MetricHistoryCapture, CancellationToken, Task<int>>? writeBatchAsync)
     {
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
         _options = options;
         _retentionTicks = options.Retention.Ticks;
         _lastCleanupUtc = DateTimeOffset.UtcNow;
+        _writeBatchAsync = writeBatchAsync ?? WriteBatchAsync;
         _worker = Task.Run(WorkerAsync);
     }
 
@@ -133,6 +146,12 @@ public sealed class SqliteMetricHistoryStore :
         lock (_queueGate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_terminalFailure is not null)
+            {
+                return ValueTask.FromException<MetricHistoryWriteResult>(
+                    new InvalidOperationException("The history worker has stopped.", _terminalFailure));
+            }
+
             if (_queue.Count >= _options.QueueCapacity)
             {
                 Interlocked.Increment(ref _queueDrops);
@@ -159,7 +178,9 @@ public sealed class SqliteMetricHistoryStore :
         Task drain;
         lock (_queueGate)
         {
-            drain = _queue.Count == 0 && !_writing
+            drain = _terminalFailure is not null
+                ? Task.FromException(new InvalidOperationException("The history worker has stopped.", _terminalFailure))
+                : _queue.Count == 0 && !_writing
                 ? Task.CompletedTask
                 : _currentDrain.Task;
         }
@@ -196,14 +217,38 @@ public sealed class SqliteMetricHistoryStore :
         DateTimeOffset toUtc,
         CancellationToken cancellationToken)
     {
+        IReadOnlyDictionary<MetricHistoryMetric, MetricHistoryQueryResult> results =
+            await QueryManyAsync(
+                logicalApplicationId,
+                [metric],
+                fromUtc,
+                toUtc,
+                cancellationToken).ConfigureAwait(false);
+        return results[metric];
+    }
+
+    public async ValueTask<IReadOnlyDictionary<MetricHistoryMetric, MetricHistoryQueryResult>> QueryManyAsync(
+        string logicalApplicationId,
+        IReadOnlyList<MetricHistoryMetric> metrics,
+        DateTimeOffset fromUtc,
+        DateTimeOffset toUtc,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        MetricHistoryMetric[] requested = metrics.Distinct().ToArray();
         if (string.IsNullOrWhiteSpace(logicalApplicationId))
         {
-            return new([], false, "A logical application ID is required.");
+            return FailedQueries(requested, "A logical application ID is required.");
         }
 
         if (fromUtc > toUtc)
         {
-            return new([], false, "The history time range is invalid.");
+            return FailedQueries(requested, "The history time range is invalid.");
+        }
+
+        if (requested.Length == 0)
+        {
+            return new Dictionary<MetricHistoryMetric, MetricHistoryQueryResult>();
         }
 
         try
@@ -211,11 +256,15 @@ public sealed class SqliteMetricHistoryStore :
             await FlushAsync(cancellationToken).ConfigureAwait(false);
             await using SqliteConnection connection = await OpenInitializedConnectionAsync(
                 cancellationToken).ConfigureAwait(false);
-            string column = MetricColumn(metric);
+            string selectedColumns = string.Join(", ", requested.Select(metric =>
+            {
+                string column = MetricColumn(metric);
+                return $"{column}_value, {column}_availability, {column}_detail";
+            }));
             await using SqliteCommand command = connection.CreateCommand();
             command.CommandText = $"""
-                SELECT application_session_id, legacy_continuity_key, timestamp_utc, {column}_value,
-                       {column}_availability, {column}_detail, sample_kind
+                SELECT application_session_id, legacy_continuity_key, timestamp_utc,
+                       {selectedColumns}, sample_kind
                 FROM metric_samples
                 WHERE logical_application_id = $application
                   AND timestamp_utc >= $from_utc
@@ -226,36 +275,54 @@ public sealed class SqliteMetricHistoryStore :
             command.Parameters.AddWithValue("$from_utc", ToDatabaseTimestamp(fromUtc));
             command.Parameters.AddWithValue("$to_utc", ToDatabaseTimestamp(toUtc));
 
-            List<MetricHistoryPoint> points = [];
+            Dictionary<MetricHistoryMetric, List<MetricHistoryPoint>> points = requested
+                .ToDictionary(metric => metric, _ => new List<MetricHistoryPoint>());
             await using SqliteDataReader reader = await command
                 .ExecuteReaderAsync(cancellationToken)
                 .ConfigureAwait(false);
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
-                points.Add(new(
-                    logicalApplicationId,
-                    reader.IsDBNull(0) ? null : reader.GetInt64(0),
-                    reader.IsDBNull(1) ? null : reader.GetString(1),
-                    ParseDatabaseTimestamp(reader.GetString(2)),
-                    metric,
-                    reader.IsDBNull(3) ? null : reader.GetDouble(3),
-                    (MetricAvailability)reader.GetInt32(4),
-                    reader.IsDBNull(5) ? null : reader.GetString(5),
-                    reader.GetInt32(6) == DownsampledSampleKind));
+                long? sessionId = reader.IsDBNull(0) ? null : reader.GetInt64(0);
+                string? continuityKey = reader.IsDBNull(1) ? null : reader.GetString(1);
+                DateTimeOffset timestamp = ParseDatabaseTimestamp(reader.GetString(2));
+                bool downsampled = reader.GetInt32(3 + (requested.Length * 3)) == DownsampledSampleKind;
+                for (int index = 0; index < requested.Length; index++)
+                {
+                    MetricHistoryMetric metric = requested[index];
+                    int valueIndex = 3 + (index * 3);
+                    points[metric].Add(new(
+                        logicalApplicationId,
+                        sessionId,
+                        continuityKey,
+                        timestamp,
+                        metric,
+                        reader.IsDBNull(valueIndex) ? null : reader.GetDouble(valueIndex),
+                        (MetricAvailability)reader.GetInt32(valueIndex + 1),
+                        reader.IsDBNull(valueIndex + 2) ? null : reader.GetString(valueIndex + 2),
+                        downsampled));
+                }
             }
 
-            return new(points, true);
+            return points.ToDictionary(
+                pair => pair.Key,
+                pair => new MetricHistoryQueryResult(pair.Value, true));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch (Exception exception) when (IsStorageException(exception))
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             SetError(Describe(exception));
-            return new([], false, "Metric history is unavailable.");
+            return FailedQueries(requested, "Metric history is unavailable.");
         }
     }
+
+    private static IReadOnlyDictionary<MetricHistoryMetric, MetricHistoryQueryResult> FailedQueries(
+        IEnumerable<MetricHistoryMetric> metrics,
+        string error) => metrics.ToDictionary(
+            metric => metric,
+            _ => new MetricHistoryQueryResult([], false, error));
 
     public async ValueTask<MetricHistoryApplicationsResult> ListApplicationsAsync(
         CancellationToken cancellationToken)
@@ -338,6 +405,7 @@ public sealed class SqliteMetricHistoryStore :
         finally
         {
             _signal.Dispose();
+            _initializationGate.Dispose();
             _shutdown.Dispose();
         }
     }
@@ -372,9 +440,10 @@ public sealed class SqliteMetricHistoryStore :
                 _writing = true;
             }
 
+            Exception? terminalFailure = null;
             try
             {
-                int written = await WriteBatchAsync(capture, _shutdown.Token).ConfigureAwait(false);
+                int written = await _writeBatchAsync(capture, _shutdown.Token).ConfigureAwait(false);
                 Interlocked.Increment(ref _batchesWritten);
                 Interlocked.Add(ref _samplesWritten, written);
             }
@@ -387,6 +456,19 @@ public sealed class SqliteMetricHistoryStore :
                 Interlocked.Increment(ref _writeFailures);
                 SetError(Describe(exception));
             }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                terminalFailure = exception;
+                Interlocked.Increment(ref _writeFailures);
+                SetError(Describe(exception));
+                lock (_queueGate)
+                {
+                    _terminalFailure = exception;
+                    _queue.Clear();
+                    _currentDrain.TrySetException(
+                        new InvalidOperationException("The history worker stopped unexpectedly.", exception));
+                }
+            }
             finally
             {
                 bool idle;
@@ -394,7 +476,7 @@ public sealed class SqliteMetricHistoryStore :
                 {
                     idle = _queue.Count == 0;
                 }
-                if (idle)
+                if (idle && terminalFailure is null)
                 {
                     try
                     {
@@ -428,6 +510,11 @@ public sealed class SqliteMetricHistoryStore :
                         _currentDrain.TrySetResult();
                     }
                 }
+            }
+
+            if (terminalFailure is not null)
+            {
+                return;
             }
         }
     }
@@ -683,6 +770,7 @@ public sealed class SqliteMetricHistoryStore :
         }
         catch (SqliteException exception) when (IsCorruption(exception))
         {
+            _initialized = false;
             RecoverCorruptDatabase();
             return await OpenAndInitializeConnectionAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -704,7 +792,7 @@ public sealed class SqliteMetricHistoryStore :
         {
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
             await ConfigureConnectionAsync(connection, cancellationToken).ConfigureAwait(false);
-            await ApplyMigrationsAsync(connection, cancellationToken).ConfigureAwait(false);
+            await EnsureInitializedAsync(connection, cancellationToken).ConfigureAwait(false);
             return connection;
         }
         catch
@@ -720,26 +808,52 @@ public sealed class SqliteMetricHistoryStore :
     {
         await ExecutePragmaAsync(connection, "PRAGMA foreign_keys = ON;", cancellationToken);
         await ExecutePragmaAsync(connection, "PRAGMA busy_timeout = 5000;", cancellationToken);
-        try
+        await ExecutePragmaAsync(connection, "PRAGMA synchronous = NORMAL;", cancellationToken);
+    }
+
+    private async Task EnsureInitializedAsync(
+        SqliteConnection connection,
+        CancellationToken cancellationToken)
+    {
+        if (Volatile.Read(ref _initialized))
         {
-            object? mode = await ExecuteScalarAsync(
-                connection,
-                "PRAGMA journal_mode = WAL;",
-                cancellationToken);
-            if (!string.Equals(
-                Convert.ToString(mode, CultureInfo.InvariantCulture),
-                "wal",
-                StringComparison.OrdinalIgnoreCase))
-            {
-                SetError("SQLite WAL mode is unavailable; using SQLite fallback journal mode.");
-            }
-        }
-        catch (SqliteException exception)
-        {
-            SetError($"SQLite WAL mode is unavailable ({exception.SqliteErrorCode}).");
+            return;
         }
 
-        await ExecutePragmaAsync(connection, "PRAGMA synchronous = NORMAL;", cancellationToken);
+        await _initializationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_initialized)
+            {
+                return;
+            }
+
+            try
+            {
+                object? mode = await ExecuteScalarAsync(
+                    connection,
+                    "PRAGMA journal_mode = WAL;",
+                    cancellationToken);
+                if (!string.Equals(
+                    Convert.ToString(mode, CultureInfo.InvariantCulture),
+                    "wal",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    SetError("SQLite WAL mode is unavailable; using SQLite fallback journal mode.");
+                }
+            }
+            catch (SqliteException exception)
+            {
+                SetError($"SQLite WAL mode is unavailable ({exception.SqliteErrorCode}).");
+            }
+
+            await ApplyMigrationsAsync(connection, cancellationToken).ConfigureAwait(false);
+            Volatile.Write(ref _initialized, true);
+        }
+        finally
+        {
+            _initializationGate.Release();
+        }
     }
 
     private static async Task ApplyMigrationsAsync(
@@ -752,6 +866,11 @@ public sealed class SqliteMetricHistoryStore :
         if (version > SchemaVersion)
         {
             throw new InvalidDataException("The metric history schema is newer than this application.");
+        }
+
+        if (version == SchemaVersion)
+        {
+            return;
         }
 
         await using SqliteTransaction transaction = (SqliteTransaction)await connection
