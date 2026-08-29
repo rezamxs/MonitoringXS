@@ -17,6 +17,8 @@ jobs:
         with:
           global-json-file: global.json
       - run: dotnet restore MonitoringXS.sln
+      - name: Restore indirectly built test helper
+        run: dotnet restore tests/MonitoringXS.ProcessActionTestHelper/MonitoringXS.ProcessActionTestHelper.csproj
       - run: dotnet build MonitoringXS.sln -c Release --no-restore -p:TreatWarningsAsErrors=true
       - run: dotnet test MonitoringXS.sln -c Release --no-build
 
