@@ -439,4 +439,996 @@ While the application was running, `logman` reported `MonitoringXS.KernelMetrics
 
 No actual OS PID reuse occurred during this pass (`PID-reuse rejected 0`). PID/start-time protection remains covered by deterministic UTC-domain tests. This runtime result is from one development machine and does not replace validation on other Windows versions, hardware, network conditions, or security policies.
 
-Milestone 3A acceptance criteria are satisfied on the recorded development machine. GPU work was not started.
+At that point, the recorded run appeared to satisfy Milestone 3A acceptance criteria on the development machine. The later retained-total defect and its post-fix validation requirement supersede that conclusion; the current status is recorded in the newer sections below. GPU work was not started.
+
+## 2026-07-22 Milestone 4 sorting, title bar, and card hierarchy validation
+
+This focused UI pass did not change collectors, attribution, metric semantics, GPU, history, application actions, or packaging. Sorting is applied separately inside the installed and portable sections. Available and partial measured values use their real numeric value; warming-up, denied, unsupported, and other unavailable states remain after measured values in both directions. Equal values use application name as the stable secondary key. Live metric reordering is limited to a five-second interval, while user and membership changes apply immediately.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug --no-restore
+```
+
+Actual build and test results:
+
+- The sandboxed restore failed with NuGet TLS/credential `NU1301`. The same command succeeded with normal network access and reported all projects up to date. No package version changed and the global NuGet cache was not cleared.
+- The final Release build succeeded with 0 warnings and 0 errors in 00:01:23.73.
+- All 96 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Integration 36, Storage 4, and App 12.
+- New deterministic App tests cover all seven sort fields, both name directions, measured-before-unavailable behavior in both metric directions, application-name tie breaking, partial lower-bound values, combined read/write or download/upload rates, card identity preservation, and the five-second anti-jitter policy including forced refresh and clock rollback.
+
+Actual WinUI and UI Automation observations on Windows 10 build 19045 at 96 DPI:
+
+- A visible responsive `Monitoring XS` window opened. UI Automation exposed the native Minimize, Maximize, and Close buttons plus a `Monitoring XS` title-bar element.
+- All seven fields were selected in ascending and descending directions: Application name, CPU usage, Memory usage, Process I/O rate, Physical Disk rate, Network rate, and Process count. Installed and portable applications remained in separate sections.
+- Physical Disk and Network both honestly showed `Access denied` in this unelevated pass. Because every observed card was unavailable for those two fields, both directions used application name as their stable secondary order; no unavailable value was treated as zero.
+- Chrome selection was `True` before cycling through all sort fields and remained `True` afterward. During a separate 12-second CPU-sort observation, Chrome remained selected and keyboard-focused in every sample.
+- Chrome's accessible card name changed as live CPU and memory changed. CPU values observed during that interval ranged from 12.6% to 23.8%, and working set moved from 2.36 GB to 2.38 GB. The card order had one distinct value during the interval, with no visible one-second reorder jitter.
+- Keyboard Enter on the focused Chrome card opened `Google Chrome application tab`. That tab remained open after returning to Running Apps and changing the sort field.
+- Double-clicking the custom drag region changed the window from its 1180 x 760 restored bounds to maximized and a second double-click restored it. A drag moved the restored bounds from `(52, 52)` to `(114, 88)`. The native Minimize button minimized the window and Windows restored it normally.
+- The light theme was visually inspected at 1366 x 768 and 100% scaling. Metric text wrapped at the available width, selection remained visible, and no decorative animation or shadow was added. The final screenshot is `.artifacts/ui-polish-after.png`; it is ignored by Git.
+- Dark theme, High Contrast, 150-200% scaling, Windows 11 Snap Layout, and a broader screen-reader pass were not executed on this Windows 10/96-DPI environment and remain open Milestone 4 validation work.
+- A normal close request returned `True`; `MonitoringXS.App` and its `dotnet run` parent both exited, and no process remained. This shell did not retain a numeric exit code, so exit code zero is not claimed for this pass.
+- After exit, both `MonitoringXS.KernelMetrics.v1` and the retired `MonitoringXS.PhysicalDisk.v1` query returned `Data Collector Set was not found`.
+
+The UI refinement is validated for the observed Windows 10 light-theme environment. Milestone 4 remains in progress because the other product pages and the unexecuted theme, scaling, Snap Layout, and screen-reader checks are still required.
+
+## 2026-07-23 two-tier application-card validation
+
+This focused visual correction changed only the Running Apps presentation and its view-model formatting. Collectors, attribution, metric models, package versions, project configuration, and unrelated pages were not changed.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet test MonitoringXS.sln -c Release --no-build -m:1
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+```
+
+Actual build and test results:
+
+- The sandboxed restore failed with NuGet repository-signature TLS/credential `NU1301`. The same restore succeeded with normal network access and reported every project up to date. The global NuGet cache was not cleared.
+- The initial Release build succeeded in 00:01:15.76 with 0 warnings and 0 errors. The final Release build after the tests succeeded in 00:00:39.59 with the same clean result.
+- The first solution-wide parallel test run passed Core 4, Application 5, Collectors 35, Storage 4, and Integration 36, but the xUnit runner failed while discovering the WinUI App assembly after reporting that its test process did not return valid JSON. The App assembly then passed independently with 17 tests. A final sequential solution run with `-m:1` passed all 101 tests with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Storage 4, Integration 36, and App 17.
+- New deterministic App tests verify that matching denied, warming-up, unavailable, and unsupported directions collapse to one visible state, partial pairs keep their measured lower-bound values, and the card's accessible text follows metric changes.
+
+Actual WinUI and UI Automation observations on Windows 10 build 19045 at 96 DPI:
+
+- A visible responsive `Monitoring XS` window opened at 1180 x 760. UI Automation exposed three application cards and the native Minimize, Maximize, and Close buttons.
+- The first card's accessible name changed from CPU 8.9% and memory 2.10 GB to CPU 7.7% and memory 2.09 GB after three seconds. It continued to include application identity, running state, Process I/O, Physical disk state, and Network state. No `Unavailable read` or `Unavailable write` duplication was exposed.
+- CPU and memory were visually primary. Process I/O, Physical disk, and Network stayed in a separate secondary tier. Physical disk and Network honestly displayed `Unavailable` with the supporting reason `Access denied`; neither was displayed as zero.
+- Advanced mode changed from Off to On and returned to Off through its UI Automation Toggle pattern. The sort-direction control changed from ascending to descending and updated its accessible action name.
+- Keyboard focus and Enter on the Visual Studio Code card opened `Visual Studio Code application tab`. The UI remained responsive.
+- The shared content column remained fluid at its normal width. Additional width-stress observations at 787 x 760 and 590 x 760 showed no horizontal scrollbar; long identity text ellipsized and secondary values wrapped. These are width proxies, not claims of actual 150% or 200% DPI validation.
+- A normal close request succeeded and `MonitoringXS.App` exited without a remaining application process. The surrounding command wrapper timed out, so a numeric `dotnet run` exit code is not claimed.
+- The final light-theme screenshot is `.artifacts/ui-two-tier-final-100.png`; it is ignored by Git.
+
+Actual 150% and 200% display scaling, Dark theme, High Contrast, Windows 11 Snap Layout, and a broader screen-reader pass were not executed because this machine remained at 96 DPI in its current light-theme user session. Milestone 4 therefore remains in progress.
+
+## 2026-07-23 title-bar, live-chart, and appearance validation
+
+The incoming worktree already contained the uncommitted two-tier application-card pass. It was preserved. This task did not change collectors, attribution, metric aggregation, package versions, GPU, history storage, actions, or unrelated pages.
+
+### Reproduced causes
+
+- The native Close, Minimize, Maximize, and Restore hit targets were present at 48 x 48 and their physical actions worked before the fix. The reproduced regression was that inactive caption glyphs were nearly invisible against the Light title-bar surface. `ExtendsContentIntoTitleBar` left caption drawing with `AppWindowTitleBar`, but the application never synchronized its foreground, inactive, hover, or pressed colors with the effective XAML theme.
+- The existing one-minute CPU line rendered and changed in the initial live run, so a frozen renderer was not reproduced. Source review and deterministic tests reproduced four concrete correctness defects: timestamps were discarded, duplicate/out-of-order timestamps were not normalized, unavailable samples were removed so the line connected across missing intervals, and NaN/Infinity could create invalid geometry. The scaling floor `Math.Max(1, peak)` was also reused as the displayed peak, so a real all-zero history was described as a 1.0% peak.
+- During implementation, creating `Windows.UI.ViewManagement.AccessibilitySettings` in this unpackaged Windows 10 process caused a startup fail-fast with `E_NOINTERFACE (0x80004002)` and `Microsoft.UI.Xaml.dll` exception `0xc000027b`. It was removed rather than caught. High Contrast is now read through `SPI_GETHIGHCONTRAST` in `MonitoringXS.Platform.Windows`, and High Contrast brushes use the user's dynamic `SystemColor*` values.
+
+### Implementation and automated validation
+
+- Caption-button colors now follow the effective Light or Dark theme. When High Contrast is active, all caption color overrides are cleared so Windows owns them.
+- The chart now receives bounded timestamped samples. Projection sorts them, keeps the last duplicate timestamp, retains unavailable gaps, rejects negative and non-finite values, and keeps at most 60 samples. The renderer creates separate path figures for contiguous real intervals and reports the real peak independently from the minimum drawing scale.
+- Appearance offers exactly System, Light, and Dark. The selection is stored atomically as `%LOCALAPPDATA%\MonitoringXS\appearance.txt`. System maps to `ElementTheme.Default`. No SQLite or Settings subsystem was added.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release
+dotnet test MonitoringXS.sln -c Release
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+```
+
+Observed command results:
+
+- Sandboxed restore/build attempts encountered only NuGet TLS/credential `NU1301`. The same exact restore and build commands succeeded with normal network access. No package version changed and the global NuGet cache was not cleared.
+- The full Release build succeeded with 0 warnings and 0 errors.
+- All 114 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Storage 4, Integration 36, and App 30.
+- New App tests cover timestamp ordering, last-duplicate selection, 60-sample bounding, unavailable gaps, invalid numbers, honest real-zero peak reporting, the three appearance values, invalid-preference fallback, and High Contrast resolving to System.
+
+### Actual runtime observations
+
+- System, Light, and Dark were selected through the accessible ComboBox without restarting. Light used cool neutral page, toolbar, primary metric, and card surfaces. Dark used distinct graphite page/navigation, blue-gray toolbar and card surfaces, cyan metric values, violet selection, and readable borders.
+- `Dark` was written to the preference file, the app was closed and restarted, and UI Automation observed Dark selected after restart. The test then returned the preference to `System` through the UI.
+- At 96 DPI, the native caption buttons remained separate from XAML content. Physical clicks verified Minimize, Maximize, Restore, and Close. Double-click maximized and restored the window. A drag moved it from `(122,32)` to `(182,62)`. The Alt+Space system menu was visibly observed with Restore, Move, Size, Minimize, Maximize, Close, and Alt+F4. Native hover and pressed states were captured, and the physical Close hit target exited `MonitoringXS.App` without a remaining process.
+- The chart was observed continuously for 60.159 seconds with 55 UI Automation samples. CPU stayed real and non-zero, ranging from 2.7% to 19.2% in the recorded values. Seven distinct peak summaries were observed, and the process was responsive at every sample.
+- Resizing to 900 x 700 left a visible 787 x 120 chart. Closing the Visual Studio Code tab and reopening it with keyboard Enter reconnected immediately to 60 real samples. The chart remained visible after scrolling and continued updating.
+- Physical disk and Network continued to show `Unavailable` with `Access denied` in this unelevated run; neither was converted to zero or mixed with Process I/O.
+- `SPI_GETHIGHCONTRAST` reported that High Contrast was not enabled in this session. High Contrast resource mapping compiled, but an actual High Contrast visual pass was not executed.
+
+Screenshots created under ignored `.artifacts`:
+
+- `theme-system.png`
+- `theme-light.png`
+- `theme-dark.png`
+- `chart-repaired-dark.png`
+- `caption-hover-dark.png`
+- `caption-pressed-dark.png`
+- `system-menu.png`
+
+Actual 150% and 200% display scaling, a real High Contrast session, and Windows 11 Snap Layout were not available on this Windows 10/96-DPI machine. The branch therefore remains ready for focused visual review, not final Milestone 4 completion.
+
+## 2026-07-23 sorting semantics and resolved-appearance validation
+
+This pass clarified existing sorting and appearance behavior without changing collectors, attribution, metric models, the application-card layout, chart implementation, title-bar implementation, or package versions.
+
+Commands executed:
+
+```powershell
+dotnet build MonitoringXS.sln -c Release
+dotnet test MonitoringXS.sln -c Release
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+```
+
+Build and test results:
+
+- The first sandboxed build attempt failed during restore with NuGet TLS/credential `NU1301`. Repeating the same build command with normal network access succeeded in 00:01:30.92 with 0 warnings and 0 errors. The global NuGet cache was not cleared.
+- All 150 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 35, Integration 36, Storage 4, and App 66.
+- New deterministic App tests cover all numeric fields in both directions, name and numeric smart defaults in the actual `MainWindowViewModel`, manual reversal, measured-before-unavailable ordering, deterministic name ordering when all values are unavailable, the comparable-data decision, direction accessibility text, and resolved appearance text.
+
+Observed sorting behavior:
+
+- Application name selected `A to Z` and reversed to `Z to A`.
+- CPU, Memory, Process I/O, Physical Disk, Network, and process count each selected `Highest to lowest` as their new-field default and reversed to `Lowest to highest`.
+- Every direction was stated in the visible button text and its accessible action name; the control was not arrow-only.
+- Two installed cards remained between the Installed section header and the Portable section header. Three portable or unregistered cards remained after the Portable header.
+- Memory and process-count ordering visibly reversed with the observed values. Some CPU and Process I/O orders matched name order when current values were equal; this was not treated as a sorting failure.
+- Physical Disk and Network were `Access denied` for every visible application in this unelevated run. Both fields displayed `No comparable data`, kept deterministic A-to-Z ordering inside each section in both directions, and never converted unavailable values to zero. Selecting CPU, Memory, Process I/O, or process count removed the message.
+- During a 12-second CPU-sort interval, Visual Studio Code remained selected in all 12 samples. While Monitoring XS remained the foreground window, the card also remained keyboard-focused in every sample. A previously opened Visual Studio Code tab remained present during the sort and refresh interval.
+- Live CPU values and accessible card text changed every second, while card order changed only at the existing multi-second sort boundaries. The deterministic five-second policy remained covered by automated tests.
+
+Observed appearance behavior:
+
+- The Windows `AppsUseLightTheme` value was `1`. Selecting `System — follows Windows` resolved to `Currently Light` and persisted `System`.
+- Forced Light resolved to `Currently Light` and persisted `Light`. Forced Dark resolved to `Currently Dark` and persisted `Dark`.
+- The application was closed while Dark was selected and restarted. UI Automation observed `Application appearance. Dark. Currently Dark.` and the preference file still contained `Dark`. The preference was then returned through the UI to `System`, which resolved to `Currently Light`.
+- A live Windows application-theme change was not performed, so System reacting to a Light-to-Dark OS change is not claimed. The implementation uses `ElementTheme.Default` and listens for `ActualThemeChanged`; validation here only confirms the current Light system state.
+
+Regression observations:
+
+- The Visual Studio Code tab closed through its native tab close button, keyboard Tab moved focus, and keyboard Enter reopened the application tab.
+- The CPU chart was observed for 63.2 seconds with 30 UI Automation samples. CPU text produced 17 distinct observed values from 1.8% to 11.3%, chart peak text produced 6 distinct summaries from 11.3% to 40.1%, and the process was responsive in every sample.
+- Native Maximize and Restore succeeded. Native Minimize entered the minimized state and Windows restored the window to normal.
+- Double-click changed the window from normal to maximized and back. Dragging the title bar moved the normal bounds from `(52, 52, 1180, 760)` to `(102, 82, 1180, 760)`.
+- Native Close ended `MonitoringXS.App` with no remaining application process. The first long-running `dotnet run` wrapper exceeded the validation tool's five-minute timeout, so its numeric exit code is not claimed. A second short persistence run completed in 00:00:50.3 with exit code 0.
+- After both final exits, `logman` reported `Data Collector Set was not found` for `MonitoringXS.KernelMetrics.v1` and the retired `MonitoringXS.PhysicalDisk.v1` name.
+
+No runtime product defect was reproduced during this pass. Actual System-on-Windows-Dark switching, a real High Contrast session, 150-200% display scaling, Windows 11 Snap Layout, and a broader screen-reader pass remain unexecuted. Milestone 4 remains in progress.
+
+## 2026-07-24 latest baseline validation
+
+This Phase 1 pass validated the committed baseline on
+`feature/ui-polish-and-sorting`. It did not change source code, project files,
+package versions, metric behavior, or milestone status.
+
+Environment:
+
+- Windows 10.0.19045, `win-x64`
+- .NET SDK 10.0.302 and .NET runtime 10.0.10
+- No installed .NET workloads
+- No repository `NuGet.config` or package lock file was present; neither was
+  created
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release
+dotnet test MonitoringXS.sln -c Release
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+```
+
+Build and test results:
+
+- The sandboxed restore failed with NuGet repository-signature TLS/credential
+  `NU1301` and vulnerability-feed `NU1900` warnings. Repeating the same restore
+  with normal network access succeeded and reported all projects up to date.
+  The global NuGet cache was not cleared.
+- The Release build succeeded in 00:01:34.05 with 0 warnings and 0 errors.
+- All 150 tests passed with 0 failures and 0 skipped: Core 4, Application 5,
+  Collectors 35, Integration 36, Storage 4, and App 66.
+
+Actual runtime observations:
+
+- A visible and responsive `Monitoring XS` window opened at 1180 x 760.
+- UI Automation exposed two installed applications and three portable or
+  unregistered applications. Telegram Desktop and Visual Studio Code remained
+  in the installed section. .NET, Google Chrome, and Monitoring XS remained in
+  the portable or unregistered section.
+- Multiprocess grouping was visible for Visual Studio Code (15 processes) and
+  Google Chrome (13 processes). This confirms the grouped UI result observed in
+  this run; it is not a synthetic PID-reuse validation.
+- CPU, memory, and Process I/O were live. Across three samples five seconds
+  apart, Visual Studio Code CPU changed from 12.2% to 0.2%, Chrome CPU changed
+  from 11.8% to 9.0%, and the cards' accessible names changed with the sampled
+  values.
+- Process I/O remained a separately labelled secondary metric. Physical Disk
+  and Network each displayed `Unavailable` with `Access denied`; neither was
+  converted to zero or mixed with Process I/O.
+- The Telegram Desktop application tab opened with keyboard Enter, closed
+  through its tab close control, and reopened with Enter.
+- Keyboard focus moved from the Telegram Desktop card to the Visual Studio Code
+  card with the Down key.
+- Advanced mode changed from Off to On and returned to Off through its
+  Automation toggle. The accessible tree exposed the Advanced-mode notice while
+  it was enabled.
+- A 30-second smoke sample reported 0.385% average process CPU, 0.579% maximum
+  process CPU, and 173.2 MB average working set. Working set ranged from
+  172.9 MB to 173.3 MB, and the process responded in all 30 samples. This is a
+  short runtime smoke measurement, not a formal performance benchmark.
+- A standard `WM_CLOSE` request exercised the normal window-close path. Both
+  `MonitoringXS.App` and its `dotnet run` parent exited, no application process
+  remained, and neither `MonitoringXS.KernelMetrics.v1` nor
+  `MonitoringXS.PhysicalDisk.v1` remained active.
+- The detached launcher did not retain a numeric exit code, so exit code zero is
+  not claimed. No Monitoring XS Application Error, .NET Runtime failure, or
+  Windows Error Reporting entry was found for this run.
+
+The actual baseline screenshot is
+`.artifacts/Phase1Baseline/monitoringxs-baseline-2026-07-24.png`; it is ignored
+by Git.
+
+This run was unelevated, so elevated Physical Disk or Network availability was
+not revalidated. Actual PID reuse, 150-200% display scaling, High Contrast,
+Windows 11 Snap Layout, and a broad screen-reader pass were not executed.
+Milestone 4 therefore remains in progress, and no change to
+`docs/MILESTONES.md` was justified.
+
+## 2026-07-24 physical-disk monotonic-rate and diagnostics stabilization
+
+The incoming repository already contained the real ETW physical-disk implementation from `69ea628`. This pass did not add another collector, change the shared session name, change a package, or start Network/GPU work. It closed focused correctness and observability gaps in the existing Physical Disk path.
+
+Design review confirmed:
+
+- kernel `DiskIO`, `DiskIOInit`, and `Thread` events remain the source of completion transfer size and process correlation;
+- `Microsoft.Diagnostics.Tracing.TraceEvent` remains centrally pinned at 3.2.5, targets .NET Standard 2.0, is compatible with the current .NET 10 Windows project, and uses the MIT license;
+- raw QPC timestamps do not cross the Windows layer. Event and process-start identity remain normalized to UTC for PID-reuse checks;
+- session ownership remains fixed at `MonitoringXS.KernelMetrics.v1` with `NoRestartOnCreate`; an existing same-name session is never replaced or stopped.
+
+Implemented:
+
+- Physical Disk rates now use injected monotonic `TimeProvider` timestamps rather than UTC wall-clock deltas.
+- Intervals below 10 ms remain `WarmingUp`; their bytes are retained for the next valid interval instead of generating an extreme rate.
+- Confirmed ETW loss or local queue overflow keeps retained session totals `Partial` lower bounds until collector state resets. Later healthy interval rates may be complete without misrepresenting the incomplete totals.
+- Unavailable collector state clears process rate history so a recovered/restarted collector begins at `WarmingUp`.
+- Advanced diagnostics now expose read/write event and byte counts, metadata lookup failures, session-start/access-denied failures, processing latency, last successful event timestamp, collector status, and retained-total completeness in addition to the existing ETW loss, queue, unattributed, PID-reuse, rate, and buffer data.
+- An unavailable collector now reports diagnostic completeness as `unavailable`, not `complete`.
+- Elevated probing found that one IRP can produce multiple split completions and that later PID 4 split-init events were overwriting the original user initiator. IRP correlation now survives multiple completions, preserves a known user initiator across PID 4 split-init events, accepts a later user init as pointer reuse, and remains capacity-bounded.
+- Thread lifecycle mapping now uses the thread and process identity carried by the thread event itself rather than the creator/parent identity.
+- Events with a valid PID outside the current application process set now increment the unattributed diagnostic instead of disappearing from observability.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug
+git diff --check
+```
+
+Actual command results:
+
+- The sandboxed restore failed with NuGet TLS/credential `NU1301` and vulnerability-feed `NU1900` warnings. The same restore with normal network access succeeded for all projects without warnings or package changes. The global NuGet cache was not cleared.
+- The final Release build succeeded in 00:00:32.95 with 0 warnings and 0 errors. No compiler, analyzer, XAML, or NuGet warning remained in the successful build.
+- All 166 tests passed with 0 failures and 0 skipped: Core 4, Application 5, Collectors 45, Integration 41, Storage 4, and App 67.
+- Sixteen tests were added relative to the 150-test baseline. New deterministic coverage includes monotonic rate timing despite a backward UTC jump, sub-10-ms byte carry-forward, unknown PID handling and counting, process exit/reentry, queue-loss and persistent session-lower-bound semantics, unavailable recovery, collector restart, expanded diagnostics, Chrome/VS Code aggregation and launcher/game boundaries, pre-start disposal idempotence, read-after-dispose safety, unavailable diagnostic wording, split completion reuse of one IRP correlation, bounded IRP pointer replacement, and preservation of a user initiator across PID 4 split-init.
+
+Actual unelevated runtime observations:
+
+- A visible responsive `Monitoring XS` window opened. Four cards exposed live CPU, memory, and Process I/O values.
+- Physical Disk and Network remained separately labelled and each reported `Access denied`; neither was replaced with Process I/O or a numeric zero.
+- Keyboard Enter opened the Google Chrome tab. The Advanced expander opened successfully.
+- Physical Disk diagnostics reported `Status AccessDenied`, 0 ETW events, 0 queue depth/drop, 0 ETW loss, one session-start failure, one access-denied failure, 0.037 ms collector processing time, no last event, and `completeness unavailable`.
+- The final process remained responsive. Normal `WM_CLOSE` exited both `MonitoringXS.App` and its `dotnet run` parent. No Monitoring XS ETW session or related crash event remained.
+
+Performance smoke:
+
+- duration: 30 seconds after warm-up;
+- average CPU: 0.574% of total eight-logical-processor capacity;
+- peak CPU: 1.827%;
+- average working set: 182,593,399 bytes (174.1 MiB);
+- peak working set: 184,037,376 bytes (175.5 MiB);
+- responsiveness: 30 of 30 samples.
+
+Elevated correlation investigation and final validation:
+
+- A raw DiskIO probe confirmed repeated completion events for the same IRP. A focused correlation probe observed 18 distinct workload IRPs produce 121 completions, including 40 additional completions beyond the first one per IRP.
+- Before the final correlation fix, the direct Monitoring XS source assigned only 413,696 workload write bytes while assigning 65,380,352 bytes to PID 4. After preserving the known user initiator across PID 4 split-init events, the same direct source probe assigned 30,678,528 write bytes to the workload PID. PID 4 remained separate rather than being merged into the user application.
+- The final elevated UI run used the existing `MonitoringXS.Benchmarks disk-smoke` workload for 20 seconds. It performed 38 iterations and reported 159,383,552 Process I/O bytes read and written. The controlled read path was mostly cached and therefore did not become equivalent physical-disk read traffic.
+- The workload appeared as its own low-memory Monitoring XS product card. Its Physical Disk write rate reached 5.7 MB/s while Process I/O separately showed approximately 8.0 MB/s read and write. The workload Physical Disk session total reached 37.1 MB write and 4.0 KB read.
+- The shared kernel source observed 7,492 events, including 6,706 reads and 786 writes, with 475.1 MB read and 156.2 MB write across the whole machine. Events assigned to PID 4 or other processes outside the current application set remained visible as 7,169 unattributed events and were not guessed into the workload.
+- Maximum observed event rate was 1,488 events/s. Maximum queue depth was 1,492 of 16,384, local queue drops were 0, ETW-lost events were 0, metadata lookup failures were 0, session-start/access-denied failures were 0, PID-reuse rejections were 0, and maximum collector processing latency was 1.066 ms.
+- Physical Disk was `Available` and `completeness complete`, meaning the retained attributed stream had no reported ETW or local queue loss. It does not mean every system disk completion had a user-process owner; PID 4 and out-of-set events remain explicitly unattributed.
+- The window remained responsive in all 48 checks. After workload completion and cooldown, a 30-second steady sample averaged 0.508% CPU, peaked at 2.325%, averaged 188,336,674 bytes (179.6 MiB) working set, and peaked at 193,048,576 bytes (184.1 MiB).
+- A normal close produced exit code 0 for both `MonitoringXS.App` and `dotnet run`. No application or project `dotnet run` process remained, and neither `MonitoringXS.KernelMetrics.v1` nor the retired `MonitoringXS.PhysicalDisk.v1` session remained active.
+
+The product never requested elevation itself; Administrator PowerShell was approved and launched manually for this validation. An actual OS PID reuse did not occur, so Milestone 2 remains in progress for its existing real-runtime PID-reuse acceptance item. The deterministic UTC-domain rejection test remains green.
+
+## 2026-07-24 Phase 3 network attribution hardening
+
+Starting state:
+
+- branch `feature/network-attribution`;
+- clean tracked and untracked status;
+- HEAD `8e11044 feat(metrics): add ETW physical disk attribution`;
+- no package or project changes were present.
+
+Official-source review retained the existing Windows kernel Network ETW mechanism and shared `MonitoringXS.KernelMetrics.v1` session. Microsoft documents that TCP/IP network operations can run on separate threads, so the event payload PID is used instead of guessing from header thread context. Typed TCP and UDP send/receive callbacks cover IPv4 and IPv6, and the event `size` field is documented as packet size. No second kernel session, package, service, driver, packet capture, payload inspection, destination retention, or automatic elevation was added.
+
+Implementation results:
+
+- Network rate windows now use monotonic `TimeProvider` timestamps. UTC remains the event/process-lifetime domain, and raw QPC is never compared with `StartTimeUtc`.
+- Intervals below 10 ms remain `WarmingUp` and carry bytes into the next safe interval.
+- PID 0/4, malformed payload PID, outside-application-set, and pre-start PID-reuse events remain unattributed.
+- Advanced diagnostics now expose TCP/UDP and IPv4/IPv6 event counts, source send/receive bytes, attributed/unattributed categories, session/access/processing failures, unsupported versions, queue capacity, average/maximum latency, last event, status, reason, and lower-bound state.
+- Recoverable network callback failures no longer end physical-disk collection. Network status is separate above the common session-start boundary.
+- Logical-application aggregation retains observed totals from an exited helper while another process in that application remains active. State is removed when the whole logical application exits, so a later restart begins a new total.
+- Cards and tabs use explicit receive/send wording. Process I/O, Physical Disk, and Network remain separate.
+
+Commands executed:
+
+```powershell
+git branch --show-current
+git status -sb
+git status --short
+git log -5 --oneline
+git diff --check
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Debug --no-restore
+dotnet test MonitoringXS.sln -c Debug --no-build
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug --no-build
+logman query MonitoringXS.KernelMetrics.v1 -ets
+logman query MonitoringXS.PhysicalDisk.v1 -ets
+```
+
+Build and automated-test results:
+
+- The sandboxed restore failed with NuGet TLS/credential `NU1301` and vulnerability-feed `NU1900`. Repeating the same restore with normal network access succeeded with every project up to date. No package version changed and the global NuGet cache was not cleared.
+- The final sequential Release and Debug builds succeeded with 0 warnings and 0 errors in 00:00:32.36 and 00:00:30.00 respectively. An immediately preceding Release attempt exposed and then resolved a local-variable naming collision in the retained-total limit branch; the final builds and full test run use the corrected source.
+- All 179 tests passed with 0 failures and 0 skipped: Core 5, Application 5, Collectors 54, Storage 4, Integration 44, and App 67.
+- Thirteen tests were added relative to the 166-test baseline. New coverage includes address-family normalization, invalid/zero sizes, TCP/UDP and IPv4/IPv6 counters, monotonic delayed and sub-10-ms intervals, collector restart, unsupported-version lower bounds, system/outside/PID-reuse rejection, expanded diagnostics, browser/editor/launcher/game boundaries, exited-helper total retention, whole-application total reset, and accessible receive/send wording.
+
+Actual unelevated runtime:
+
+- The `Monitoring XS` main window was observed. CPU, memory, and Process I/O updated while Physical Disk and Network displayed `Access denied`; unavailable data was not converted to zero.
+- The controlled Chrome workload changed Chrome Process I/O from roughly 10.9 KB/s per direction to 3.0 MB/s read and 3.6 MB/s write while Network remained `Access denied`, confirming that Network was not copied from Process I/O.
+- Process I/O, Physical Disk, and Network labels were independently present. The app responded in every sampled check.
+- Normal close removed the app and parent runner. Neither current nor retired Monitoring XS ETW session remained. The first harness attempt stopped before workload because of a validation-script argument error; the corrected pass completed successfully.
+
+Actual elevated runtime before the retained-total fix:
+
+- `MonitoringXS.KernelMetrics.v1` was active and both Physical Disk and Network were available. Chrome reached 2.8 MB/s receive and 2.0 MB/s send during the 10,000,000-byte receive and 2,097,152-byte send requests.
+- After the workload, Chrome showed 1.3 MB/s receive while Visual Studio Code, `.NET`, and Monitoring XS remained at 0 B/s Network. Telegram retained its own small background traffic. Chrome traffic was not assigned to those unrelated applications.
+- Process I/O and Physical Disk showed different values from Network throughout the same samples.
+- The final network diagnostic snapshot reported 35,132 events: 14,492 send, 20,640 receive, 14,472 TCP send, 20,606 TCP receive, 20 UDP send, 34 UDP receive, 35,116 IPv4, and 16 IPv6. Source totals were 45.1 MB send and 89.2 MB receive.
+- It reported 3,684 attributed and 31,448 unattributed events: 12 system, 31,436 outside the active application set, 0 unknown, and 0 PID-reuse rejection. Queue depth was 138, maximum queue depth 1,183 of 16,384, local drops 0, ETW loss 0, processing failures 0, unsupported versions 0, event rate 136/s, average processing latency 1.330 ms, and maximum latency 18.202 ms.
+- TCP connection count was 15 and UDP endpoint count was 20 for the selected Chrome application.
+- The UI responded in every sample. Normal close returned application and runner exit code 0. No Monitoring XS process, `MonitoringXS.KernelMetrics.v1`, or retired `MonitoringXS.PhysicalDisk.v1` session remained.
+
+That elevated run exposed one real defect: after short-lived Chrome helpers exited, the logical-application rate remained correct but the displayed retained total could fall to 436.7 KB. The aggregation fix and two deterministic regression tests now preserve exited-helper totals while the logical application remains active and reset them when the entire application exits.
+
+At the time of this review, the requested post-fix elevated repeat had not been executed, so the review left Milestone 3A runtime-validation-pending. The final accepted elevated run is recorded in the 2026-07-25 section below. Actual OS PID reuse was not forced, unknown future ETW event versions beyond typed callback delivery remain a diagnostic limitation, and exact loopback/offload behavior is not generalized by this run. GPU was not started, so Milestone 3B remains pending.
+
+## 2026-07-25 Phase 3A focused engineering review
+
+This review covered the uncommitted Network implementation on `feature/network-attribution` without changing packages, project files, Git history, or unrelated milestones. The previously recorded elevated measurements were not repeated and are not presented as validation of this reviewed binary.
+
+Confirmed fixes:
+
+- Typed TCP/UDP transfer-size access now occurs inside the recoverable callback guard. A malformed typed payload is counted as a processing failure and unattributed event instead of being able to terminate the shared disk/network ETW consumer.
+- Cancellation after a Network batch has been drained marks future rates and retained totals as lower bounds. The recovered diagnostic reason names the interrupted batch instead of silently presenting an incomplete session as complete.
+- Per-process cumulative baselines are independent of the current logical-application key. Reattribution transfers only future deltas, not historical bytes.
+- Retained logical-application state remains capped at 512 active applications. An application beyond the cap receives an explicit unavailable total; after a slot opens, accumulation resumes from its process baseline as a partial lower bound.
+- Advanced Network diagnostics now describe unavailable status as unavailable, include the structured reason/detail, and do not call it complete.
+- Accessible partial Network rates and totals use explicit “at least” lower-bound wording.
+
+Deterministic regression coverage added in this review:
+
+- malformed typed transfer-size containment and accounting;
+- cancellation after batch drain with lower-bound recovery;
+- logical-application reattribution without historical-total transfer;
+- 512-application retention-cap behavior and lower-bound recovery;
+- exited-helper totals without duplicate contribution;
+- unavailable diagnostics and accessible lower-bound wording.
+
+Commands and actual results:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet build MonitoringXS.sln -c Debug --no-restore
+git diff --check
+```
+
+- The sandboxed restore failed with NuGet signature-metadata TLS/credential `NU1301`. Repeating the same command with normal network access succeeded with all projects up to date. No package version changed and the global NuGet cache was not cleared.
+- The final Release build after the review cleanup succeeded with 0 warnings and 0 errors in 00:00:24.60.
+- All 184 tests passed with 0 failures and 0 skipped: Core 5, Application 5, Collectors 57, Storage 4, Integration 45, and App 68.
+- The final Debug build succeeded with 0 warnings and 0 errors in 00:00:23.14.
+- `git diff --check` passed. Git emitted only working-tree LF-to-CRLF conversion notices.
+
+TraceEvent exposes the aggregate real-time session `EventsLost` value used by the collector, but its public session surface does not provide separate log-buffer-lost and real-time-buffer-lost counters. Aggregate ETW loss still forces lower-bound semantics. Unknown future event versions that never reach a typed callback also remain a documented diagnostic limitation.
+
+At the time of this review, no elevated runtime validation had been executed on the reviewed post-fix binary. The controlled Administrator browser scenario was completed afterward; the accepted results are recorded in the 2026-07-25 section below.
+
+## 2026-07-25 final elevated Phase 3A Network acceptance
+
+This was the post-fix acceptance run on Windows 10 build 19045. The runner used an Administrator PowerShell launched through the one-time UAC path, an isolated Microsoft Edge profile (Chrome already had user processes), the controlled receive/send page, and the existing 20-second `disk-smoke` benchmark. The product did not request elevation or change its normal unelevated behavior.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet build MonitoringXS.sln -c Debug --no-restore
+dotnet run --project .\src\MonitoringXS.App\MonitoringXS.App.csproj -c Debug --no-build
+```
+
+The sandboxed restore first failed with `NU1301`/`NU1900` network-feed errors. Repeating the same restore with approved network access succeeded for every project. No package version, project file, or global NuGet cache was changed.
+
+The final acceptance runner reported `Accepted: True`. It observed a visible UI Automation root with bounds `1180 x 760`, a responsive application during all 180 one-second samples, and a normal application and runner exit with code 0. No `MonitoringXS.App` process remained. The shared `MonitoringXS.KernelMetrics.v1` session was present during collection and absent afterward; the retired `MonitoringXS.PhysicalDisk.v1` session was absent during and after the run.
+
+Network observations:
+
+- Network and Physical Disk were both `Available`; Process I/O, Physical Disk, and Network remained separately labelled and their values were not copied between metrics.
+- The isolated Edge card reached `Downloaded 21.8 MB / Uploaded 4.1 MB` after the second controlled traffic page. Its workload card showed Network `1.8 KB/s receive, 719 B/s send`, while Process I/O and Physical Disk showed different values.
+- The selected Edge NetworkService helper exited safely at PID `7148` while the logical Edge application remained active. The totals stayed exactly at `12,268,339.2` downloaded bytes and `2,097,152` uploaded bytes across the helper exit; subsequent traffic increased them only by new deltas.
+- After the complete Edge lifetime was closed, the new lifetime started at `3,460,300.8` downloaded bytes and `12,697.6` uploaded bytes, below half of the previous lifetime, so retained totals were not inherited.
+- The final workload diagnostics observed 62,177 events: 21,165 send and 41,012 receive, including TCP and UDP events over both IPv4 and IPv6. Five TCP connections and four UDP endpoints were reported.
+- The final snapshot reported 4,790 attributed and 57,387 unattributed events (12 system and 57,375 outside the active application set), 0 unknown events, and 0 PID-reuse rejections. This system-wide outside-set traffic was kept out of the Edge application total.
+- Event rate was 211/s, current queue depth 210, maximum queue depth 1,284 of 16,384, local queue drops 0, ETW lost 0, processing failures 0, unsupported versions 0, average processing latency 1.191 ms, and maximum latency 19.432 ms.
+
+Performance and lifecycle:
+
+- Warm-up 30 samples: average CPU 2.425%, peak 12.183%, average working set 179,316,190 bytes, peak 184,696,832 bytes.
+- Idle 60 samples: average CPU 0.600%, peak 2.503%, average working set 177,796,642 bytes, peak 182,439,936 bytes.
+- Workload 60 samples: average CPU 0.749%, peak 4.190%, average working set 193,305,122 bytes, peak 200,978,432 bytes.
+- Cooldown 30 samples: average CPU 0.398%, peak 1.977%, average working set 203,075,174 bytes, peak 208,470,016 bytes.
+- All samples reported the application as responsive. The controlled disk workload completed, the window closed normally, and no ETW session remained active.
+
+The run accepted the Phase 3A Network criteria. Actual OS PID reuse was not forced; the UTC-domain rejection and attribution-safety paths remain covered by deterministic tests.
+
+## 2026-07-26 Phase 3B GPU feasibility and runtime spike
+
+This was a feasibility and integration spike on `feature/gpu-attribution`. It does not claim that GPU monitoring is complete across Windows hardware, drivers, virtual machines, or remote sessions.
+
+The provider decision was based on the Windows GPU Engine and GPU Process Memory performance-counter sets. A native persistent PDH probe was used to avoid treating PowerShell counter enumeration overhead as product performance.
+
+Commands executed:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+```
+
+The sandboxed restore first failed with `NU1301`/`NU1900` TLS and credential errors while contacting `https://api.nuget.org/v3/index.json`. The same restore with approved network access succeeded with all projects up to date. The global NuGet cache was not cleared and no package versions changed.
+
+The Release build succeeded with 0 warnings and 0 errors. The Release test run passed 209 tests with 0 failures and 0 skipped tests: Core 5, Application 6, Collectors 70, Storage 4, Integration 50, and App 74.
+
+Feasibility observations on the development machine:
+
+- Windows exposed GPU Local Adapter Memory, GPU Adapter Memory, GPU Process Memory, GPU Non Local Adapter Memory, and GPU Engine counter sets without automatic elevation.
+- WMI reported two adapters: Intel HD Graphics 3000 and NVIDIA GeForce GT 525M.
+- The native probe captured 11 one-second samples. After warm-up, capture generally took 10–16 ms with the bounded parent snapshot and cache, and it observed 86 GPU engine instances, two adapters, and one process-memory instance in the first VLC workload.
+- VLC produced real GPU Engine values of approximately 4.26–5.02% on a 3D engine and process GPU memory of 69,111,808 dedicated bytes plus 913,408 shared bytes. The values were read from the Windows counters, not generated by the application.
+- The aggregation uses the busiest engine across adapters instead of summing parallel engines. Dedicated and shared process-memory values remain separate; shared allocations can be counted more than once when Windows reports cross-process sharing.
+- A temporary Edge WebGL probe did not expose GPU counter rows for its controlled browser processes. This was treated as a workload/driver placement observation, not as evidence that the provider is universally unavailable.
+
+The WinUI runtime harness was started with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\.artifacts\validation\gpu-runtime\Invoke-GpuRuntimeValidation.ps1 -Mode Start
+```
+
+The visible application was sampled for a 30-second warm-up and two 30-second steady-state intervals. UI Automation remained responsive for 90/90 samples. Warm-up average CPU was `0.7696%` with a peak of `2.0105%`; average working set was `179,612,331` bytes with a peak of `182,599,680`. Across the two steady intervals, average CPU was `0.7596%` with a peak of `1.9968%`; average working set was `181,532,535` bytes with a peak of `182,751,232`.
+
+The VLC card exposed real GPU values while the tab was open:
+
+```text
+GPU 4.5%, 65.9 MB dedicated · 892.0 KB shared
+```
+
+Advanced diagnostics reported:
+
+```text
+Provider Windows PDH GPU performance counters; status Available; reason None; target processes 34; sampled 34; engine instances 95; process-memory instances 2; adapters 2; busiest 3D engine 0, adapter LUID 0x000000000000A778, physical index 0; PID-reuse rejected 0; inaccessible process samples 0; unattributed descendant counters 0; invalid counters 0; collection 5.113 ms.
+```
+
+The UI kept Process I/O, Physical Disk, Network, and GPU as separate metrics. The application closed through the normal close path; no `MonitoringXS.App` or validation runner process remained afterward. Both `MonitoringXS.KernelMetrics.v1` and the retired `MonitoringXS.PhysicalDisk.v1` ETW sessions were absent after shutdown.
+
+This spike did not force an actual operating-system PID reuse event, did not validate AMD hardware, newer WDDM drivers, remote/virtual adapters, or machines without usable GPU counters, and did not establish a release-wide GPU compatibility claim. Those scenarios remain open for Phase 3B.
+
+## 2026-07-26 Phase 3B GPU stabilization and acceptance review
+
+This follow-up reviewed the complete GPU path without changing branches, packages, global NuGet state, or Git history. It kept the existing uncommitted Phase 3B work in place and fixed only confirmed correctness issues.
+
+### Findings and fixes
+
+- The native source was using one combined set of dedicated and shared memory instance IDs when calculating both fields. When both counter sets were valid, each field could be marked Partial because it also inspected IDs belonging to the other counter. The source now passes the dedicated and shared instance sets independently; a deterministic regression test covers the two sums.
+- The coordinator previously caught every `Exception` from the optional GPU path. It now isolates only expected provider failures (`ArgumentException`, `ArithmeticException`, `InvalidOperationException`, and `ExternalException`); cancellation and unexpected/fatal failures are not silently converted to a fake metric.
+- The review confirmed bounded PDH buffers (64 MiB), bounded item count (65,536), item-array and UTF-16 bounds checks, duplicate/invalid-value handling, independent counter availability, idempotent disposal, serialized capture, and PID-lifetime quarantine. Deterministic coverage includes parser order/suffixes, duplicate and overflow semantics, stale/reused PID behavior, incomplete enumeration, bounded state, native lifecycle (10 create/sample/dispose loops), and eight concurrent captures.
+
+### Commands and results
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet build MonitoringXS.sln -c Debug --no-restore
+```
+
+The first sandboxed restore stopped with `NU1301` because the NuGet repository-signature endpoint could not establish TLS credentials. The same standard solution restore with approved network access completed with all projects up to date. No package version or global cache changed. Release and Debug builds both completed with 0 warnings and 0 errors. The Release test run passed 253 tests with 0 failures and 0 skipped tests: Core 5, Application 7, Collectors 84, Storage 4, Integration 77, and App 76. The focused GPU source tests passed 32/32.
+
+### Runtime observations
+
+The existing UI Automation harness ran a 30-second warm-up and two 30-second steady intervals on Windows 10 build 19045. It observed 90/90 responsive samples. Warm-up averaged `0.8005%` CPU and `186,729,540` bytes working set (peak `2.7648%` and `187,961,344` bytes). The two steady intervals averaged `0.6748%`/`184,987,921` bytes and `0.6444%`/`184,683,315` bytes respectively. VLC showed real `3.9–5.0%` utilization on a `3D` engine, `45.1 MB` dedicated memory, and `892 KB` shared memory. Advanced diagnostics showed 95 engine instances, 2 process-memory instances, 2 adapters, 0 PID-reuse rejections, 0 inaccessible samples, 0 unassigned descendants, 0 malformed/duplicate/invalid instances, and `2.606 ms` collection duration.
+
+A controlled Edge WebGL profile was launched while Monitoring XS was running. The app showed a separate Microsoft Edge logical card with real CPU (approximately `14.5–36.5%`) and memory (approximately `477–782 MB`) activity. The Edge GPU card remained `0.0%, 0 B dedicated · 0 B shared`, and the provider probe recorded 0 engine and 0 process-memory rows for the controlled Edge process tree. This workload therefore did not prove browser GPU visibility on this old driver; it did prove that the application did not fabricate GPU values or attribute VLC's GPU activity to Edge.
+
+The app was closed through the normal window close path twice. In both runs the app and `dotnet run` wrapper exited, no `MonitoringXS.App` process remained, and `logman query -ets` showed neither `MonitoringXS.KernelMetrics.v1` nor the retired `MonitoringXS.PhysicalDisk.v1` session. Video-decode activity and an actual operating-system PID reuse were not observed. AMD, newer WDDM, Windows 11, remote, virtual, and unsupported-counter environments remain unvalidated.
+
+## 2026-07-28 Phase 3B GPU checkpoint
+
+Phase 3B was approved within the tested PDH/WDDM scope. The final Release build completed with 0 warnings and 0 errors. The full Release suite passed 264/264 tests: Core 5, Application 7, Collectors 86, Storage 4, Integration 85, and App 77. The focused GPU filter passed 75/75 tests: Application 2, Collectors 29, Integration 40, and App 4.
+
+Broader hardware, driver, remote, virtual, unsupported-counter, and observed operating-system PID-reuse coverage remains open and does not invalidate this scoped checkpoint.
+## 2026-07-28 privileged ETW broker
+
+`.artifacts/validation/privileged-etw-broker/Invoke-Validation.ps1 -Mode Validate` requested UAC only for temporary service installation/removal, launched `MonitoringXS.App.exe` without `RunAs`, and removed the service and ProgramData copy in `finally`. The run reported `BrokerRunning=true`, `AppStarted=true`, `AppWindowObserved=true`, `AppExecutionLevel=asInvoker`, and `CleanedUp=true`; no service or validation directory remained afterward. The harness output is ignored under `.artifacts`.
+
+The follow-up identity probe used the same Release binary. LocalService exposed
+Network/Physical disk as `Unsupported`; expanded diagnostics reported
+`The privileged ETW broker protocol version is incompatible.` LocalSystem
+exposed Physical disk as `Access denied` and Network as `Unavailable`.
+`logman` found no `MonitoringXS.KernelMetrics.v1` session for either identity,
+so this run did not reach or prove a failing `StartTrace` call. Cleanup found no
+Monitoring XS process, service, ProgramData validation directory, or ETW
+session. Release and Debug builds completed with zero warnings/errors and all
+276 Release tests passed.
+
+### 2026-07-28 named-pipe authorization fix
+
+The validation harness now stops/deletes any prior temporary service, deploys one
+fresh Release broker output, passes the exact user SID/session to the service,
+and refuses to run when client/server protocol or platform hashes differ. The
+pipe is per-user/session and uses `NamedPipeServerStreamAcl.Create`. For client
+SID `S-1-5-21-2982241020-2171625489-2028922754-1003`, session `1`, and service
+SID `S-1-5-80-4147618721-3073213316-1887265883-420630433-47577316`, the owner is
+`S-1-5-19` and the complete protected SDDL is:
+
+`O:LSD:P(D;;0x1f019f;;;NU)(A;;0x1f019f;;;LS)(A;;0x12019b;;;S-1-5-21-2982241020-2171625489-2028922754-1003)(A;;0x1f019f;;;S-1-5-80-4147618721-3073213316-1887265883-420630433-47577316)`.
+
+The prior blocker was the missing explicit client SID ACE. After the fix, a
+fresh matching client completed the v1 hello handshake through the LocalService
+pipe; an ordinary PowerShell client connected but received broker error `4`
+(`Unauthorized`), proving post-connect image/SID/session authorization remains
+enforced. The broker then executed `TraceEventSession.EnableKernelProvider` for
+session `MonitoringXS.KernelMetrics.v1` as LocalService and returned native
+Win32 status `5` (`ERROR_ACCESS_DENIED`); `logman query -ets` showed no active
+Monitoring XS session. Consequently no nonzero Network/Physical Disk
+attribution or restart recovery can be claimed from this machine. The app launch
+was asInvoker with no RunAs/UAC; CPU, Memory, Process I/O, and GPU remained
+independent in the broker-failure path. The app and ETW session were absent
+after the run. Final service removal could not be completed in this non-elevated
+automation token (`sc.exe` returned access denied and `Start-Process -Verb RunAs`
+returned `0xc0000142`); the remaining temporary service must be removed from an
+interactive UAC-approved administrator shell.
+
+### 2026-07-29 LocalSystem final validation
+
+The final probe used one fresh matching Release app/broker build and protocol
+v1. LocalService had previously reached
+`TraceEventSession.EnableKernelProvider` for
+`MonitoringXS.KernelMetrics.v1` and returned Win32 status 5
+(`ERROR_ACCESS_DENIED`). The same broker binary, installed temporarily as the
+non-interactive LocalSystem service with its dedicated service SID, completed
+the protocol handshake and enabled the kernel provider successfully. During the
+active run, `logman query -ets` listed `MonitoringXS.KernelMetrics.v1`.
+
+The asInvoker app launched normally without `RunAs` or a launch-time UAC prompt.
+For controlled activity attributed to PID 21276, Physical Disk recorded 2
+events, 16,384 read bytes, and 1,048,576 written bytes. Network recorded 19
+events: 5 sends and 14 receives; the controlled source produced 1,048,901 sent
+bytes and 1,052,757 received bytes. Network and Physical Disk were independently
+available and nonzero. Restarting the service restored the v1 connection and
+kernel session; CPU, Memory, Process I/O, and GPU remained independent.
+
+Normal shutdown and elevated cleanup left zero Monitoring XS processes, zero
+temporary services, no temporary installation directory, and no Monitoring XS
+ETW session. The final Release and Debug builds completed with zero warnings and
+zero errors. The Release suite passed 285/285 tests: Core 5, Application 8,
+Collectors 86, Storage 4, Integration 105, and App 77.
+
+### 2026-07-29 SQLite history backend
+
+The existing UI Automation stress harness ran twice against the fresh Release
+build, normally (no `RunAs`) for 30 seconds per run. Both runs observed the
+main window, opened an application tab by keyboard, expanded advanced details,
+stayed responsive for every sample, requested normal close, and exited with
+`DotnetRunExitCode=0`, `CleanExit=true`, and zero new crash events. The second
+run confirmed restart persistence.
+
+The ignored read-only inspector observed `%LOCALAPPDATA%\MonitoringXS\history.db`:
+
+```text
+after first run:  40 rows, 5 applications, 53,248 bytes
+after restart:    80 rows, 5 applications, 77,824 bytes
+after final run: 120 rows, 5 applications, 102,400 bytes
+query latency:    30,369 microseconds
+```
+
+CPU, working-set, Process I/O, and GPU rows contained numeric values. Network
+and Physical Disk rows remained `NULL` where the broker was unavailable; no
+zero was fabricated. Normal `Window.Closed` disposal left no app process.
+
+The ignored accelerated storage benchmark wrote 100 snapshots in four
+transactions, flushed with queue depth 0, zero drops, and zero failures, then
+queried history and downsampled one bucket:
+
+```text
+write+flush: 417,376 microseconds (4,173.76/sample)
+query:        40,854 microseconds
+cleanup:      1 run, 15,671 microseconds
+database:     143,680 bytes
+process CPU:  437.5 ms; working-set delta: 13,815,808 bytes
+```
+
+The benchmark database was deleted in `finally`; storage tests use unique
+temporary databases and clean them up. The final Release suite passed 298/298
+tests (Core 5, Application 8, Collectors 86, Storage 17, Integration 105,
+App 77); the focused SQLite set passed 13/13.
+
+Known limits: stopped-application tabs remain out of scope; the native SQLite
+dependency must be rechecked during packaging even though
+`SQLitePCLRaw.bundle_e_sqlite3` 2.1.12 is centrally pinned; disk-full behavior
+is classified by the SQLite error path but is not forced by CI.
+
+### 2026-07-29 History page
+
+The fresh Release build was launched normally with no `RunAs` and exercised by
+the ignored `.artifacts/validation/history-page/Invoke-HistoryPageValidation.ps1`
+harness. UI Automation selected the History navigation item, loaded all 11
+metric series, and changed the range to 15 minutes, 1 hour, 6 hours, and
+24 hours. The selected persisted application had no sample in the final
+15-minute range, which produced the explicit empty-range state; the 1-hour,
+6-hour, and 24-hour ranges completed with partial/unavailable gaps.
+Query/display timings were 76-91 ms and 0-539 bounded chart points across the page. The page
+reported real CPU, Working Set, Process I/O, and GPU history values. Network
+and Physical Disk rows with no broker data remained explicit chart gaps and
+were not converted to zero. PID-lifetime boundaries are also inserted as
+gaps. The final run observed all 11 chart accessibility summaries, about
+`204,615,680` bytes working set and `1.1719%` CPU during a settled 10-second
+UI-automation sample (instrumentation was active), then closed normally with no
+`MonitoringXS.App` process remaining.
+
+The deterministic App tests passed 83/83 and Storage tests passed 18/18. The
+full Release suite passed 305/305 tests (Core 5, Application 8, Collectors 86,
+Storage 18, Integration 105, App 83). Release and Debug builds completed with
+zero warnings and errors; `git diff --check` passed. Restore first failed in
+the sandbox because NuGet TLS credentials were unavailable, then the identical
+restore completed with approved network access. The History page remains
+limited to persisted local SQLite data and does not yet provide stopped-tab
+presentation, export, or chart zooming.
+
+### 2026-07-29 History chart and LocalSystem broker runtime repair
+
+This pass changed only History chart projection/rendering, safe broker connection
+diagnostics, and deterministic tests. The base branch was
+`fix/history-charts-broker-runtime` at History checkpoint
+`6721d18248019f0e25012209752a56380225a72c`. No commit was created.
+
+The chart harness launched the fresh Release app normally with no `RunAs`.
+Window size was exactly 1180 x 760 and normal close left zero
+`MonitoringXS.App` processes. It selected 15-minute, 1-hour, 6-hour, and
+24-hour ranges. The first two were honest empty ranges (0 chart points); the
+6-hour and 24-hour ranges loaded partial/unavailable gaps with 352 aggregate
+displayed points. Timings recorded by the UI were `84/4 ms`, `80/2 ms`,
+`128/4 ms`, and `87/8 ms`. Screenshots and complete point/status/axis diagnostics are in
+`.artifacts/validation/history-chart-fix`. Real runtime was 96 DPI (100%);
+deterministic layout tests passed the equivalent 144-DPI (150%) environment.
+Real 125%/150% runtime validation remains a non-blocking limitation; Windows
+global scaling was not changed.
+
+The existing elevated harness was rerun once against a fresh matching Release
+build. It installed only a temporary LocalSystem service and launched the app
+through Explorer (`asInvoker`, no UAC on normal launch). The v1 handshake
+matched on both sides:
+
+```text
+pipe: MonitoringXS.PrivilegedEtwBroker.v1.4F92F58E2050CECB54A6BE5E
+client SHA-256: B9EDAEB0CDB742319618F9E77BC11548D03A88F102AFEE70ED92ADF676BB0ADA
+server SHA-256: E82664DF29671C9784878F7898E81E249D6CD94C0D563F3CA863104722305876
+protocol: 1
+service: LocalSystem, Running
+```
+
+`TraceEventSession.EnableKernelProvider` succeeded for
+`MonitoringXS.KernelMetrics.v1`; `logman query ... -ets` reported Running and
+0 buffers lost. The controlled attributed probe returned `Available` Network
+with 7 events, 3 send events, 4 receive events, 1,048,635 send bytes, and
+1,048,615 receive bytes. Physical Disk returned `Available` with 1 read event
+and 32,768 read bytes; write activity was issued but no write event was
+observed, so no write value is claimed. The event PID and `StartTimeUtc`
+matched the probe process and no system/unattributed event was mapped.
+Restarting the service changed its instance ID and the v1 reconnect succeeded;
+the first recovered response remains lower-bound partial by design. CPU,
+Memory, Process I/O, and GPU remained independent.
+
+Cleanup evidence: service list empty, MonitoringXS process list empty,
+validation ProgramData directory absent, and the MonitoringXS kernel ETW
+session absent (`logman` reported no data collector set). The DACL remained
+explicit and protected: Network denied; LocalSystem, service SID, and the
+configured user SID allowed; no `Everyone` ACE.
+
+The deterministic suite passed 323/323 tests: Core 5, Application 8,
+Collectors 86, Storage 18, Integration 105, and App 101. Release build and
+Debug build completed with zero warnings/errors. The sandbox-only restore
+attempts returned `NU1301`; identical commands with approved network access
+succeeded. Real 125%/150% runtime validation remains a non-blocking
+limitation; changing the user's global scale was intentionally not performed.
+
+### 2026-07-29 tracked Broker-management lifecycle
+
+The tracked `scripts/privileged-broker/Manage-PrivilegedBroker.ps1` entry point
+was exercised from the repository checkout. `Status` reported `Installed: No`
+before installation. Install used one UAC-approved elevated child, published
+the matching Release broker, and created the fixed automatic LocalSystem
+service with protocol compatibility `v1`; normal `Status` then reported
+`Running`, `LocalSystem`, binary `present`, version `1.0.0.0`, and
+`ProtocolCompatibility: compatible`.
+
+The Release app launched normally with `Start-Process` and no `RunAs` or
+launch-time UAC. UI Automation observed `Physical disk (ETW)` and `Network
+(ETW)` with `Available` status before the service restart. One UAC-approved
+`Restart-Service` returned the service to `Running`; the same app observed
+`Available` Physical Disk and `Available`/lower-bound Network after reconnect.
+The app closed normally and `RemainingAppProcesses` was `0`. This lifecycle
+probe did not claim a new controlled traffic measurement; prior nonzero
+Network/Physical Disk attribution evidence remains recorded above.
+
+The elevated tracked `Remove` completed. Final checks found no
+`MonitoringXS.PrivilegedEtwBroker` service, no installation directory, zero
+`MonitoringXS*` processes, and no `MonitoringXS.KernelMetrics.v1` ETW session.
+User `appearance.txt` and `history.db` size/hash stayed unchanged across
+install, restart, and removal.
+
+### 2026-07-29 live-refresh stall repair
+
+Ignored pipeline diagnostics reproduced the stall with the refresh timer and
+Broker requests still progressing. Publication stopped when
+`BrokerJson.Deserialize<PhysicalDiskEventBatch>` threw because
+`PhysicalDiskIoEvent.timestamp` could not bind to `TimestampUtc`; the same
+latent defect existed for `NetworkTrafficEvent`. Nonempty payload round-trip
+tests now cover both types.
+
+The fresh Release app ran normally for 80 seconds with controlled CPU, memory,
+file, loopback-network, and available GPU activity. UI Automation recorded 30
+distinct rendered timestamps, including more than 10 consecutive updates,
+zero unresponsive samples, and normal shutdown. Observed live values included
+CPU `0.2-11.7%`, memory `193 MB-2.09 GB`, Process I/O up to `128.7 KB/s` read
+and `120.0 KB/s` write, Physical Disk up to `259.2 KB/s` write, and Network up
+to `2.5 KB/s` receive and `288 B/s` send. GPU remained an honest measured
+`0.0%` for attributed apps or explicitly unavailable/quarantined.
+
+During a four-second Broker stop, rendered timestamps advanced through
+`20:58:32`, `20:58:33`, and `20:58:34`. The controlled PowerShell workload
+continued changing from CPU `17.7%` to `12.3%` to `12.1%`, memory `420-425 MB`,
+and Process I/O `1.3 MB/s` to `15.4 KB/s`; only Physical Disk and Network
+became unavailable/error. After restart, the same app recovered automatically:
+by `20:58:42` Physical Disk was available again, and the next sample measured
+`65.0 KB/s` read and `191.1 KB/s` write. Navigation between Running Apps and
+History did not stop refresh. No app or workload process remained.
+
+The final suite passed 335/335 tests: Core 5, Application 10, Collectors 86,
+Storage 18, Integration 110, and App 106. Release and Debug builds completed
+with zero warnings/errors; `git diff --check` passed. Final cleanup found no
+Broker service/install directory, Monitoring XS process, workload file, or
+Monitoring XS ETW session.
+
+### 2026-07-29 Settings page implementation and blocked runtime validation
+
+Prerequisites passed on `feature/settings-page`: the required
+`572d4e6435670b6c1bb930e4930243de94745a0d` commit was an ancestor, the tracked
+worktree was clean, and the baseline suite passed 335/335.
+
+The implementation adds one version-1 typed JSON store at
+`%LOCALAPPDATA%\MonitoringXS\settings.json`, serialized async writes with
+temporary-file replacement, validation/quarantine/default handling, and one
+serialized ViewModel save path. The only values are 1/2/5-second cadence,
+6/24/72/168-hour retention, and System/Light/Dark. Retention changes update
+future SQLite maintenance without a migration or UI-thread deletion. Settings
+queries the existing Broker service/protocol path and performs no install,
+remove, restart, elevation, or security change.
+
+Deterministic tests cover defaults, round trips, current/future versions,
+unknown fields, corrupt/invalid values, atomic replacement, cancellation,
+concurrent writes, unavailable storage, rapid/stale saves, all mappings,
+single-execution cadence changes, retention maintenance, theme application,
+safe Broker states, keyboard/focus markup, scrolling, and 100/150/200% layout
+equivalents. The focused current binaries passed Storage 31/31 and App 111/111.
+
+Runtime evidence is mixed and therefore not approved. An unelevated Release
+launch (`Verb=none`, session 1) opened at 1180 x 760 and remained responsive
+for 60 seconds without Automation: working set 190,701,568 bytes, normal close,
+exit code 0. Partial Automation runs observed 150,757,376-153,108,480-byte
+working sets, keyboard focus on all four controls, scroll reachability, writes
+in 295.6-341.0 ms, and live timestamps at 1-second and 2-3-second cadence.
+One run recorded 20+ changing metric-card strings.
+
+The original XAML hookup exposed a confirmed layout-reentrancy defect: initial
+ComboBox binding invoked `SamplingSelector_SelectionChanged` from
+`MeasureOverride`, entered `SettingsPageViewModel.ChangeAsync`, and terminated
+with `AccessViolationException`. The selector handlers now attach only after
+`Loaded`, and a regression contract prevents XAML-time handler hookup.
+However, repeated end-to-end UI Automation still terminated fresh Release
+processes with CoreCLR `0x80131506` / native `0xc0000005`; the final run did so
+before selector changes. A separate isolated Settings navigation plus 24 real
+Tab presses remained responsive for 30 seconds and closed normally, so the
+remaining trigger is Automation-specific but unresolved. Full persistence
+restart, all three Broker runtime states, and final theme switching cannot be
+claimed.
+
+Every failed harness run restored the initial state: zero
+`MonitoringXS.App` processes, no settings file (the initial state), and the
+pre-existing Broker service installed, Automatic, and Running. Ignored evidence
+is under `.artifacts/validation/settings-page`.
+
+Final restore passed after the sandbox-only TLS/authentication failure was
+retried with network access. Release and Debug builds passed with zero warnings
+and errors. The full current x64 suite passed 353/353: Core 5, Application 10,
+Collectors 86, Storage 31, Integration 110, and App 111. `git diff --check`
+passed.
+
+### 2026-07-30 Settings interaction and persistence acceptance
+
+Direct Release interaction found the product defect in the page event gate:
+popup and pointer selection could leave the owning `ComboBox` unfocused, so
+the three handlers rejected valid user changes after the TwoWay binding had
+updated only the visible selection. Removing that focus predicate retained
+safe initialization suppression because handlers still attach only after the
+first `Loaded`.
+
+Mouse and keyboard input passed for every selector and Broker Refresh. Runtime
+cadence changed to 2 and 5 seconds without overlapping capture. Retention
+reached the authoritative SQLite maintenance controller without synchronous
+deletion or schema migration. Dark and System applied immediately. Broker
+Refresh used the existing non-overlapping service/protocol probe and performed
+no service or security mutation.
+
+The version-1 file at `%LOCALAPPDATA%\MonitoringXS\settings.json` was created
+and atomically replaced with no temporary file left behind. Restart cycle one
+restored 2 seconds, 72 hours, and Dark. Cycle two restored 5 seconds, 24 hours,
+and System. A 300.58-second Release run produced 60 rendered timestamp changes,
+kept History usable, closed normally, and left zero app processes. No
+validation-period Application Error, WER, CoreCLR fatal error, or
+`0xc0000005` occurred.
+
+`dotnet build MonitoringXS.sln -c Release`, `dotnet test MonitoringXS.sln -c
+Release --no-build`, and `dotnet build MonitoringXS.sln -c Debug` passed.
+Release and Debug builds had zero warnings/errors. Tests passed 358/358: Core
+5, Collectors 86, Application 10, App 115, Storage 31, and Integration 111.
+`git diff --check` passed.
+
+## 2026-08-09 repository hygiene and CI baseline
+
+Repository inspection found one tracked root file containing `less --help`
+output and three mode-`160000` entries under `skills/` without a `.gitmodules`
+file. The root artifact and unresolved gitlinks were removed from the worktree.
+The former skill checkouts are optional development aids; restore, build, tests,
+runtime behavior, and contributor guidance do not depend on them.
+
+`MainWindow.xaml` and its selection handler confirm that Running Apps, System
+Overview, History, Diagnostics, Settings, and About are active. Dashboard and
+Portable Apps remain visible, disabled placeholders. README, product-spec, and
+milestone wording was aligned with that current implementation without changing
+metric truthfulness, attribution, privacy, security, or ADR contracts.
+
+The new `.github/workflows/ci.yml` uses `windows-latest`, reads the SDK selection
+from `global.json`, restores the solution, builds Release with
+`-p:TreatWarningsAsErrors=true`, and runs the solution tests for pushes and pull
+requests. Local YAML parsing passed. An ignored temporary probe confirmed that
+the CI property promoted compiler warning `CS0168` and analyzer warning `CA1822`
+to errors; the probe was then deleted. No GitHub-hosted run is claimed.
+
+Commands and observed results:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore -p:TreatWarningsAsErrors=true
+dotnet test MonitoringXS.sln -c Release --no-build --blame-hang --blame-hang-timeout 2m --blame-hang-dump-type none --diag ".\TestResults\hang-diagnostics\vstest-diag.log" --logger "trx;LogFileName=hang-diagnostics.trx" --results-directory ".\TestResults\hang-diagnostics"
+```
+
+The sandboxed restore first failed with `NU1301` because Windows TLS credentials
+were unavailable; the identical approved-network restore succeeded with all
+projects up to date. Release build succeeded with 0 warnings and 0 errors. The
+diagnostic full suite completed without reproducing the earlier transient stall:
+506 passed, 0 failed, and 0 skipped (Core 11, Application 36, Collectors 86,
+Storage 35, Integration 137, and App 201). All test hosts exited normally and
+blame-hang produced no sequence file because every test completed.
+
+## 2026-08-27 Phase E1 History UX checkpoint
+
+Environment: Windows 10 x64, .NET SDK 10.0.302, branch `feature/history-ux` (Phase D base `2ab8131`).
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release --no-restore /nr:false
+dotnet test MonitoringXS.sln -c Release --no-build
+git diff --check
+```
+
+Restore: all projects up to date.
+
+Build (`MSBUILDDISABLENODEREUSE=1`): succeeded, 0 warnings, 0 errors.
+
+Tests: 575 passed, 0 failed, 0 skipped (Core 11, Collectors 86, Application 50, App 211, Storage 40, Architecture 26, Integration 151).
+
+`git diff --check`: passed (CRLF normalization warnings only).
+
+Release UI Automation against `src\MonitoringXS.App\bin\x64\Release\net10.0-windows10.0.26100.0\MonitoringXS.App.exe`:
+
+- Opened History (`Application metric history page`, `History metric charts`).
+- Honest empty presentation: `No history in the selected range`, per-metric `No … history in the selected 1 hour range`, `Empty history`. No fabricated zeros.
+- Legend present: `Line = measured; gap = unavailable/partial`.
+- Changed range to `24 hours`, invoked Refresh, hovered multiple X positions on the chart host.
+- Navigated to Running Apps and back; History charts remained present.
+- Opened Settings; Persian language option is present. Full Persian/RTL page interaction was not completed in this pass (EN/FA resource parity is covered by automated localization tests).
+- Process remained alive and exited cleanly through the main window close path.
+
+Local SQLite history had no measured samples, so live tooltip value/unit/reason text was not observed on-screen. Tooltip availability, byte formatting, and unavailable-is-not-zero behavior are covered by `ChartTooltipBuilder` tests. Database-unavailable and stale-range overwrite are covered by `HistoryPageViewModel` tests. GPU instance-name regex timeouts now fail closed as unparsed rather than throwing.
+
+## 2026-08-27 Phase E1 validation closeout
+
+Environment: Windows 10 x64, .NET SDK 10.0.302, branch `feature/history-ux`.
+
+Official solution test gate after an x64 Release build:
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet build MonitoringXS.sln -c Release -p:Platform=x64 --no-restore -m:1
+dotnet test MonitoringXS.sln -c Release --no-build
+```
+
+Do not keep a leftover AnyCPU `tests/MonitoringXS.App.Tests/bin/Release` copy beside `bin/x64/Release`. Parallel `dotnet test` on the solution previously started two `MonitoringXS.App.Tests.exe` testhosts from those two outputs (xunit v3 also emits an MTP `.exe`). App.Tests and ArchitectureTests now force `Platform=x64` and `IsTestingPlatformApplication=false` so the solution run discovers each project once.
+
+Actual closeout results:
+
+- Restore: all projects up to date.
+- Build (`-p:Platform=x64 -m:1`): succeeded, 0 errors. Analyzer still reports the existing Storage CA1822 and CA1859 warnings; no new compiler warnings.
+- `dotnet test MonitoringXS.sln -c Release --no-build`: completed with no hung testhosts.
+
+| Project | Passed | Failed | Skipped | Total |
+| --- | ---: | ---: | ---: | ---: |
+| MonitoringXS.Core.Tests | 11 | 0 | 0 | 11 |
+| MonitoringXS.Application.Tests | 50 | 0 | 0 | 50 |
+| MonitoringXS.Collectors.Tests | 86 | 0 | 0 | 86 |
+| MonitoringXS.App.Tests | 212 | 0 | 0 | 212 |
+| MonitoringXS.ArchitectureTests | 26 | 0 | 0 | 26 |
+| MonitoringXS.Storage.Tests | 40 | 0 | 0 | 40 |
+| MonitoringXS.IntegrationTests | 151 | 0 | 0 | 151 |
+| **All** | **576** | **0** | **0** | **576** |
+
+Live History (Google Chrome, 1 hour) showed measured CPU and working-set series, percent and byte units, `Partial` state, lower-bound counts, and `2 unavailable samples` without fabricating zeros. Chart-point hover tooltips were not captured: WinUI `ToolTipService` needs a real `PointerMoved` on the sparkline, and synthetic cursor moves did not raise that event. Tooltip text, unavailable-is-not-zero, and irregular timestamp mapping remain covered by `ChartTooltipBuilder` and `ChartHoverMapper` tests. Visible History series summaries now go through localization resources (English and Persian).
+

@@ -1,19 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
+using MonitoringXS.App.Composition;
 using MonitoringXS.App.ViewModels;
+using MonitoringXS.App.Localization;
 using MonitoringXS.Application;
-using MonitoringXS.Collectors;
 using MonitoringXS.Core.Abstractions;
-using MonitoringXS.Platform.Windows.Attribution;
-using MonitoringXS.Platform.Windows.Catalogs;
-using MonitoringXS.Platform.Windows.Icons;
-using MonitoringXS.Platform.Windows.Metadata;
-using MonitoringXS.Platform.Windows.Metrics;
-using MonitoringXS.Platform.Windows.Packages;
-using MonitoringXS.Platform.Windows.Processes;
-using MonitoringXS.Platform.Windows.Security;
-using MonitoringXS.Storage.Attribution;
+using MonitoringXS.Core.Models;
+using Microsoft.Windows.Globalization;
 
 namespace MonitoringXS.App;
 
@@ -26,20 +20,90 @@ public partial class App : Microsoft.UI.Xaml.Application
     {
         InitializeComponent();
         _services = ConfigureServices();
+        Localization.LanguageChanged += Localization_LanguageChanged;
     }
 
     public IServiceProvider Services => _services;
 
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
-        _window = new MainWindow(_services.GetRequiredService<MainWindowViewModel>());
+        IApplicationSettingsStore settingsStore =
+            _services.GetRequiredService<IApplicationSettingsStore>();
+        ApplicationSettingsLoadResult load;
+        try
+        {
+            load = await settingsStore.LoadAsync(CancellationToken.None);
+        }
+        catch
+        {
+            load = new(
+                ApplicationSettings.Default,
+                false,
+                false,
+                "Settings storage is unavailable.");
+        }
+
+        LiveRefreshCadence cadence = _services.GetRequiredService<LiveRefreshCadence>();
+        Localization.SetLanguage(load.Settings.Language);
+        cadence.Update(load.Settings.LiveSamplingInterval);
+        SettingsPageViewModel settingsViewModel =
+            _services.GetRequiredService<SettingsPageViewModel>();
+        settingsViewModel.Initialize(load);
+        MonitoringRuntime runtime = _services.GetRequiredService<MonitoringRuntime>();
+        _ = runtime.Start();
+        MainWindow mainWindow = new(
+            _services.GetRequiredService<MainWindowViewModel>(),
+            load.Settings,
+            _services.GetRequiredService<HistoryPageViewModel>(),
+            _services.GetRequiredService<DiagnosticsPageViewModel>(),
+            settingsViewModel,
+            _services.GetRequiredService<IMonitoringSnapshotSource>(),
+            runtime,
+            Localization);
+        _window = mainWindow;
         _window.Closed += Window_Closed;
         _window.Activate();
+        mainWindow.EnableResponsiveToolbar();
     }
 
-    private void Window_Closed(object sender, WindowEventArgs args)
+    private async void Window_Closed(object sender, WindowEventArgs args)
     {
-        _services.Dispose();
+        if (ReferenceEquals(sender, _window))
+        {
+            _window = null;
+            Localization.LanguageChanged -= Localization_LanguageChanged;
+            await _services.GetRequiredService<MonitoringRuntime>().StopAsync();
+            await _services.DisposeAsync();
+        }
+    }
+
+    public LocalizationService Localization => _services.GetRequiredService<LocalizationService>();
+
+    private void Localization_LanguageChanged(object? sender, LanguageChangedEventArgs args)
+    {
+        ApplicationLanguages.PrimaryLanguageOverride = args.Culture.Name;
+
+        if (_window is not MainWindow oldWindow)
+        {
+            return;
+        }
+
+        string selectedNavigation = oldWindow.SelectedNavigationTag;
+        MainWindow replacement = new(
+            _services.GetRequiredService<MainWindowViewModel>(),
+            _services.GetRequiredService<SettingsPageViewModel>().CurrentSettings,
+            _services.GetRequiredService<HistoryPageViewModel>(),
+            _services.GetRequiredService<DiagnosticsPageViewModel>(),
+            _services.GetRequiredService<SettingsPageViewModel>(),
+            _services.GetRequiredService<IMonitoringSnapshotSource>(),
+            _services.GetRequiredService<MonitoringRuntime>(),
+            Localization,
+            selectedNavigation);
+        _window = replacement;
+        replacement.Closed += Window_Closed;
+        replacement.Activate();
+        replacement.EnableResponsiveToolbar();
+        oldWindow.Close();
     }
 
     private static ServiceProvider ConfigureServices()
@@ -50,34 +114,8 @@ public partial class App : Microsoft.UI.Xaml.Application
             builder.AddDebug();
             builder.SetMinimumLevel(LogLevel.Information);
         });
-        services.AddSingleton<IExecutableMetadataProvider, ExecutableMetadataProvider>();
-        services.AddSingleton<IInstalledApplicationCatalog, Win32InstalledApplicationCatalog>();
-        services.AddSingleton<IPackageApplicationCatalog, MsixPackageApplicationCatalog>();
-        services.AddSingleton<IPackageIdentityResolver, WindowsPackageIdentityResolver>();
-        services.AddSingleton<IDigitalSignatureInspector, DigitalSignatureInspector>();
-        services.AddSingleton<IApplicationIconProvider, WindowsApplicationIconProvider>();
-        services.AddSingleton<IUserAttributionOverrideStore>(_ =>
-        {
-            string localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string path = Path.Combine(localData, "MonitoringXS", "attribution-overrides.json");
-            return new JsonUserAttributionOverrideStore(path);
-        });
-        services.AddSingleton<IProcessDiscoveryService, WindowsProcessDiscoveryService>();
-        services.AddSingleton<IApplicationAttributionService, ApplicationAttributionService>();
-        services.AddSingleton<IProcessResourceCounterReader, WindowsProcessResourceCounterReader>();
-        services.AddSingleton<IProcessMetricCollector, ProcessMetricCollector>();
-        services.AddSingleton<IMetricAggregationService, MetricAggregationService>();
-        services.AddSingleton<EtwPhysicalDiskEventSource>();
-        services.AddSingleton<IPhysicalDiskEventSource>(provider =>
-            provider.GetRequiredService<EtwPhysicalDiskEventSource>());
-        services.AddSingleton<INetworkEventSource>(provider =>
-            provider.GetRequiredService<EtwPhysicalDiskEventSource>());
-        services.AddSingleton<IPhysicalDiskMetricCollector, PhysicalDiskMetricCollector>();
-        services.AddSingleton<IPhysicalDiskAggregationService, PhysicalDiskAggregationService>();
-        services.AddSingleton<INetworkMetricCollector, NetworkMetricCollector>();
-        services.AddSingleton<INetworkMetricAggregationService, NetworkMetricAggregationService>();
-        services.AddSingleton<MonitoringCoordinator>();
-        services.AddSingleton<MainWindowViewModel>();
+        services.AddMonitoringXs();
         return services.BuildServiceProvider(validateScopes: true);
     }
+
 }

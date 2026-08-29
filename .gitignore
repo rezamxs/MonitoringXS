@@ -22,3 +22,18 @@ BenchmarkDotNet.Artifacts/
 *.appxbundle
 GeneratedFiles/
 .tools/
+
+# Tooling artifacts
+context-packs/
+.tooling/indexes/
+.tooling/.cache/
+*.cobertura.xml
+TestResults/Coverage/
+.artifacts/sbom/
+
+# Removed agent-only artifacts; keep them out of the public tree
+/.agents/
+/AGENTS.md
+/skills/
+/skills-lock.json
+/docs/SKILLS_USAGE.md

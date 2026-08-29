@@ -1,9 +1,15 @@
 using System.Collections.Specialized;
+using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Shapes;
+using MonitoringXS.App.Localization;
+using MonitoringXS.App.ViewModels;
 using Windows.Foundation;
+using WToolTipService = Microsoft.UI.Xaml.Controls.ToolTipService;
 
 namespace MonitoringXS.App.Controls;
 
@@ -11,40 +17,232 @@ public sealed partial class MetricSparkline : UserControl
 {
     public static readonly DependencyProperty SamplesProperty = DependencyProperty.Register(
         nameof(Samples),
-        typeof(IList<double?>),
+        typeof(IList<CpuHistorySample>),
         typeof(MetricSparkline),
         new PropertyMetadata(null, OnSamplesChanged));
 
+    public static readonly DependencyProperty SummaryTextProperty = DependencyProperty.Register(
+        nameof(SummaryText),
+        typeof(string),
+        typeof(MetricSparkline),
+        new PropertyMetadata(null, OnTextChanged));
+
+    public static readonly DependencyProperty ShowSummaryProperty = DependencyProperty.Register(
+        nameof(ShowSummary),
+        typeof(bool),
+        typeof(MetricSparkline),
+        new PropertyMetadata(true, OnTextChanged));
+
+    public static readonly DependencyProperty EmptyTextProperty = DependencyProperty.Register(
+        nameof(EmptyText),
+        typeof(string),
+        typeof(MetricSparkline),
+        new PropertyMetadata("Waiting for real samples…", OnTextChanged));
+
+    public static readonly DependencyProperty ChartScaleProperty = DependencyProperty.Register(
+        nameof(ChartScale),
+        typeof(MetricSparklineScale),
+        typeof(MetricSparkline),
+        new PropertyMetadata(MetricSparklineScale.Percent, OnLayoutChanged));
+
+    public static readonly DependencyProperty RangeStartUtcProperty = DependencyProperty.Register(
+        nameof(RangeStartUtc),
+        typeof(DateTimeOffset?),
+        typeof(MetricSparkline),
+        new PropertyMetadata(null, OnLayoutChanged));
+
+    public static readonly DependencyProperty RangeEndUtcProperty = DependencyProperty.Register(
+        nameof(RangeEndUtc),
+        typeof(DateTimeOffset?),
+        typeof(MetricSparkline),
+        new PropertyMetadata(null, OnLayoutChanged));
+
+    public static readonly DependencyProperty UnitTextProperty = DependencyProperty.Register(
+        nameof(UnitText),
+        typeof(string),
+        typeof(MetricSparkline),
+        new PropertyMetadata(string.Empty, OnTextChanged));
+
+    public static readonly DependencyProperty IsEmbeddedProperty = DependencyProperty.Register(
+        nameof(IsEmbedded),
+        typeof(bool),
+        typeof(MetricSparkline),
+        new PropertyMetadata(false, OnEmbeddedChanged));
+
+    public static readonly DependencyProperty TooltipMetricNameProperty = DependencyProperty.Register(
+        nameof(TooltipMetricName),
+        typeof(string),
+        typeof(MetricSparkline),
+        new PropertyMetadata(null));
+
+    public static readonly DependencyProperty TooltipValueUnitProperty = DependencyProperty.Register(
+        nameof(TooltipValueUnit),
+        typeof(string),
+        typeof(MetricSparkline),
+        new PropertyMetadata(null));
+
+    public static readonly DependencyProperty TooltipUsesPercentUnitProperty = DependencyProperty.Register(
+        nameof(TooltipUsesPercentUnit),
+        typeof(bool),
+        typeof(MetricSparkline),
+        new PropertyMetadata(false));
+
+    public static readonly DependencyProperty TooltipUsesRateUnitProperty = DependencyProperty.Register(
+        nameof(TooltipUsesRateUnit),
+        typeof(bool),
+        typeof(MetricSparkline),
+        new PropertyMetadata(false));
+
     private INotifyCollectionChanged? _observableSamples;
-    private bool _resizeRedrawPending;
+    private bool _redrawPending;
+    private readonly Brush? _defaultBackground;
 
     public MetricSparkline()
     {
         InitializeComponent();
+        _defaultBackground = ChartRoot.Background;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
 
-    public IList<double?>? Samples
+    public IList<CpuHistorySample>? Samples
     {
-        get => (IList<double?>?)GetValue(SamplesProperty);
+        get => (IList<CpuHistorySample>?)GetValue(SamplesProperty);
         set => SetValue(SamplesProperty, value);
+    }
+
+    public string? SummaryText
+    {
+        get => (string?)GetValue(SummaryTextProperty);
+        set => SetValue(SummaryTextProperty, value);
+    }
+
+    public bool ShowSummary
+    {
+        get => (bool)GetValue(ShowSummaryProperty);
+        set => SetValue(ShowSummaryProperty, value);
+    }
+
+    public string EmptyText
+    {
+        get => (string)GetValue(EmptyTextProperty);
+        set => SetValue(EmptyTextProperty, value);
+    }
+
+    public MetricSparklineScale ChartScale
+    {
+        get => (MetricSparklineScale)GetValue(ChartScaleProperty);
+        set => SetValue(ChartScaleProperty, value);
+    }
+
+    public DateTimeOffset? RangeStartUtc
+    {
+        get => (DateTimeOffset?)GetValue(RangeStartUtcProperty);
+        set => SetValue(RangeStartUtcProperty, value);
+    }
+
+    public DateTimeOffset? RangeEndUtc
+    {
+        get => (DateTimeOffset?)GetValue(RangeEndUtcProperty);
+        set => SetValue(RangeEndUtcProperty, value);
+    }
+
+    public string UnitText
+    {
+        get => (string)GetValue(UnitTextProperty);
+        set => SetValue(UnitTextProperty, value);
+    }
+
+    public bool IsEmbedded
+    {
+        get => (bool)GetValue(IsEmbeddedProperty);
+        set => SetValue(IsEmbeddedProperty, value);
+    }
+
+    public string? TooltipMetricName
+    {
+        get => (string?)GetValue(TooltipMetricNameProperty);
+        set => SetValue(TooltipMetricNameProperty, value);
+    }
+
+    public string? TooltipValueUnit
+    {
+        get => (string?)GetValue(TooltipValueUnitProperty);
+        set => SetValue(TooltipValueUnitProperty, value);
+    }
+
+    public bool TooltipUsesPercentUnit
+    {
+        get => (bool)GetValue(TooltipUsesPercentUnitProperty);
+        set => SetValue(TooltipUsesPercentUnitProperty, value);
+    }
+
+    public bool TooltipUsesRateUnit
+    {
+        get => (bool)GetValue(TooltipUsesRateUnitProperty);
+        set => SetValue(TooltipUsesRateUnitProperty, value);
+    }
+
+    private static void OnEmbeddedChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+    {
+        MetricSparkline chart = (MetricSparkline)sender;
+        chart.ApplyEmbeddedState();
+        chart.QueueRedraw();
+    }
+
+    private void ApplyEmbeddedState()
+    {
+        if (IsEmbedded)
+        {
+            ChartRoot.Background = null;
+            ChartRoot.BorderThickness = new Thickness(0);
+            ChartRoot.CornerRadius = new CornerRadius(0);
+            Summary.Visibility = Visibility.Collapsed;
+            TopAxisLabel.Visibility = Visibility.Collapsed;
+            BottomAxisLabel.Visibility = Visibility.Collapsed;
+            StartAxisLabel.Visibility = Visibility.Collapsed;
+            EndAxisLabel.Visibility = Visibility.Collapsed;
+            EmptyState.Visibility = Visibility.Collapsed;
+            MidGridLine.Visibility = Visibility.Collapsed;
+            BaselineGridLine.Opacity = 0.35;
+            MinHeight = 44;
+        }
+        else
+        {
+            ChartRoot.Background = _defaultBackground;
+            ChartRoot.BorderThickness = new Thickness(1);
+            ChartRoot.CornerRadius = new CornerRadius(8);
+            TopAxisLabel.Visibility = Visibility.Visible;
+            BottomAxisLabel.Visibility = Visibility.Visible;
+            StartAxisLabel.Visibility = Visibility.Visible;
+            EndAxisLabel.Visibility = Visibility.Visible;
+            MidGridLine.Visibility = Visibility.Visible;
+            BaselineGridLine.Opacity = 0.55;
+            Summary.Visibility = ShowSummary ? Visibility.Visible : Visibility.Collapsed;
+            MinHeight = 120;
+        }
     }
 
     private static void OnSamplesChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
     {
         MetricSparkline chart = (MetricSparkline)sender;
         chart.Unsubscribe();
-        chart._observableSamples = args.NewValue as INotifyCollectionChanged;
-        if (chart._observableSamples is not null)
+        if (chart.IsLoaded && args.NewValue is INotifyCollectionChanged observable)
         {
+            chart._observableSamples = observable;
             chart._observableSamples.CollectionChanged += chart.OnCollectionChanged;
         }
 
-        chart.Redraw();
+        chart.QueueRedraw();
     }
 
-    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs args) => Redraw();
+    private static void OnTextChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args) =>
+        ((MetricSparkline)sender).QueueRedraw();
+
+    private static void OnLayoutChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args) =>
+        ((MetricSparkline)sender).QueueRedraw();
+
+    private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs args) => QueueRedraw();
 
     private void OnLoaded(object sender, RoutedEventArgs args)
     {
@@ -54,21 +252,25 @@ public sealed partial class MetricSparkline : UserControl
             _observableSamples.CollectionChanged += OnCollectionChanged;
         }
 
+        ApplyEmbeddedState();
         Redraw();
     }
 
     private void ChartRoot_SizeChanged(object sender, SizeChangedEventArgs args)
+        => QueueRedraw();
+
+    private void QueueRedraw()
     {
-        if (_resizeRedrawPending)
+        if (_redrawPending || !IsLoaded)
         {
             return;
         }
 
-        _resizeRedrawPending = DispatcherQueue.TryEnqueue(
+        _redrawPending = DispatcherQueue.TryEnqueue(
             DispatcherQueuePriority.Low,
             () =>
             {
-                _resizeRedrawPending = false;
+                _redrawPending = false;
                 if (IsLoaded)
                 {
                     Redraw();
@@ -78,29 +280,95 @@ public sealed partial class MetricSparkline : UserControl
 
     private void Redraw()
     {
-        double[] values = Samples?.Where(value => value.HasValue).Select(value => value!.Value).ToArray() ?? [];
-        bool hasSeries = values.Length >= 2 && ChartRoot.ActualWidth > 24 && ChartRoot.ActualHeight > 48;
-        EmptyState.Visibility = hasSeries ? Visibility.Collapsed : Visibility.Visible;
+        MetricSparklineLayout layout = MetricSparklineLayout.Create(
+            Samples?.ToArray() ?? [],
+            PlotArea.ActualWidth,
+            PlotArea.ActualHeight,
+            ChartScale,
+            RangeStartUtc,
+            RangeEndUtc,
+            IsEmbedded);
+        bool hasSeries = layout.Segments.Count > 0 || layout.Markers.Count > 0;
+        EmptyState.Text = EmptyText;
+        EmptyState.Visibility = IsEmbedded
+            ? Visibility.Collapsed
+            : (hasSeries ? Visibility.Collapsed : Visibility.Visible);
         Line.Visibility = hasSeries ? Visibility.Visible : Visibility.Collapsed;
-        Line.Points.Clear();
+        PathGeometry geometry = new();
 
-        if (!hasSeries)
+        foreach (IReadOnlyList<MetricSparklinePoint> segment in layout.Segments)
         {
-            Summary.Text = "CPU history is warming up. Unavailable samples are not drawn as zero.";
-            return;
+            PathFigure figure = new()
+            {
+                StartPoint = new Point(segment[0].X, segment[0].Y)
+            };
+            foreach (MetricSparklinePoint point in segment.Skip(1))
+            {
+                figure.Segments.Add(new LineSegment
+                {
+                    Point = new Point(point.X, point.Y)
+                });
+            }
+
+            geometry.Figures.Add(figure);
         }
 
-        double width = Math.Max(1, ChartRoot.ActualWidth - 32);
-        double height = Math.Max(1, ChartRoot.ActualHeight - 52);
-        double peak = Math.Max(1, values.Max());
-        for (int index = 0; index < values.Length; index++)
+        Line.Data = geometry;
+        Rect plotClip = new(
+            layout.PlotLeft,
+            layout.PlotTop,
+            Math.Max(0, layout.PlotRight - layout.PlotLeft),
+            Math.Max(0, layout.PlotBottom - layout.PlotTop));
+        Line.Clip = new RectangleGeometry { Rect = plotClip };
+        Markers.Clip = new RectangleGeometry { Rect = plotClip };
+        Markers.Children.Clear();
+        foreach (MetricSparklinePoint marker in layout.Markers)
         {
-            double x = 16 + width * index / Math.Max(1, values.Length - 1);
-            double y = 12 + height * (1 - values[index] / peak);
-            Line.Points.Add(new Point(x, y));
+            Ellipse ellipse = new()
+            {
+                Width = 6,
+                Height = 6,
+                Fill = Line.Stroke
+            };
+            Canvas.SetLeft(ellipse, marker.X - 3);
+            Canvas.SetTop(ellipse, marker.Y - 3);
+            Markers.Children.Add(ellipse);
         }
 
-        Summary.Text = $"Last {values.Length} real samples · peak {peak:0.0}% of total CPU capacity.";
+        if (!IsEmbedded)
+        {
+            TopAxisLabel.Text = FormatAxis(layout.DomainMaximum);
+            BottomAxisLabel.Text = FormatAxis(layout.DomainMinimum);
+            StartAxisLabel.Text = layout.RangeStartUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
+            EndAxisLabel.Text = layout.RangeEndUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
+
+            Summary.Text = string.IsNullOrWhiteSpace(SummaryText) ? layout.Summary : SummaryText;
+            Summary.Visibility = ShowSummary ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private string FormatAxis(double value) =>
+        ChartScale == MetricSparklineScale.Percent
+            ? $"{value:0}%"
+            : UnitText switch
+            {
+                "bytes/s" => $"{FormatBytes(value)}/s",
+                "bytes" => FormatBytes(value),
+                _ => $"{FormatBytes(value)} {UnitText}".Trim()
+            };
+
+    private static string FormatBytes(double value)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        int unit = 0;
+        value = Math.Max(0, value);
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.#} {units[unit]}";
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args) => Unsubscribe();
@@ -113,4 +381,81 @@ public sealed partial class MetricSparkline : UserControl
             _observableSamples = null;
         }
     }
+
+    private void OnPointerMoved(object sender, PointerRoutedEventArgs args) => UpdateHover(args);
+
+    private void OnPointerExited(object sender, PointerRoutedEventArgs args)
+    {
+        _hoverIndex = -1;
+        WToolTipService.SetToolTip(ChartRoot, null);
+    }
+
+    private void UpdateHover(PointerRoutedEventArgs args)
+    {
+        if (Samples is not { Count: > 0 } samples
+            || TooltipMetricName is not { Length: > 0 } metricName)
+        {
+            _hoverIndex = -1;
+            WToolTipService.SetToolTip(ChartRoot, null);
+            return;
+        }
+
+        Point position = args.GetCurrentPoint(ChartRoot).Position;
+        int index = NearestIndex(position.X);
+        if (index < 0 || index >= samples.Count || index == _hoverIndex)
+        {
+            return;
+        }
+
+        _hoverIndex = index;
+        LocalizationService localization =
+            (Microsoft.UI.Xaml.Application.Current as global::MonitoringXS.App.App)?.Localization
+            ?? _localization;
+        IReadOnlyList<CpuHistorySample> displayed = samples as IReadOnlyList<CpuHistorySample>
+            ?? samples.ToArray();
+        HistoryValueKind valueKind = TooltipUsesPercentUnit
+            ? HistoryValueKind.Percent
+            : TooltipUsesRateUnit
+                ? HistoryValueKind.BytesPerSecond
+                : HistoryValueKind.Bytes;
+        string? tooltip = ChartTooltipBuilder.Build(
+            displayed,
+            index,
+            metricName,
+            valueKind,
+            localization.Get(LocalizationKeys.Available),
+            localization.Get(LocalizationKeys.PartialLowerBound),
+            localization.Get(LocalizationKeys.Unavailable),
+            localization.Get(LocalizationKeys.TooltipReason),
+            localization.Get(LocalizationKeys.TooltipValue));
+        if (string.IsNullOrEmpty(tooltip))
+        {
+            _hoverIndex = -1;
+            WToolTipService.SetToolTip(ChartRoot, null);
+            return;
+        }
+
+        TooltipText.Text = tooltip;
+        WToolTipService.SetToolTip(ChartRoot, TooltipText);
+    }
+
+    private int NearestIndex(double x)
+    {
+        IList<CpuHistorySample>? samples = Samples;
+        if (samples is null || samples.Count == 0)
+        {
+            return -1;
+        }
+
+        return ChartHoverMapper.NearestIndex(
+            x,
+            samples,
+            RangeStartUtc,
+            RangeEndUtc,
+            IsEmbedded,
+            PlotArea.ActualWidth);
+    }
+
+    private int _hoverIndex = -1;
+    private readonly LocalizationService _localization = new();
 }

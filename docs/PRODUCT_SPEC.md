@@ -9,7 +9,7 @@ Monitoring XS is a private-by-default, native Windows resource monitor organized
 
 ## Information architecture
 
-Primary navigation: Dashboard, Running Apps, Portable Apps, History, Settings, and About. Selecting an application opens one closable logical-application tab. Pinned tabs survive process exit while retained history exists and reconnect by logical application ID.
+Primary navigation: Running Apps, System Overview, History, Diagnostics, Settings, and About. Dashboard and Portable Apps remain visible placeholders. Selecting an application opens one closable logical-application tab. Pinned tabs survive process exit while retained history exists and reconnect by logical application ID.
 
 ## Attribution rules
 

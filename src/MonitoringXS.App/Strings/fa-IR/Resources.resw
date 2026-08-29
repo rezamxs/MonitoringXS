@@ -1,0 +1,525 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="Available" xml:space="preserve"><value>در دسترس</value></data>
+  <data name="PartialLowerBound" xml:space="preserve"><value>حد پایین معتبر</value></data>
+  <data name="WarmingUp" xml:space="preserve"><value>در حال آماده‌سازی</value></data>
+  <data name="AccessDenied" xml:space="preserve"><value>دسترسی رد شد</value></data>
+  <data name="Unsupported" xml:space="preserve"><value>پشتیبانی نمی‌شود</value></data>
+  <data name="Unavailable" xml:space="preserve"><value>در دسترس نیست</value></data>
+  <data name="Error" xml:space="preserve"><value>خطا</value></data>
+  <data name="Running" xml:space="preserve"><value>در حال اجرا</value></data>
+  <data name="PublisherUnavailable" xml:space="preserve"><value>ناشر در دسترس نیست</value></data>
+  <data name="NoAttributedActivity" xml:space="preserve"><value>هنوز فعالیتی به این برنامه نسبت داده نشده است.</value></data>
+  <data name="DatabaseUnavailable" xml:space="preserve"><value>پایگاه‌داده در دسترس نیست</value></data>
+  <data name="SettingsStorageUnavailable" xml:space="preserve"><value>محل ذخیره‌سازی تنظیمات در دسترس نیست.</value></data>
+  <data name="SamplingOneLabel" xml:space="preserve"><value>۱ ثانیه</value></data>
+  <data name="SamplingOneDescription" xml:space="preserve"><value>بیشترین سرعت واکنش، با سربار نمونه‌برداری بیشتر.</value></data>
+  <data name="SamplingTwoLabel" xml:space="preserve"><value>۲ ثانیه</value></data>
+  <data name="SamplingTwoDescription" xml:space="preserve"><value>تعادل میان سرعت واکنش و سربار نمونه‌برداری.</value></data>
+  <data name="SamplingFiveLabel" xml:space="preserve"><value>۵ ثانیه</value></data>
+  <data name="SamplingFiveDescription" xml:space="preserve"><value>کمترین سربار، با واکنش کندتر به تغییرات.</value></data>
+  <data name="RetentionSixLabel" xml:space="preserve"><value>۶ ساعت</value></data>
+  <data name="RetentionSixDescription" xml:space="preserve"><value>داده‌های قدیمی‌تر از ۶ ساعت در پاک‌سازی‌های بعدی حذف می‌شوند.</value></data>
+  <data name="RetentionDayLabel" xml:space="preserve"><value>۲۴ ساعت</value></data>
+  <data name="RetentionDayDescription" xml:space="preserve"><value>گزینهٔ پیش‌فرض نگه‌داری تاریخچه.</value></data>
+  <data name="RetentionThreeDaysLabel" xml:space="preserve"><value>۳ روز</value></data>
+  <data name="RetentionThreeDaysDescription" xml:space="preserve"><value>تاریخچهٔ محلی را تا ۳ روز نگه می‌دارد.</value></data>
+  <data name="RetentionSevenDaysLabel" xml:space="preserve"><value>۷ روز</value></data>
+  <data name="RetentionSevenDaysDescription" xml:space="preserve"><value>تاریخچهٔ محلی را تا ۷ روز، در محدودهٔ ظرفیت پایگاه‌داده، نگه می‌دارد.</value></data>
+  <data name="ThemeSystemLabel" xml:space="preserve"><value>سیستم</value></data>
+  <data name="ThemeSystemDescription" xml:space="preserve"><value>پیروی از پوستهٔ ویندوز.</value></data>
+  <data name="ThemeLightLabel" xml:space="preserve"><value>روشن</value></data>
+  <data name="ThemeLightDescription" xml:space="preserve"><value>استفاده از پوستهٔ روشن برنامه.</value></data>
+  <data name="ThemeDarkLabel" xml:space="preserve"><value>تیره</value></data>
+  <data name="ThemeDarkDescription" xml:space="preserve"><value>استفاده از پوستهٔ تیرهٔ برنامه.</value></data>
+  <data name="LanguageSystemLabel" xml:space="preserve"><value>پیش‌فرض سیستم</value></data>
+  <data name="LanguageSystemDescription" xml:space="preserve"><value>پیروی از زبان نمایش ویندوز.</value></data>
+  <data name="LanguageEnglishLabel" xml:space="preserve"><value>English</value></data>
+  <data name="LanguageEnglishDescription" xml:space="preserve"><value>نمایش Monitoring XS به زبان انگلیسی.</value></data>
+  <data name="LanguagePersianLabel" xml:space="preserve"><value>فارسی</value></data>
+  <data name="LanguagePersianDescription" xml:space="preserve"><value>نمایش فارسی با چیدمان راست‌به‌چپ.</value></data>
+  <data name="LoadingSettings" xml:space="preserve"><value>در حال بارگذاری تنظیمات…</value></data>
+  <data name="SettingsNotChecked" xml:space="preserve"><value>بررسی نشده</value></data>
+  <data name="BrokerRefreshPrompt" xml:space="preserve"><value>برای بررسی دسترسی به سنجه‌های پیشرفته، وضعیت را تازه‌سازی کنید.</value></data>
+  <data name="SettingsAccessibilitySummary" xml:space="preserve"><value>نمونه‌برداری {0}؛ نگه‌داری تاریخچه {1}؛ پوسته {2}؛ زبان {3}؛ سرویس پایش پیشرفته {4}.</value></data>
+  <data name="SettingsNotLoaded" xml:space="preserve"><value>بارگذاری نشده</value></data>
+  <data name="SettingsRecovered" xml:space="preserve"><value>تنظیمات با مقادیر پیش‌فرض ایمن بازیابی شدند.</value></data>
+  <data name="SettingsLoaded" xml:space="preserve"><value>تنظیمات بارگذاری شدند.</value></data>
+  <data name="Checking" xml:space="preserve"><value>در حال بررسی…</value></data>
+  <data name="BrokerCheckFailed" xml:space="preserve"><value>بررسی وضعیت سرویس پایش پیشرفته انجام نشد.</value></data>
+  <data name="SelectedSettingUnsupported" xml:space="preserve"><value>تنظیم انتخاب‌شده پشتیبانی نمی‌شود.</value></data>
+  <data name="SettingApplyFailed" xml:space="preserve"><value>تنظیم اعمال نشد.</value></data>
+  <data name="SavingSettings" xml:space="preserve"><value>در حال ذخیره‌سازی تنظیمات…</value></data>
+  <data name="SettingsSaved" xml:space="preserve"><value>تنظیمات ذخیره شدند.</value></data>
+  <data name="BrokerNotInstalledLabel" xml:space="preserve"><value>نصب نشده</value></data>
+  <data name="BrokerNotInstalledDetail" xml:space="preserve"><value>سنجه‌های شبکه و دیسک فیزیکی به سرویس پایش پیشرفته نیاز دارند.</value></data>
+  <data name="BrokerStoppedLabel" xml:space="preserve"><value>متوقف</value></data>
+  <data name="BrokerStoppedDetail" xml:space="preserve"><value>سرویس پایش پیشرفته نصب شده است، اما اجرا نمی‌شود.</value></data>
+  <data name="BrokerRunningLabel" xml:space="preserve"><value>در حال اجرا</value></data>
+  <data name="BrokerRunningDetail" xml:space="preserve"><value>سرویس در حال اجراست، اما سلامت اتصال هنوز تأیید نشده است.</value></data>
+  <data name="BrokerBinaryMissingLabel" xml:space="preserve"><value>فایل اجرایی موجود نیست</value></data>
+  <data name="BrokerBinaryMissingDetail" xml:space="preserve"><value>سرویس ثبت شده است، اما فایل اجرایی آن در دسترس نیست.</value></data>
+  <data name="BrokerProtocolMismatchLabel" xml:space="preserve"><value>ناسازگاری پروتکل</value></data>
+  <data name="BrokerProtocolMismatchDetail" xml:space="preserve"><value>نسخهٔ پروتکل برنامه و سرویس یکسان نیست.</value></data>
+  <data name="BrokerConnectionUnavailableLabel" xml:space="preserve"><value>اتصال در دسترس نیست</value></data>
+  <data name="BrokerConnectionUnavailableDetail" xml:space="preserve"><value>برنامه نتوانست یک اتصال محلی سالم با سرویس برقرار کند.</value></data>
+  <data name="BrokerHealthyLabel" xml:space="preserve"><value>سالم</value></data>
+  <data name="BrokerHealthyDetail" xml:space="preserve"><value>سنجه‌های پیشرفتهٔ شبکه و دیسک فیزیکی در دسترس‌اند.</value></data>
+  <data name="SettingsPageTitle.Text" xml:space="preserve"><value>تنظیمات</value></data>
+  <data name="SettingsPageTitle.AutomationProperties.Name" xml:space="preserve"><value>صفحهٔ تنظیمات برنامه</value></data>
+  <data name="SettingsPageRoot.AutomationProperties.Name" xml:space="preserve"><value>صفحهٔ تنظیمات برنامه</value></data>
+  <data name="SettingsSavingProgress.AutomationProperties.Name" xml:space="preserve"><value>در حال ذخیرهٔ تنظیمات</value></data>
+  <data name="SettingsPageSubtitle.Text" xml:space="preserve"><value>تنظیمات پایش و نمایش</value></data>
+  <data name="SettingsMonitoringTitle.Text" xml:space="preserve"><value>پایش</value></data>
+  <data name="SettingsMonitoringDescription.Text" xml:space="preserve"><value>فاصلهٔ امن نمونه‌برداری زنده را انتخاب کنید. تغییرات بدون راه‌اندازی مجدد اعمال می‌شوند و نمونه‌برداری‌ها هم‌پوشانی ندارند.</value></data>
+  <data name="SettingsSamplingSelector.AutomationProperties.Name" xml:space="preserve"><value>فاصلهٔ نمونه‌برداری زنده</value></data>
+  <data name="SettingsSamplingSelector.AutomationProperties.HelpText" xml:space="preserve"><value>۱، ۲ یا ۵ ثانیه را انتخاب کنید.</value></data>
+  <data name="SettingsHistoryTitle.Text" xml:space="preserve"><value>تاریخچه</value></data>
+  <data name="SettingsHistoryDescription.Text" xml:space="preserve"><value>تغییر مدت نگه‌داری در پاک‌سازی‌های بعدی اعمال می‌شود. کاهش این مدت ممکن است داده‌های قدیمی تاریخچه را حذف کند.</value></data>
+  <data name="SettingsRetentionSelector.AutomationProperties.Name" xml:space="preserve"><value>مدت نگه‌داری تاریخچه</value></data>
+  <data name="SettingsRetentionSelector.AutomationProperties.HelpText" xml:space="preserve"><value>۶ ساعت، ۲۴ ساعت، ۳ روز یا ۷ روز را انتخاب کنید.</value></data>
+  <data name="SettingsAppearanceTitle.Text" xml:space="preserve"><value>ظاهر</value></data>
+  <data name="SettingsAppearanceDescription.Text" xml:space="preserve"><value>تغییرات پوسته فوراً اعمال می‌شوند. حالت «سیستم» از پوسته و کنتراست بالای ویندوز پیروی می‌کند.</value></data>
+  <data name="SettingsThemeSelector.AutomationProperties.Name" xml:space="preserve"><value>پوستهٔ برنامه</value></data>
+  <data name="SettingsPrivilegedTitle.Text" xml:space="preserve"><value>پایش پیشرفته</value></data>
+  <data name="SettingsPrivilegedDescription.Text" xml:space="preserve"><value>سنجه‌های شبکه و دیسک فیزیکی به سرویس پایش پیشرفته نیاز دارند. این صفحه سرویس را نصب، حذف یا راه‌اندازی نمی‌کند و خطاهای آن را نیز برطرف نمی‌کند.</value></data>
+  <data name="SettingsBrokerRefreshButton.Content" xml:space="preserve"><value>تازه‌سازی وضعیت</value></data>
+  <data name="SettingsBrokerRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>تازه‌سازی وضعیت سرویس پایش پیشرفته</value></data>
+  <data name="SettingsBrokerProgress.AutomationProperties.Name" xml:space="preserve"><value>در حال بررسی وضعیت سرویس پایش پیشرفته</value></data>
+  <data name="SettingsOperatorCommand.Text" xml:space="preserve"><value>فرمان مدیریتی: scripts/privileged-broker/Manage-PrivilegedBroker.ps1</value></data>
+  <data name="SettingsElevationNote.Text" xml:space="preserve"><value>نصب یا حذف سرویس به اجرای PowerShell با دسترسی مدیر نیاز دارد. خود برنامه در حالت عادی بدون دسترسی مدیر اجرا می‌شود.</value></data>
+  <data name="SettingsLanguageTitle.Text" xml:space="preserve"><value>زبان</value></data>
+  <data name="SettingsLanguageDescription.Text" xml:space="preserve"><value>زبان رابط را بین پیش‌فرض سیستم، انگلیسی و فارسی تغییر دهید. صفحهٔ فعلی و پایش زنده حفظ می‌شوند.</value></data>
+  <data name="SettingsLanguageSelector.AutomationProperties.Name" xml:space="preserve"><value>زبان برنامه</value></data>
+  <data name="ProcessDetailsTitle.Text" xml:space="preserve"><value>جزئیات و عملیات پردازش</value></data>
+  <data name="ProcessDetailsDescription.Text" xml:space="preserve"><value>عملیات بدون دسترسی مدیر انجام می‌شوند و شناسهٔ پردازش، زمان شروع و هویت فایل اجرایی پیش از اجرا دوباره بررسی می‌شوند.</value></data>
+  <data name="EndTaskButtonLabel.Text" xml:space="preserve"><value>پایان دادن به پردازش</value></data>
+  <data name="EndTaskButton.AutomationProperties.Name" xml:space="preserve"><value>پایان دادن به پردازش انتخاب‌شده</value></data>
+  <data name="EndTaskButton.AutomationProperties.HelpText" xml:space="preserve"><value>پس از تأیید و بررسی دوبارهٔ هویت، فقط پردازش انتخاب‌شده را پایان می‌دهد.</value></data>
+  <data name="EndTreeButtonLabel.Text" xml:space="preserve"><value>پایان دادن به درخت پردازش</value></data>
+  <data name="EndTreeButton.AutomationProperties.Name" xml:space="preserve"><value>پایان دادن به درخت پردازش انتخاب‌شده</value></data>
+  <data name="EndTreeButton.AutomationProperties.HelpText" xml:space="preserve"><value>پس از تأیید صریح، پردازش‌های فرزند تأییدشده را از برگ تا ریشه پایان می‌دهد.</value></data>
+  <data name="OpenLocationButtonLabel.Text" xml:space="preserve"><value>باز کردن محل فایل</value></data>
+  <data name="OpenLocationButton.AutomationProperties.Name" xml:space="preserve"><value>باز کردن محل فایل پردازش انتخاب‌شده</value></data>
+  <data name="OpenLocationButton.AutomationProperties.HelpText" xml:space="preserve"><value>File Explorer را باز می‌کند و فایل اجرایی تأییدشده را انتخاب می‌کند.</value></data>
+  <data name="CopyDetailsButtonLabel.Text" xml:space="preserve"><value>کپی جزئیات پردازش</value></data>
+  <data name="CopyDetailsButton.AutomationProperties.Name" xml:space="preserve"><value>کپی جزئیات پردازش انتخاب‌شده</value></data>
+  <data name="CopyDetailsButton.AutomationProperties.HelpText" xml:space="preserve"><value>هویت تأییدشدهٔ پردازش و سنجه‌های فعلی برنامه را بدون خط فرمان یا اطلاعات محرمانه کپی می‌کند.</value></data>
+  <data name="MetricCpuLabel.Text" xml:space="preserve"><value>مصرف پردازنده</value></data>
+  <data name="MetricMemoryLabel.Text" xml:space="preserve"><value>مصرف حافظه</value></data>
+  <data name="MetricIoReadLabel.Text" xml:space="preserve"><value>خواندن I/O</value></data>
+  <data name="MetricIoWriteLabel.Text" xml:space="preserve"><value>نوشتن I/O</value></data>
+  <data name="MetricDiskTitle.Text" xml:space="preserve"><value>دیسک فیزیکی</value></data>
+  <data name="MetricReadLabel.Text" xml:space="preserve"><value>خواندن دیسک</value></data>
+  <data name="MetricWriteLabel.Text" xml:space="preserve"><value>نوشتن دیسک</value></data>
+  <data name="MetricNetworkTitle.Text" xml:space="preserve"><value>شبکه</value></data>
+  <data name="MetricReceiveLabel.Text" xml:space="preserve"><value>دریافت شبکه</value></data>
+  <data name="MetricSendLabel.Text" xml:space="preserve"><value>ارسال شبکه</value></data>
+  <data name="MetricGpuTitle.Text" xml:space="preserve"><value>GPU</value></data>
+  <data name="MetricBusiestEngineLabel.Text" xml:space="preserve"><value>فعال‌ترین موتور GPU</value></data>
+  <data name="MetricDedicatedLabel.Text" xml:space="preserve"><value>حافظهٔ اختصاصی</value></data>
+  <data name="MetricSharedLabel.Text" xml:space="preserve"><value>حافظهٔ اشتراکی</value></data>
+  <data name="MetricCpuHistoryTitle.Text" xml:space="preserve"><value>CPU · یک دقیقهٔ اخیر</value></data>
+  <data name="AdvancedInfo.Header" xml:space="preserve"><value>اطلاعات پیشرفتهٔ برنامه</value></data>
+  <data name="ClassificationEvidence.Text" xml:space="preserve"><value>شواهد دسته‌بندی</value></data>
+  <data name="DiskTotals.Text" xml:space="preserve"><value>مجموع نشست دیسک فیزیکی</value></data>
+  <data name="NetworkDetails.Text" xml:space="preserve"><value>جزئیات نشست شبکه</value></data>
+  <data name="GpuDetails.Text" xml:space="preserve"><value>جزئیات شمارندهٔ GPU</value></data>
+  <data name="UnavailableImplementation.Text" xml:space="preserve"><value>جدول‌های سطح پردازش، خط فرمان و فیلدهای امنیتی در این بخش در دسترس نیستند.</value></data>
+  <data name="NavDashboard.Content" xml:space="preserve"><value>داشبورد</value></data>
+  <data name="NavRunning.Content" xml:space="preserve"><value>برنامه‌های در حال اجرا</value></data>
+  <data name="NavPortable.Content" xml:space="preserve"><value>برنامه‌های قابل‌حمل</value></data>
+  <data name="NavHistory.Content" xml:space="preserve"><value>تاریخچه</value></data>
+  <data name="NavSettings.Content" xml:space="preserve"><value>تنظیمات</value></data>
+  <data name="NavAbout.Content" xml:space="preserve"><value>درباره</value></data>
+  <data name="RunningAppsTab.Header" xml:space="preserve"><value>برنامه‌های در حال اجرا</value></data>
+  <data name="RunningAppsTitle.Text" xml:space="preserve"><value>برنامه‌های در حال اجرا</value></data>
+  <data name="SortBy.Text" xml:space="preserve"><value>مرتب‌سازی بر اساس</value></data>
+  <data name="NoComparableData.ToolTipService.ToolTip" xml:space="preserve"><value>همه‌ی مقادیر در دسترس نیستند. برنامه‌ها بر اساس نام مرتب شده‌اند.</value></data>
+  <data name="NoComparableData.Text" xml:space="preserve"><value>داده‌ای برای مقایسه موجود نیست</value></data>
+  <data name="AdvancedToggle.Text" xml:space="preserve"><value>پیشرفته</value></data>
+  <data name="AdvancedToggle.AutomationProperties.Name" xml:space="preserve"><value>نمایش اطلاعات پیشرفتهٔ برنامه</value></data>
+  <data name="AdvancedNotice.Text" xml:space="preserve"><value>حالت پیشرفته فعال است. برای دیدن شواهد انتساب و جزئیات فنی، یک زبانهٔ برنامه را باز کنید و بخش اطلاعات پیشرفته را گسترش دهید.</value></data>
+  <data name="CardCpuLabel.Text" xml:space="preserve"><value>CPU</value></data>
+  <data name="CardMemoryLabel.Text" xml:space="preserve"><value>حافظه</value></data>
+  <data name="CardIoLabel.Text" xml:space="preserve"><value>I/O پردازش</value></data>
+  <data name="CardDiskLabel.Text" xml:space="preserve"><value>دیسک فیزیکی</value></data>
+  <data name="NavRunning.ToolTipService.ToolTip" xml:space="preserve"><value>نمایش برنامه‌های در حال اجرا</value></data>
+  <data name="NavHistory.ToolTipService.ToolTip" xml:space="preserve"><value>تاریخچه‌ی برنامه‌ها در طول زمان</value></data>
+  <data name="NavSettings.ToolTipService.ToolTip" xml:space="preserve"><value>پیکربندی نمونه‌برداری، مدت نگهداری، پوسته و زبان</value></data>
+  <data name="CardNetworkLabel.ToolTipService.ToolTip" xml:space="preserve"><value>بایت‌های بسته‌های ارسالی و دریافتی که از طریق موتور پایش پیشرفته دیده شده‌اند. هیچ بار یا مقصدی جمع‌آوری نمی‌شود.</value></data>
+  <data name="CardGpuLabel.ToolTipService.ToolTip" xml:space="preserve"><value>شلوغ‌ترین موتور GPU در سراسر برنامه. حافظه‌ی اختصاصی و اشتراکی مجموع شمارنده‌های GPU فرایندی ویندوز هستند.</value></data>
+  <data name="CardNetworkLabel.Text" xml:space="preserve"><value>شبکه</value></data>
+  <data name="CardGpuLabel.Text" xml:space="preserve"><value>GPU</value></data>
+  <data name="ProcessSelector.AutomationProperties.Name" xml:space="preserve"><value>پردازش برای عملیات برنامه</value></data>
+  <data name="ProcessPath.AutomationProperties.Name" xml:space="preserve"><value>مسیر فایل اجرایی پردازش انتخاب‌شده</value></data>
+  <data name="SortSelector.AutomationProperties.Name" xml:space="preserve"><value>مرتب‌سازی برنامه‌ها بر اساس</value></data>
+  <data name="AdvancedSwitch.AutomationProperties.Name" xml:space="preserve"><value>نمایش اطلاعات پیشرفتهٔ برنامه</value></data>
+  <data name="RunningApplicationsList.AutomationProperties.Name" xml:space="preserve"><value>برنامه‌های در حال اجرا</value></data>
+  <data name="HistoryPageRoot.AutomationProperties.Name" xml:space="preserve"><value>صفحهٔ تاریخچهٔ سنجه‌های برنامه</value></data>
+  <data name="HistoryLoadingProgress.AutomationProperties.Name" xml:space="preserve"><value>در حال بارگذاری تاریخچهٔ برنامه</value></data>
+  <data name="HistoryApplicationSelector.AutomationProperties.Name" xml:space="preserve"><value>برنامهٔ تاریخچه</value></data>
+  <data name="HistoryRangeSelector.AutomationProperties.Name" xml:space="preserve"><value>بازهٔ زمانی تاریخچه</value></data>
+  <data name="HistoryCharts.AutomationProperties.Name" xml:space="preserve"><value>نمودارهای سنجه‌های تاریخچه</value></data>
+  <data name="HistoryPageTitle.Text" xml:space="preserve"><value>تاریخچه</value></data>
+  <data name="HistoryPageSubtitle.Text" xml:space="preserve"><value>سنجه‌های ذخیره‌شدهٔ برنامه · تاریخچهٔ محلی SQLite</value></data>
+  <data name="HistoryRefreshButton.Content" xml:space="preserve"><value>تازه‌سازی</value></data>
+  <data name="HistoryRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>تازه‌سازی تاریخچهٔ برنامه</value></data>
+  <data name="HistoryChartLegend.Text" xml:space="preserve"><value>خط: دادهٔ اندازه‌گیری‌شده · شکاف: دادهٔ ناموجود</value></data>
+  <data name="SparklineEmpty.Text" xml:space="preserve"><value>در انتظار نمونه‌های واقعی…</value></data>
+  <data name="SparklineSummary.Text" xml:space="preserve"><value>تاریخچهٔ CPU در حال آماده‌سازی است.</value></data>
+  <data name="DiscoveringApplications" xml:space="preserve"><value>در حال یافتن برنامه‌های در حال اجرا…</value></data>
+  <data name="RefreshRetry" xml:space="preserve"><value>بخشی از داده‌های پایش موقتاً در دسترس نیست. دوباره تلاش می‌شود…</value></data>
+  <data name="InstalledApplications" xml:space="preserve"><value>برنامه‌های نصب‌شده</value></data>
+  <data name="InstalledApplicationsDescription" xml:space="preserve"><value>برای باز کردن زبانهٔ پایش زنده، یک برنامه را انتخاب کنید. مؤلفه‌های سیستمی ویندوز و سرویس‌ها در این فهرست نمایش داده نمی‌شوند.</value></data>
+  <data name="PortableApplications" xml:space="preserve"><value>برنامه‌های قابل‌حمل و ثبت‌نشده</value></data>
+  <data name="PortableApplicationsDescription" xml:space="preserve"><value>فایل‌های اجرایی بدون شواهد نصب، جداگانه فهرست می‌شوند.</value></data>
+  <data name="SortApplicationName" xml:space="preserve"><value>نام برنامه</value></data>
+  <data name="SortPid" xml:space="preserve"><value>شناسهٔ پردازش</value></data>
+  <data name="SortCpu" xml:space="preserve"><value>مصرف CPU</value></data>
+  <data name="SortMemory" xml:space="preserve"><value>مصرف حافظه</value></data>
+  <data name="SortProcessIo" xml:space="preserve"><value>نرخ I/O پردازش</value></data>
+  <data name="SortDisk" xml:space="preserve"><value>نرخ دیسک فیزیکی</value></data>
+  <data name="SortNetwork" xml:space="preserve"><value>نرخ شبکه</value></data>
+  <data name="SortGpu" xml:space="preserve"><value>مصرف GPU</value></data>
+  <data name="SortProcessCount" xml:space="preserve"><value>تعداد پردازش‌ها</value></data>
+  <data name="SortAToZ" xml:space="preserve"><value>الف تا ی</value></data>
+  <data name="SortZToA" xml:space="preserve"><value>ی تا الف</value></data>
+  <data name="SortHighestToLowest" xml:space="preserve"><value>بیشترین تا کمترین</value></data>
+  <data name="SortLowestToHighest" xml:space="preserve"><value>کمترین تا بیشترین</value></data>
+  <data name="SortDirectionAutomation" xml:space="preserve"><value>جهت مرتب‌سازی: {0}. برای تغییر به {1} فعال کنید.</value></data>
+  <data name="NoComparableDataText" xml:space="preserve"><value>داده‌ای برای مقایسه موجود نیست</value></data>
+  <data name="RunningLive" xml:space="preserve"><value>در حال اجرا · زنده</value></data>
+  <data name="RunningPartial" xml:space="preserve"><value>در حال اجرا</value></data>
+  <data name="RunningWarming" xml:space="preserve"><value>در حال اجرا · آماده‌سازی سنجه‌ها</value></data>
+  <data name="ProcessCountSingular" xml:space="preserve"><value>{0} پردازش</value></data>
+  <data name="ProcessCountPlural" xml:space="preserve"><value>{0} پردازش</value></data>
+  <data name="HistoryLoading" xml:space="preserve"><value>در حال بارگذاری برنامه‌های ذخیره‌شده…</value></data>
+  <data name="HistoryOpenPrompt" xml:space="preserve"><value>برای بارگذاری سنجه‌های ذخیره‌شده، تاریخچه را باز کنید.</value></data>
+  <data name="HistoryNotLoaded" xml:space="preserve"><value>بارگذاری نشده</value></data>
+  <data name="HistoryDatabaseUnavailable" xml:space="preserve"><value>پایگاه‌دادهٔ تاریخچه در دسترس نیست.</value></data>
+  <data name="HistoryNoSaved" xml:space="preserve"><value>هنوز تاریخچه‌ای برای برنامه‌ها ذخیره نشده است.</value></data>
+  <data name="HistoryLoaded" xml:space="preserve"><value>تاریخچه بارگذاری شد.</value></data>
+  <data name="HistoryLoadedPartial" xml:space="preserve"><value>تاریخچه بارگذاری شد؛ برخی بازه‌ها یا سنجه‌ها داده ندارند.</value></data>
+  <data name="HistoryNoRange" xml:space="preserve"><value>در بازهٔ انتخاب‌شده دادهٔ تاریخی وجود ندارد.</value></data>
+  <data name="HistoryCancelled" xml:space="preserve"><value>درخواست تاریخچه لغو شد.</value></data>
+  <data name="HistoryQueryFailed" xml:space="preserve"><value>بارگذاری تاریخچه انجام نشد.</value></data>
+  <data name="HistoryApplicationNotFound" xml:space="preserve"><value>برنامه پیدا نشد.</value></data>
+  <data name="HistoryLastUpdatedFormat" xml:space="preserve"><value>آخرین به‌روزرسانی {0}</value></data>
+  <data name="HistoryEmptyState" xml:space="preserve"><value>تاریخچه خالی</value></data>
+  <data name="HistoryPartialState" xml:space="preserve"><value>ناقص</value></data>
+  <data name="HistoryDatabaseUnavailableState" xml:space="preserve"><value>پایگاه‌داده در دسترس نیست</value></data>
+  <data name="HistoryEmptySummary" xml:space="preserve"><value>در بازهٔ {1} تاریخچه‌ای برای {0} وجود ندارد.</value></data>
+  <data name="HistoryNoMeasuredSummary" xml:space="preserve"><value>{0} مقدار اندازه‌گیری‌شده ندارد؛ نمونه‌های ناموجود به‌صورت شکاف باقی می‌مانند.</value></data>
+  <data name="HistoryPartialAvailability" xml:space="preserve"><value>ناقص؛ {0} حد پایین و {1} نمونهٔ ناموجود</value></data>
+  <data name="HistoryMeasuredSummary" xml:space="preserve"><value>{0}; حداقل {1}، حداکثر {2}، آخرین {3}؛ {4}؛ {5} کاهش‌نمونه‌شده؛ {6} از {7} نقطه نمایش داده شد.</value></data>
+  <data name="Range5Minutes" xml:space="preserve"><value>۵ دقیقه</value></data>
+  <data name="Range15Minutes" xml:space="preserve"><value>۱۵ دقیقه</value></data>
+  <data name="Range1Hour" xml:space="preserve"><value>۱ ساعت</value></data>
+  <data name="Range3Hours" xml:space="preserve"><value>۳ ساعت</value></data>
+  <data name="Range6Hours" xml:space="preserve"><value>۶ ساعت</value></data>
+  <data name="Range12Hours" xml:space="preserve"><value>۱۲ ساعت</value></data>
+  <data name="Range24Hours" xml:space="preserve"><value>۲۴ ساعت</value></data>
+  <data name="MetricCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="MetricWorkingSet" xml:space="preserve"><value>حافظهٔ در حال استفاده (Working Set)</value></data>
+  <data name="MetricIoRead" xml:space="preserve"><value>خواندن I/O پردازش</value></data>
+  <data name="MetricIoWrite" xml:space="preserve"><value>نوشتن I/O پردازش</value></data>
+  <data name="MetricDiskRead" xml:space="preserve"><value>خواندن دیسک فیزیکی</value></data>
+  <data name="MetricDiskWrite" xml:space="preserve"><value>نوشتن دیسک فیزیکی</value></data>
+  <data name="MetricNetworkReceive" xml:space="preserve"><value>دریافت شبکه</value></data>
+  <data name="MetricNetworkSend" xml:space="preserve"><value>ارسال شبکه</value></data>
+  <data name="MetricGpuUtilization" xml:space="preserve"><value>مصرف GPU</value></data>
+  <data name="MetricGpuDedicated" xml:space="preserve"><value>حافظهٔ اختصاصی GPU</value></data>
+  <data name="MetricGpuShared" xml:space="preserve"><value>حافظهٔ اشتراکی GPU</value></data>
+  <data name="UnitCount" xml:space="preserve"><value>تعداد</value></data>
+  <data name="UnitTime" xml:space="preserve"><value>زمان</value></data>
+  <data name="UnitUnknown" xml:space="preserve"><value>نامشخص</value></data>
+  <data name="ScopeSystem" xml:space="preserve"><value>کل سیستم</value></data>
+  <data name="ScopeLogicalApplication" xml:space="preserve"><value>این برنامه</value></data>
+  <data name="ScopeProcess" xml:space="preserve"><value>فرایند</value></data>
+  <data name="ScopeCollector" xml:space="preserve"><value>زیرسیستم پایش</value></data>
+  <data name="SourceWindowsPerformanceCounters" xml:space="preserve"><value>شمارنده‌های کارایی ویندوز</value></data>
+  <data name="SourceOperatingSystem" xml:space="preserve"><value>سیستم‌عامل</value></data>
+  <data name="SourceAdvancedMonitoring" xml:space="preserve"><value>موتور پایش پیشرفته</value></data>
+  <data name="SourceCalculated" xml:space="preserve"><value>محاسبه‌ی Monitoring XS</value></data>
+  <data name="SourceLocalHistory" xml:space="preserve"><value>پایگاه‌داده‌ی تاریخچه‌ی محلی</value></data>
+  <data name="SourceUnknown" xml:space="preserve"><value>منبع نامشخص</value></data>
+  <data name="SamplingCurrentSnapshot" xml:space="preserve"><value>مقدار لحظه‌ای</value></data>
+  <data name="SamplingPeriodically" xml:space="preserve"><value>نمونه‌برداری دوره‌ای</value></data>
+  <data name="SamplingAggregated" xml:space="preserve"><value>جمع‌آوری‌شده در بازه‌ی نمونه‌برداری</value></data>
+  <data name="SamplingCumulative" xml:space="preserve"><value>تجمعی از زمان شروع</value></data>
+  <data name="SamplingUnknown" xml:space="preserve"><value>نحوه‌ی نمونه‌برداری نامشخص</value></data>
+  <data name="MetricMetadataFormat" xml:space="preserve"><value>{0} · {1} · {2} · {3}</value></data>
+  <data name="UnitPercent" xml:space="preserve"><value>٪</value></data>
+  <data name="UnitBytes" xml:space="preserve"><value>بایت</value></data>
+  <data name="UnitBytesPerSecond" xml:space="preserve"><value>بایت/ثانیه</value></data>
+  <data name="SelectedRangeFormat" xml:space="preserve"><value>بازهٔ انتخاب‌شده: {0}</value></data>
+  <data name="TooltipReason" xml:space="preserve"><value>دلیل</value></data>
+  <data name="TooltipValue" xml:space="preserve"><value>مقدار</value></data>
+  <data name="SelectProcess" xml:space="preserve"><value>یک پردازش را انتخاب کنید.</value></data>
+  <data name="NoProcessSelected" xml:space="preserve"><value>پردازشی انتخاب نشده است</value></data>
+  <data name="Ready" xml:space="preserve"><value>آماده</value></data>
+  <data name="ReadyLastAction" xml:space="preserve"><value>آماده. آخرین عملیات: {0}</value></data>
+  <data name="EndTaskTitle" xml:space="preserve"><value>به این پردازش پایان داده شود؟</value></data>
+  <data name="EndTaskMessage" xml:space="preserve"><value>آیا می‌خواهید برنامهٔ {0} ({1}، PID {2}) را پایان دهید؟ ممکن است کار ذخیره‌نشده از دست برود.</value></data>
+  <data name="EndTaskConfirm" xml:space="preserve"><value>پایان دادن به پردازش</value></data>
+  <data name="EndTaskCancelled" xml:space="preserve"><value>پایان دادن به پردازش لغو شد.</value></data>
+  <data name="EndingTask" xml:space="preserve"><value>در حال پایان دادن به پردازش…</value></data>
+  <data name="EndTreeTitle" xml:space="preserve"><value>به درخت پردازش پایان داده شود؟</value></data>
+  <data name="EndTreeMessage" xml:space="preserve"><value>آیا می‌خواهید برنامهٔ {0} ({1}، PID {2}) و {3} پردازش فرزند شناسایی‌شده را پایان دهید؟ ممکن است کار ذخیره‌نشده از دست برود.</value></data>
+  <data name="EndTreeConfirm" xml:space="preserve"><value>پایان دادن به درخت پردازش</value></data>
+  <data name="EndTreeCancelled" xml:space="preserve"><value>پایان دادن به درخت پردازش لغو شد.</value></data>
+  <data name="VerifyingTree" xml:space="preserve"><value>در حال بررسی درخت پردازش…</value></data>
+  <data name="EndingTree" xml:space="preserve"><value>در حال پایان دادن به درخت پردازش…</value></data>
+  <data name="OpeningLocation" xml:space="preserve"><value>در حال باز کردن محل فایل…</value></data>
+  <data name="VerifyingDetails" xml:space="preserve"><value>در حال بررسی جزئیات پردازش…</value></data>
+  <data name="DetailsCopied" xml:space="preserve"><value>جزئیات پردازش کپی شد.</value></data>
+  <data name="ClipboardUnavailable" xml:space="preserve"><value>کلیپ‌بورد در دسترس نیست؛ جزئیات پردازش کپی نشد.</value></data>
+  <data name="Cancel" xml:space="preserve"><value>لغو</value></data>
+  <data name="DashboardStatus" xml:space="preserve"><value>{0} نصب‌شده · {1} قابل‌حمل · به‌روزرسانی: {2}</value></data>
+  <data name="MemoryLabel" xml:space="preserve"><value>حافظه</value></data>
+  <data name="DedicatedLabel" xml:space="preserve"><value>اختصاصی</value></data>
+  <data name="SharedLabel" xml:space="preserve"><value>اشتراکی</value></data>
+  <data name="AtLeast" xml:space="preserve"><value>حداقل</value></data>
+  <data name="ApplicationSearchBox.PlaceholderText" xml:space="preserve"><value>جست‌وجوی برنامه‌ها</value></data>
+  <data name="ApplicationSearchBox.AutomationProperties.Name" xml:space="preserve"><value>جست‌وجو در برنامه‌های در حال اجرا</value></data>
+  <data name="ApplicationSearchBox.AutomationProperties.HelpText" xml:space="preserve"><value>نام برنامه، نام فایل اجرایی، ناشر و شناسهٔ بسته را بدون خواندن خط فرمان جست‌وجو می‌کند.</value></data>
+  <data name="ClearApplicationSearchButton.Content" xml:space="preserve"><value>پاک کردن</value></data>
+  <data name="ClearApplicationSearchButton.AutomationProperties.Name" xml:space="preserve"><value>پاک کردن جست‌وجوی برنامه‌ها</value></data>
+  <data name="ClearApplicationSearchButton.AutomationProperties.HelpText" xml:space="preserve"><value>فهرست کامل و فعلی برنامه‌ها را برمی‌گرداند.</value></data>
+  <data name="NoSearchResults.Text" xml:space="preserve"><value>هیچ برنامه‌ای با این جست‌وجو مطابقت ندارد.</value></data>
+  <data name="MetricExplanations.Header" xml:space="preserve"><value>توضیح سنجه‌ها</value></data>
+  <data name="MetricAdvancedDetails.Header" xml:space="preserve"><value>جزئیات پیشرفته</value></data>
+  <data name="MetricProviderLabel.Text" xml:space="preserve"><value>ارائه‌دهندهٔ فنی</value></data>
+  <data name="MetricExplanationCpu" xml:space="preserve"><value>سهم فعلی این برنامه از ظرفیت کل CPU دستگاه.</value></data>
+  <data name="MetricExplanationMemory" xml:space="preserve"><value>حافظهٔ Working Set فعلی که از مجموع پردازش‌های این برنامه به‌دست می‌آید.</value></data>
+  <data name="MetricExplanationProcessIo" xml:space="preserve"><value>نرخ فعلی خواندن و نوشتن شمارنده‌های I/O پردازش؛ این مقدار فعالیت دیسک فیزیکی نیست.</value></data>
+  <data name="MetricExplanationPhysicalDisk" xml:space="preserve"><value>نرخ فعلی دیسک فیزیکی که «پایش پیشرفته» به این برنامه نسبت داده است.</value></data>
+  <data name="MetricExplanationNetwork" xml:space="preserve"><value>نرخ فعلی بایت‌های ارسالی و دریافتی نسبت‌داده‌شده به برنامه؛ محتوای بسته‌ها و مقصدها جمع‌آوری نمی‌شوند.</value></data>
+  <data name="MetricExplanationGpu" xml:space="preserve"><value>میزان استفادهٔ فعلی از فعال‌ترین موتور معتبر GPU مورد استفادهٔ برنامه.</value></data>
+  <data name="MetricExplanationGpuDedicated" xml:space="preserve"><value>حافظهٔ اختصاصی GPU که ویندوز برای پردازش‌های برنامه گزارش می‌کند.</value></data>
+  <data name="MetricExplanationGpuShared" xml:space="preserve"><value>حافظهٔ اشتراکی GPU گزارش‌شده برای پردازش‌های برنامه؛ یک تخصیص مشترک ممکن است برای چند پردازش شمرده شود.</value></data>
+  <data name="MetricExplanationHistory" xml:space="preserve"><value>نمونه‌های محلی نگه‌داری‌شده؛ داده‌های ناموجود به‌صورت شکاف باقی می‌مانند و هرگز با صفر ساختگی جایگزین نمی‌شوند.</value></data>
+  <data name="MetricAdvancedCpu" xml:space="preserve"><value>میزان استفاده در سطح پردازش که برای برنامه تجمیع می‌شود؛ هر {0:0.##} ثانیه نمونه‌برداری می‌شود. برای محاسبهٔ نخستین مقدار، یک نمونهٔ دیگر لازم است. وضعیت: {1}</value></data>
+  <data name="MetricAdvancedMemory" xml:space="preserve"><value>Working Set بر حسب بایت؛ مقدارهای فعلی پردازش‌ها برای برنامه جمع می‌شوند و هر {0:0.##} ثانیه نمونه‌برداری می‌شوند. وضعیت: {1}</value></data>
+  <data name="MetricAdvancedProcessIo" xml:space="preserve"><value>بایت‌های خوانده‌شده و نوشته‌شده در ثانیه از شمارنده‌های تجمعی پردازش؛ نرخ‌ها هر {0:0.##} ثانیه محاسبه می‌شوند و مجموع نشست به‌صورت تجمعی نگه‌داری می‌شود. وضعیت: {1}</value></data>
+  <data name="MetricAdvancedPhysicalDisk" xml:space="preserve"><value>بایت‌های نسبت‌داده‌شده در ثانیه، همراه با مجموع نشست؛ هر {0:0.##} ثانیه نمونه‌برداری می‌شود. از دست رفتن داده باعث می‌شود مجموع نشست فقط یک حد پایین معتبر باشد. وضعیت: {1}</value></data>
+  <data name="MetricAdvancedNetwork" xml:space="preserve"><value>بایت‌های ارسالی و دریافتی نسبت‌داده‌شده در ثانیه، همراه با مجموع نشست؛ هر {0:0.##} ثانیه نمونه‌برداری می‌شود. از دست رفتن داده باعث می‌شود مجموع نشست فقط یک حد پایین معتبر باشد. وضعیت: {1}</value></data>
+  <data name="MetricAdvancedGpu" xml:space="preserve"><value>میزان استفادهٔ فعال‌ترین موتور از داده‌های عملکردی ویندوز؛ هر {0:0.##} ثانیه نمونه‌برداری و بر پایهٔ هویت آداپتور و موتور تجمیع می‌شود. وضعیت: {1}</value></data>
+  <data name="MetricAdvancedGpuDedicated" xml:space="preserve"><value>بایت فعلی از مجموع شمارنده‌های حافظهٔ اختصاصی هر پردازش در هر {0:0.##} ثانیه؛ دسترس‌پذیری آن از بهره‌برداری GPU مستقل است. وضعیت: {1}</value></data>
+  <data name="MetricAdvancedGpuShared" xml:space="preserve"><value>بایت فعلی از مجموع شمارنده‌های حافظهٔ اشتراکی هر پردازش در هر {0:0.##} ثانیه؛ اشتراک بین پردازش‌ها می‌تواند شمارش تکراری بسازد. وضعیت: {1}</value></data>
+  <data name="MetricAdvancedHistory" xml:space="preserve"><value>تاریخچهٔ محلی از نمونه‌های زنده‌ای ساخته می‌شود که هر {0:0.##} ثانیه ثبت می‌شوند؛ داده‌ها با ظرفیت محدود نگه‌داری و در صورت نیاز کم‌نمونه‌برداری می‌شوند. وضعیت دسترس‌پذیری و حد پایین معتبر حفظ می‌شود. وضعیت: {1}</value></data>
+  <data name="ReasonAvailable" xml:space="preserve"><value>داده کامل و در دسترس است.</value></data>
+  <data name="ReasonPartial" xml:space="preserve"><value>همهٔ داده‌های قابل انتساب در دسترس نیستند؛ مقدار نمایش‌داده‌شده حد پایین معتبر است.</value></data>
+  <data name="ReasonWarmingUp" xml:space="preserve"><value>در حال آماده‌سازی؛ برای محاسبه یک نمونهٔ معتبر دیگر لازم است.</value></data>
+  <data name="ReasonPermissionRequired" xml:space="preserve"><value>این ارائه‌دهنده یا پردازش به دسترسی بیشتری نیاز دارد.</value></data>
+  <data name="ReasonProviderUnsupported" xml:space="preserve"><value>این ارائه‌دهندهٔ پایش ویندوز در سیستم فعلی پشتیبانی نمی‌شود.</value></data>
+  <data name="ReasonServiceNotInstalled" xml:space="preserve"><value>سرویس پایش پیشرفته نصب نشده است.</value></data>
+  <data name="ReasonServiceStopped" xml:space="preserve"><value>سرویس پایش پیشرفته متوقف است.</value></data>
+  <data name="ReasonServiceConnection" xml:space="preserve"><value>اتصال محلی سرویس پایش پیشرفته در دسترس نیست.</value></data>
+  <data name="ReasonProtocolMismatch" xml:space="preserve"><value>نسخهٔ پروتکل برنامه و سرویس پایش پیشرفته یکسان نیست.</value></data>
+  <data name="ReasonSessionConflict" xml:space="preserve"><value>یک نشست پایش دیگر با این ارائه‌دهنده تداخل دارد.</value></data>
+  <data name="ReasonEventLoss" xml:space="preserve"><value>برخی نمونه‌های ارائه‌دهنده یا صف از دست رفته‌اند؛ مقدارهای نمایش‌داده‌شده حد پایین معتبرند.</value></data>
+  <data name="ReasonProcessExited" xml:space="preserve"><value>پردازش پیش از خواندن شمارنده‌ها بسته شد.</value></data>
+  <data name="ReasonDriverCounters" xml:space="preserve"><value>درایور گرافیک شمارنده‌های لازم برای هر پردازش را ارائه نمی‌کند.</value></data>
+  <data name="ReasonNoAttributedData" xml:space="preserve"><value>هنوز داده‌ای برای نسبت دادن به این برنامه ثبت نشده است.</value></data>
+  <data name="ReasonHistoryNotCollected" xml:space="preserve"><value>هنوز تاریخچه‌ای جمع‌آوری نشده است.</value></data>
+  <data name="ReasonTemporarilyUnavailable" xml:space="preserve"><value>داده فعلاً در دسترس نیست.</value></data>
+  <data name="ReasonCollectorError" xml:space="preserve"><value>جمع‌آورنده با خطا روبه‌رو شد؛ سایر سنجه‌ها مستقل ادامه می‌یابند.</value></data>
+  <data name="NavDiagnostics.Content" xml:space="preserve"><value>عیب‌یابی</value></data>
+  <data name="NavDiagnostics.ToolTipService.ToolTip" xml:space="preserve"><value>عیب‌یابی</value></data>
+  <data name="DiagnosticsPageRoot.AutomationProperties.Name" xml:space="preserve"><value>صفحهٔ عیب‌یابی Monitoring XS</value></data>
+  <data name="DiagnosticsPageTitle.Text" xml:space="preserve"><value>عیب‌یابی</value></data>
+  <data name="DiagnosticsPageSubtitle.Text" xml:space="preserve"><value>وضعیت برنامه، جمع‌آورنده‌ها، سرویس و تاریخچهٔ محلی</value></data>
+  <data name="DiagnosticsRefreshProgress.AutomationProperties.Name" xml:space="preserve"><value>در حال تازه‌سازی عیب‌یابی</value></data>
+  <data name="DiagnosticsRefreshButton.Content" xml:space="preserve"><value>تازه‌سازی عیب‌یابی</value></data>
+  <data name="DiagnosticsRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>تازه‌سازی عیب‌یابی</value></data>
+  <data name="DiagnosticsRefreshButton.AutomationProperties.HelpText" xml:space="preserve"><value>اطلاعات سلامت محلی را تازه می‌کند و اتصال فعلی سرویس پایش پیشرفته را بدون راه‌اندازی دوباره می‌آزماید.</value></data>
+  <data name="DiagnosticsCopyButton.Content" xml:space="preserve"><value>کپی خلاصهٔ امن</value></data>
+  <data name="DiagnosticsCopyButton.AutomationProperties.Name" xml:space="preserve"><value>کپی خلاصهٔ امن عیب‌یابی</value></data>
+  <data name="DiagnosticsCopyButton.AutomationProperties.HelpText" xml:space="preserve"><value>فقط وضعیت‌های مجاز را بدون مسیر، خط فرمان، توکن یا دادهٔ خصوصی کاربر کپی می‌کند.</value></data>
+  <data name="DiagnosticsApplicationSection.Header" xml:space="preserve"><value>Monitoring XS</value></data>
+  <data name="DiagnosticsCollectorsSection.Header" xml:space="preserve"><value>پایش منابع</value></data>
+  <data name="DiagnosticsServiceSection.Header" xml:space="preserve"><value>سرویس پایش پیشرفته</value></data>
+  <data name="DiagnosticsStorageSection.Header" xml:space="preserve"><value>ذخیره‌سازی تاریخچه</value></data>
+  <data name="DiagnosticsAdvancedSection.Header" xml:space="preserve"><value>جزئیات فنی برای عیب‌یابی</value></data>
+  <data name="DiagnosticsWaitingForSnapshot" xml:space="preserve"><value>در انتظار نخستین نمونهٔ زندهٔ پایش.</value></data>
+  <data name="DiagnosticsHealthySummary" xml:space="preserve"><value>جمع‌آورنده‌های زنده و تاریخچهٔ محلی به‌درستی کار می‌کنند.</value></data>
+  <data name="DiagnosticsDegradedSummary" xml:space="preserve"><value>برخی بخش‌های پایش یا تاریخچهٔ محلی نیاز به بررسی دارند؛ سنجه‌های در دسترس به کار خود ادامه می‌دهند.</value></data>
+  <data name="DiagnosticsCopied" xml:space="preserve"><value>خلاصهٔ امن عیب‌یابی کپی شد.</value></data>
+  <data name="DiagnosticsCopyFailed" xml:space="preserve"><value>کپی خلاصهٔ امن عیب‌یابی انجام نشد.</value></data>
+  <data name="DiagnosticsSafeSummaryTitle" xml:space="preserve"><value>خلاصهٔ امن عیب‌یابی Monitoring XS</value></data>
+  <data name="DiagnosticsEnabled" xml:space="preserve"><value>فعال</value></data>
+  <data name="DiagnosticsSeconds" xml:space="preserve"><value>{0:0.##} ثانیه</value></data>
+  <data name="DiagnosticsHours" xml:space="preserve"><value>{0:0.##} ساعت</value></data>
+  <data name="DiagnosticsDuration" xml:space="preserve"><value>{0} ساعت، {1} دقیقه و {2} ثانیه</value></data>
+  <data name="DiagnosticsVersion" xml:space="preserve"><value>نسخهٔ برنامه</value></data>
+  <data name="DiagnosticsBuild" xml:space="preserve"><value>پیکربندی ساخت</value></data>
+  <data name="DiagnosticsArchitecture" xml:space="preserve"><value>معماری اجرایی</value></data>
+  <data name="DiagnosticsWindows" xml:space="preserve"><value>نسخه و بیلد ویندوز</value></data>
+  <data name="DiagnosticsWindowsAppSdk" xml:space="preserve"><value>نسخهٔ Windows App SDK Runtime</value></data>
+  <data name="DiagnosticsLanguage" xml:space="preserve"><value>زبان رابط کاربری</value></data>
+  <data name="DiagnosticsFlowDirection" xml:space="preserve"><value>جهت چیدمان</value></data>
+  <data name="DiagnosticsSampling" xml:space="preserve"><value>فاصلهٔ نمونه‌برداری زنده</value></data>
+  <data name="DiagnosticsUptime" xml:space="preserve"><value>مدت اجرای برنامه</value></data>
+  <data name="DiagnosticsCpuMemory" xml:space="preserve"><value>CPU و حافظه</value></data>
+  <data name="DiagnosticsProcessIo" xml:space="preserve"><value>I/O پردازش</value></data>
+  <data name="DiagnosticsPhysicalDisk" xml:space="preserve"><value>دیسک فیزیکی</value></data>
+  <data name="DiagnosticsNetwork" xml:space="preserve"><value>شبکه</value></data>
+  <data name="DiagnosticsGpu" xml:space="preserve"><value>GPU</value></data>
+  <data name="DiagnosticsHistoryStatus" xml:space="preserve"><value>وضعیت ذخیره‌سازی تاریخچه</value></data>
+  <data name="DiagnosticsServiceState" xml:space="preserve"><value>وضعیت نصب و اجرا</value></data>
+  <data name="DiagnosticsServiceConnection" xml:space="preserve"><value>اتصال و برقراری ارتباط</value></data>
+  <data name="DiagnosticsHistoryEnabled" xml:space="preserve"><value>جمع‌آوری تاریخچه</value></data>
+  <data name="DiagnosticsDatabasePath" xml:space="preserve"><value>مسیر پایگاه‌داده (حساس؛ در خلاصهٔ کپی‌شده نمی‌آید)</value></data>
+  <data name="DiagnosticsDatabaseSize" xml:space="preserve"><value>اندازهٔ تقریبی پایگاه‌داده</value></data>
+  <data name="DiagnosticsRetention" xml:space="preserve"><value>تنظیم نگه‌داری</value></data>
+  <data name="DiagnosticsStorageQueue" xml:space="preserve"><value>عمق / ظرفیت صف نوشتن</value></data>
+  <data name="DiagnosticsStorageWrites" xml:space="preserve"><value>دسته‌ها / نمونه‌های ثبت‌شده</value></data>
+  <data name="DiagnosticsStorageDrops" xml:space="preserve"><value>دسته‌های ازدست‌رفتهٔ تاریخچه</value></data>
+  <data name="DiagnosticsStorageFailures" xml:space="preserve"><value>خطاهای نوشتن تاریخچه</value></data>
+  <data name="DiagnosticsServiceIdentity" xml:space="preserve"><value>شناسهٔ سرویس</value></data>
+  <data name="DiagnosticsProtocol" xml:space="preserve"><value>پروتکل مورد انتظار</value></data>
+  <data name="DiagnosticsDiskProvider" xml:space="preserve"><value>ارائه‌دهندهٔ دیسک فیزیکی</value></data>
+  <data name="DiagnosticsDiskQueue" xml:space="preserve"><value>عمق / بیشینهٔ مشاهده‌شدهٔ صف دیسک فیزیکی</value></data>
+  <data name="DiagnosticsDiskLost" xml:space="preserve"><value>نمونه‌های ازدست‌رفته / حذف‌شدهٔ دیسک فیزیکی</value></data>
+  <data name="DiagnosticsDiskLastSuccess" xml:space="preserve"><value>آخرین رخداد موفق دیسک فیزیکی</value></data>
+  <data name="DiagnosticsNetworkProvider" xml:space="preserve"><value>ارائه‌دهندهٔ شبکه</value></data>
+  <data name="DiagnosticsNetworkQueue" xml:space="preserve"><value>عمق / ظرفیت صف شبکه</value></data>
+  <data name="DiagnosticsNetworkLost" xml:space="preserve"><value>نمونه‌های ازدست‌رفته / حذف‌شدهٔ شبکه</value></data>
+  <data name="DiagnosticsNetworkLastSuccess" xml:space="preserve"><value>آخرین رخداد موفق شبکه</value></data>
+  <data name="DiagnosticsGpuProvider" xml:space="preserve"><value>ارائه‌دهندهٔ GPU</value></data>
+  <data name="DiagnosticsGpuDuration" xml:space="preserve"><value>مدت جمع‌آوری GPU</value></data>
+  <data name="DiagnosticsGpuPartial" xml:space="preserve"><value>کامل بودن داده‌های GPU</value></data>
+  <data name="DiagnosticsStorageRecovery" xml:space="preserve"><value>وضعیت بازیابی پایگاه‌داده</value></data>
+  <data name="DiagnosticsRecoveredCorruption" xml:space="preserve"><value>پایگاه‌دادهٔ آسیب‌دیده قرنطینه شد و یک پایگاه‌دادهٔ تازه ساخته شد.</value></data>
+  <data name="DiagnosticsNoRecovery" xml:space="preserve"><value>در حال حاضر بازیابی خرابی گزارش نشده است.</value></data>
+  <data name="DiagnosticsComplete" xml:space="preserve"><value>کامل</value></data>
+  <data name="DiagnosticsDiskCompleteness" xml:space="preserve"><value>کامل بودن داده‌های نشست دیسک فیزیکی</value></data>
+  <data name="DiagnosticsDiskDuration" xml:space="preserve"><value>مدت پردازش دیسک فیزیکی</value></data>
+  <data name="DiagnosticsNetworkCompleteness" xml:space="preserve"><value>کامل بودن داده‌های نشست شبکه</value></data>
+  <data name="DiagnosticsNetworkDuration" xml:space="preserve"><value>میانگین / بیشینهٔ مدت پردازش شبکه</value></data>
+  <data name="ReasonHistoryDatabaseUnavailable" xml:space="preserve"><value>پایگاه‌دادهٔ محلی تاریخچه در دسترس نیست.</value></data>
+  <data name="DiagnosticsIntroduction" xml:space="preserve"><value>این صفحه وضعیت Monitoring XS، پایش منابع، پایش پیشرفته و تاریخچهٔ محلی را بررسی می‌کند.</value></data>
+  <data name="DiagnosticsBeginnerAllHealthy" xml:space="preserve"><value>همه‌چیز به‌درستی کار می‌کند.</value></data>
+  <data name="DiagnosticsBeginnerAttentionNeeded" xml:space="preserve"><value>برخی ویژگی‌ها نیاز به بررسی دارند.</value></data>
+  <data name="DiagnosticsBeginnerMonitoringXS" xml:space="preserve"><value>Monitoring XS</value></data>
+  <data name="DiagnosticsBeginnerResourceMonitoring" xml:space="preserve"><value>پایش منابع</value></data>
+  <data name="DiagnosticsBeginnerAdvancedService" xml:space="preserve"><value>سرویس پایش پیشرفته</value></data>
+  <data name="DiagnosticsBeginnerHistory" xml:space="preserve"><value>ذخیره‌سازی تاریخچه</value></data>
+  <data name="DiagnosticsStatusWorking" xml:space="preserve"><value>در حال کار</value></data>
+  <data name="DiagnosticsStatusAttention" xml:space="preserve"><value>نیازمند بررسی</value></data>
+  <data name="DiagnosticsRuntimeState" xml:space="preserve"><value>وضعیت موتور پایش</value></data>
+  <data name="DiagnosticsRuntimeRunning" xml:space="preserve"><value>در حال نمونه‌برداری</value></data>
+  <data name="DiagnosticsRuntimeIdle" xml:space="preserve"><value>آماده (در انتظار شروع)</value></data>
+  <data name="DiagnosticsRuntimeSession" xml:space="preserve"><value>مدت جلسه‌ی پایش</value></data>
+  <data name="DiagnosticsLastSnapshot" xml:space="preserve"><value>آخرین نمونه‌ی زنده</value></data>
+  <data name="DiagnosticsNeverSampled" xml:space="preserve"><value>هنوز نمونه‌ای گرفته نشده</value></data>
+  <data name="DiagnosticsProcesses" xml:space="preserve"><value>فرایندهای شناسایی‌شده</value></data>
+  <data name="DiagnosticsProcessesPartial" xml:space="preserve"><value>برخی فرایندها به‌طور کامل شناسایی نشدند</value></data>
+  <data name="DiagnosticsSystemOverview" xml:space="preserve"><value>نمای کلی سیستم</value></data>
+  <data name="DiagnosticsSystemOverviewAvailable" xml:space="preserve"><value>شاخص‌های زنده‌ی سیستم موجودند</value></data>
+  <data name="DiagnosticsSystemOverviewUnavailable" xml:space="preserve"><value>در انتظار اولین نمونه‌ی سیستم</value></data>
+  <data name="DiagnosticsSelfCpu" xml:space="preserve"><value>مصرف پردازنده‌ی Monitoring XS</value></data>
+  <data name="DiagnosticsSelfMemory" xml:space="preserve"><value>حافظه‌ی کاری Monitoring XS</value></data>
+  <data name="DiagnosticsStatusUnavailable" xml:space="preserve"><value>در دسترس نیست</value></data>
+  <data name="DiagnosticsExplanationMonitoringXS" xml:space="preserve"><value>برنامه در حال اجراست و داده‌ها را جمع‌آوری می‌کند.</value></data>
+  <data name="DiagnosticsExplanationResourceMonitoring" xml:space="preserve"><value>سنجه‌های CPU، حافظه و I/O پردازش در حال جمع‌آوری‌اند.</value></data>
+  <data name="DiagnosticsExplanationAdvancedService" xml:space="preserve"><value>سنجه‌های شبکه و دیسک به سرویس پایش پیشرفته نیاز دارند.</value></data>
+  <data name="DiagnosticsExplanationHistory" xml:space="preserve"><value>داده‌های تاریخی سنجه‌ها به‌صورت محلی ذخیره می‌شوند.</value></data>
+  <data name="MetricExplanationsAbout" xml:space="preserve"><value>دربارهٔ سنجه‌ها</value></data>
+  <data name="MetricExplanationsAboutDescription" xml:space="preserve"><value>هر سنجه نشان می‌دهد این برنامه چگونه از منابع سیستم استفاده می‌کند. برای دیدن جزئیات فنی، سنجه را گسترش دهید.</value></data>
+  <data name="SelectedProcessExited" xml:space="preserve"><value>پردازش انتخاب‌شده بسته شده است.</value></data>
+  <data name="ProcessApplication" xml:space="preserve"><value>برنامه</value></data>
+  <data name="ProcessName" xml:space="preserve"><value>نام پردازش</value></data>
+  <data name="ProcessId" xml:space="preserve"><value>شناسهٔ پردازش</value></data>
+  <data name="ProcessStatus" xml:space="preserve"><value>وضعیت</value></data>
+  <data name="ProcessArchitecture" xml:space="preserve"><value>معماری</value></data>
+  <data name="ProcessExecutablePath" xml:space="preserve"><value>مسیر فایل اجرایی</value></data>
+  <data name="ProcessPublisher" xml:space="preserve"><value>ناشر</value></data>
+  <data name="ProcessFileVersion" xml:space="preserve"><value>نسخهٔ فایل</value></data>
+  <data name="ProcessStartTime" xml:space="preserve"><value>زمان شروع</value></data>
+  <data name="ProcessRunningDuration" xml:space="preserve"><value>مدت اجرا</value></data>
+  <data name="ProcessCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="ProcessMemory" xml:space="preserve"><value>حافظه</value></data>
+  <data name="ProcessThreads" xml:space="preserve"><value>رشته‌ها</value></data>
+  <data name="ProcessHandles" xml:space="preserve"><value>دسته‌ها</value></data>
+  <data name="ProcessParentPid" xml:space="preserve"><value>شناسهٔ پردازش والد</value></data>
+  <data name="ProcessParent" xml:space="preserve"><value>پردازش والد</value></data>
+  <data name="ProcessIdentity" xml:space="preserve"><value>هویت پردازش</value></data>
+  <data name="ProcessArchitectureX86" xml:space="preserve"><value>x86</value></data>
+  <data name="ProcessArchitectureX64" xml:space="preserve"><value>x64</value></data>
+  <data name="ProcessArchitectureArm64" xml:space="preserve"><value>ARM64</value></data>
+  <data name="ProcessArchitectureUnknown" xml:space="preserve"><value>نامشخص</value></data>
+  <data name="ProcessRunning" xml:space="preserve"><value>در حال اجرا</value></data>
+  <data name="NavAbout.ToolTipService.ToolTip" xml:space="preserve"><value>دربارهٔ Monitoring XS</value></data>
+  <data name="AboutPageTitle" xml:space="preserve"><value>درباره</value></data>
+  <data name="AboutDescription" xml:space="preserve"><value>پایشگر سبک منابع ویندوز که مصرف منابع را بر اساس برنامه‌ها نمایش می‌دهد، نه فهرست خام پردازش‌ها.</value></data>
+  <data name="AboutPlatform" xml:space="preserve"><value>ویندوز ۱۰ (۱۸۰۹+) و ویندوز ۱۱</value></data>
+  <data name="AboutOpenSource" xml:space="preserve"><value>متن‌باز و منتشرشده تحت مجوز MIT. مشارکت جامعه خوش‌آمد است.</value></data>
+  <data name="AboutPrivacySummary" xml:space="preserve"><value>حریم خصوصی در اولویت است</value></data>
+  <data name="AboutPrivacyDetail" xml:space="preserve"><value>همهٔ داده‌ها روی دستگاه شما باقی می‌مانند؛ بدون تله‌متری، بارگذاری ابری یا ردیابی. خروجی‌های عیب‌یابی هرگز شامل خط فرمان، توکن یا اطلاعات محرمانه نمی‌شوند.</value></data>
+  <data name="AboutRepository" xml:space="preserve"><value>مخزن</value></data>
+  <data name="AboutLicense" xml:space="preserve"><value>مجوز</value></data>
+  <data name="AboutCopyright" xml:space="preserve"><value>حق نشر</value></data>
+  <data name="AboutBetaBadge" xml:space="preserve"><value>بتای عمومی</value></data>
+  <data name="WhatsNewTitle" xml:space="preserve"><value>تازه‌های این نسخه</value></data>
+  <data name="WhatsNewLocalization" xml:space="preserve"><value>پشتیبانی از انگلیسی و فارسی در زمان اجرا، همراه با چیدمان خودکار راست‌به‌چپ</value></data>
+  <data name="WhatsNewSearch" xml:space="preserve"><value>جست‌وجوی برنامه‌ها در میان برنامه‌های نصب‌شده و قابل‌حمل</value></data>
+  <data name="WhatsNewSorting" xml:space="preserve"><value>مرتب‌سازی لیست برنامه‌ها بر اساس نام، CPU، حافظه، دیسک، شبکه و GPU</value></data>
+  <data name="WhatsNewDiagnostics" xml:space="preserve"><value>صفحهٔ عیب‌یابی برای مشاهدهٔ سریع وضعیت سلامت پایش</value></data>
+  <data name="WhatsNewMetricExplanations" xml:space="preserve"><value>توضیح سنجه‌ها با متن ساده و قابل‌فهم</value></data>
+  <data name="WhatsNewProcessSelection" xml:space="preserve"><value>انتخاب پایدار پردازش با تأیید هویت</value></data>
+  <data name="WhatsNewProcessSafety" xml:space="preserve"><value>ایمنی بیشتر عملیات پردازش با بررسی انتساب پیش از اجرا</value></data>
+  <data name="WhatsNewCpuMonitoring" xml:space="preserve"><value>پایش واقعی مصرف CPU هر برنامه</value></data>
+  <data name="WhatsNewMemoryMonitoring" xml:space="preserve"><value>پایش حافظه با ردیابی Working Set</value></data>
+  <data name="WhatsNewDiskMonitoring" xml:space="preserve"><value>پایش خواندن و نوشتن دیسک فیزیکی</value></data>
+  <data name="WhatsNewNetworkMonitoring" xml:space="preserve"><value>پایش ارسال و دریافت شبکه</value></data>
+  <data name="WhatsNewGpuMonitoring" xml:space="preserve"><value>پایش GPU در صورت پشتیبانی ارائه‌دهنده‌های ویندوز</value></data>
+  <data name="WhatsNewHistory" xml:space="preserve"><value>تاریخچهٔ محلی سنجه‌ها با قابلیت تنظیم نگه‌داری</value></data>
+  <data name="WhatsNewChartGaps" xml:space="preserve"><value>شکاف‌های واقعی در نمودار برای نمونه‌های ناموجود؛ بدون دادهٔ ساختگی</value></data>
+  <data name="WhatsNewInstaller" xml:space="preserve"><value>پشتیبانی از نصب‌کنندهٔ ویندوز برای راه‌اندازی آسان‌تر</value></data>
+  <data name="WhatsNewSystemOverviewFoundation" xml:space="preserve"><value>نمای کلی سیستم با نمایش زندهٔ CPU، حافظه، دیسک، شبکه و GPU</value></data>
+  <data name="BetaLimitationsTitle" xml:space="preserve"><value>محدودیت‌های نسخهٔ بتا</value></data>
+  <data name="BetaLimitationProviders" xml:space="preserve"><value>برخی سنجه‌ها به ارائه‌دهنده‌های عملکرد ویندوز وابسته‌اند و ممکن است در همهٔ سیستم‌ها در دسترس نباشند.</value></data>
+  <data name="BetaLimitationHardware" xml:space="preserve"><value>پشتیبانی سخت‌افزار و درایورها ممکن است متفاوت باشد؛ سنجه‌های GPU به درایور سازگار نیاز دارند.</value></data>
+  <data name="BetaLimitationPermissions" xml:space="preserve"><value>برخی سنجه‌های پیشرفته ممکن است به دسترسی بیشتر یا سرویس پایش پیشرفته نیاز داشته باشند.</value></data>
+  <data name="BetaLimitationMetricStates" xml:space="preserve"><value>برخی سنجه‌ها ممکن است در حال آماده‌سازی باشند یا به‌دلیل محدودیت منبع، پشتیبانی سیستم، سطح دسترسی یا خطا همهٔ داده‌ها را در اختیار نداشته باشند.</value></data>
+  <data name="BetaLimitationChartGaps" xml:space="preserve"><value>نمونه‌های ناموجود به‌صورت شکاف‌های عمدی در نمودار نمایش داده می‌شوند، نه مقادیر میان‌یابی‌شده.</value></data>
+  <data name="BetaLimitationNoFakeData" xml:space="preserve"><value>دادهٔ ناموجود هرگز با صفر یا مقدار ساختگی جایگزین نمی‌شود.</value></data>
+  <data name="BetaLimitationDefects" xml:space="preserve"><value>این نسخه هنوز بتاست و ممکن است ایرادهایی باقی مانده باشد. بازخورد شما به بهبود Monitoring XS کمک می‌کند.</value></data>
+  <data name="NavSystemOverview.Content" xml:space="preserve"><value>نمای کلی سیستم</value></data>
+  <data name="NavSystemOverview.AutomationProperties.Name" xml:space="preserve"><value>نمای کلی سیستم</value></data>
+  <data name="NavSystemOverview.ToolTipService.ToolTip" xml:space="preserve"><value>نمای کلی سیستم</value></data>
+  <data name="SystemOverviewPageTitle" xml:space="preserve"><value>نمای کلی سیستم</value></data>
+  <data name="SystemOverviewSubtitle" xml:space="preserve"><value>نمای زندهٔ مصرف منابع کل دستگاه، بر پایهٔ ارائه‌دهنده‌های پایش ویندوز.</value></data>
+  <data name="SystemOverviewPrimaryMetrics" xml:space="preserve"><value>سنجه‌های اصلی</value></data>
+  <data name="SystemOverviewSecondaryMetrics" xml:space="preserve"><value>فعالیت</value></data>
+  <data name="SystemOverviewCpu" xml:space="preserve"><value>CPU</value></data>
+  <data name="SystemOverviewMemory" xml:space="preserve"><value>حافظهٔ فیزیکی</value></data>
+  <data name="SystemOverviewDisk" xml:space="preserve"><value>دیسک فیزیکی</value></data>
+  <data name="SystemOverviewNetwork" xml:space="preserve"><value>شبکه</value></data>
+  <data name="SystemOverviewGpu" xml:space="preserve"><value>GPU</value></data>
+  <data name="SystemOverviewUtilization" xml:space="preserve"><value>میزان استفاده</value></data>
+  <data name="SystemOverviewUsed" xml:space="preserve"><value>مصرف‌شده / کل</value></data>
+  <data name="SystemOverviewAvailableMemory" xml:space="preserve"><value>در دسترس</value></data>
+  <data name="SystemOverviewRead" xml:space="preserve"><value>خواندن دیسک</value></data>
+  <data name="SystemOverviewWrite" xml:space="preserve"><value>نوشتن دیسک</value></data>
+  <data name="SystemOverviewReceive" xml:space="preserve"><value>دریافت شبکه</value></data>
+  <data name="SystemOverviewSend" xml:space="preserve"><value>ارسال شبکه</value></data>
+  <data name="SystemOverviewMemoryUsedFormat" xml:space="preserve"><value>{0} / {1}</value></data>
+  <data name="SystemOverviewStatusPartialLabel" xml:space="preserve"><value>حد پایین معتبر</value></data>
+  <data name="SystemOverviewStatusPartial" xml:space="preserve"><value>همهٔ داده‌های منبع در دسترس نیستند؛ مقدار موجود بدون برآورد ساختگی و به‌صورت حد پایین معتبر نمایش داده می‌شود.</value></data>
+  <data name="SystemOverviewStatusWarmingUp" xml:space="preserve"><value>در انتظار نمونه‌های کافی برای نمایش مقدار واقعی.</value></data>
+  <data name="SystemOverviewStatusUnavailable" xml:space="preserve"><value>این سنجه فعلاً داده‌ای در دسترس ندارد.</value></data>
+  <data name="SystemOverviewStatusUnsupported" xml:space="preserve"><value>ارائه‌دهندهٔ فعلی ویندوز از این سنجه پشتیبانی نمی‌کند.</value></data>
+  <data name="SystemOverviewStatusAccessDenied" xml:space="preserve"><value>ویندوز دسترسی لازم برای خواندن این سنجه را نداد.</value></data>
+  <data name="SystemOverviewStatusError" xml:space="preserve"><value>خواندن این سنجه با خطا روبه‌رو شد.</value></data>
+  <data name="SystemOverviewChartSummary" xml:space="preserve"><value>۶۰ ثانیهٔ گذشته؛ نمونه‌های ناموجود به‌صورت شکاف باقی می‌مانند.</value></data>
+  <data name="SystemOverviewChartEmpty" xml:space="preserve"><value>در انتظار نمونه‌های واقعی…</value></data>
+  <data name="SystemOverviewChartAutomationName" xml:space="preserve"><value>نمودار زندهٔ {0}، {1}</value></data>
+</root>

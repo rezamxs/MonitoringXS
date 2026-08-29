@@ -1,0 +1,92 @@
+# ast-grep rules for Monitoring XS
+# Development-only static analysis — targeted, low-noise rules.
+
+id: fragile-availability-contains
+language: csharp
+rule:
+  pattern: $X.Contains($Y)
+  inside:
+    pattern: |
+      MetricAvailability.$_
+note: >
+  Fragile user-facing availability mapping using .Contains().
+  Prefer explicit enum comparison or TryParse patterns for metric availability checks.
+severity: warning
+message: "Consider using explicit MetricAvailability enum comparison instead of string Contains()"
+
+
+---
+
+id: broad-catch-in-collector
+language: csharp
+rule:
+  pattern: |
+    catch (Exception $E) { $$$BODY }
+  inside:
+    any:
+      - pattern: |
+          class $_Collector { $$$ }
+      - pattern: |
+          class $_Provider { $$$ }
+      - pattern: |
+          class $_Source { $$$ }
+note: >
+  Suspicious broad catch(Exception) in collector/provider/source paths.
+  Collectors should handle specific expected failures (access denied, counter unavailable)
+  without swallowing unexpected exceptions that mask bugs.
+severity: warning
+message: "Broad catch(Exception) in collector path — consider catching specific exception types"
+
+
+---
+
+id: forbidden-shell-invocation
+language: csharp
+rule:
+  any:
+    - pattern: Process.Start("cmd.exe", $$$)
+    - pattern: Process.Start("powershell.exe", $$$)
+    - pattern: Process.Start("pwsh.exe", $$$)
+    - pattern: new ProcessStartInfo("cmd.exe", $$$)
+    - pattern: new ProcessStartInfo("powershell.exe", $$$)
+    - pattern: new ProcessStartInfo("pwsh.exe", $$$)
+note: >
+  Accidental use of shell/process invocation patterns.
+  Per CONTRIBUTING.md: "Do not execute strings through a shell when a direct Windows API exists."
+  Elevated operations must go through the Broker security boundary.
+severity: error
+message: "Direct shell invocation detected — use Windows API or Broker security boundary instead"
+
+
+---
+
+id: hardcoded-user-facing-string-in-viewmodel
+language: csharp
+rule:
+  pattern: |
+    [ObservableProperty] private string $_ = "$LITERAL";
+  regex: "[A-Z][a-z]+ [a-z]"
+note: >
+  Possible hardcoded user-facing string in ViewModel.
+  Monitoring XS uses .resw localization resources for user-facing text.
+  Verify this string is intentionally non-localized (e.g., internal identifier).
+severity: info
+message: "Possible hardcoded user-facing string — verify localization requirement"
+
+
+---
+
+id: core-depends-on-platform
+language: csharp
+rule:
+  pattern: |
+    using MonitoringXS.Platform.Windows$$$;
+  inside:
+    pattern: |
+      namespace MonitoringXS.Core$$$ { $$$ }
+note: >
+  Direct platform dependency from Core layer.
+  Per architecture: Core must not depend on Platform.Windows.
+  Use abstractions defined in Core and implement in Platform.Windows.
+severity: error
+message: "Core layer references Platform.Windows — violates architecture boundary"

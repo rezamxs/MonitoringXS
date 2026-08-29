@@ -12,6 +12,7 @@ namespace MonitoringXS.Platform.Windows.Metrics;
 
 public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetworkEventSource, IDisposable, IAsyncDisposable
 {
+    private const int SystemProcessId = 4;
     public const string SessionName = "MonitoringXS.KernelMetrics.v1";
     public const int EventQueueCapacity = 16_384;
     public const int NetworkEventQueueCapacity = 16_384;
@@ -37,6 +38,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         });
     private readonly BoundedThreadProcessMap _threadProcesses = new(ThreadMapCapacity);
     private readonly BoundedIrpProcessMap _irpProcesses = new(IrpMapCapacity);
+    private readonly NetworkEventStatistics _networkStatistics = new();
     private readonly CancellationTokenSource _shutdown = new();
     private readonly object _gate = new();
     private TaskCompletionSource<MetricAvailability>? _started;
@@ -45,23 +47,34 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
     private ETWTraceEventSource? _source;
     private DateTimeOffset _nextRetryUtc;
     private MetricAvailability _availability = MetricAvailability.WarmingUp;
-    private string? _detail = "Starting the physical-disk ETW session.";
+    private string? _detail = "Starting the kernel metric ETW session.";
+    private MetricAvailability _networkAvailability = MetricAvailability.WarmingUp;
+    private string? _networkDetail = "Starting the kernel metric ETW session.";
     private long _queueEventsDropped;
     private long _unattributedEvents;
     private long _eventsObserved;
+    private long _readEventsObserved;
+    private long _writeEventsObserved;
+    private long _readBytesObserved;
+    private long _writeBytesObserved;
+    private long _metadataLookupFailures;
+    private long _sessionStartFailures;
+    private long _accessDeniedFailures;
+    private long _lastSuccessfulEventTimestampUtcTicks;
     private long _etwEventsLost;
     private long _lastReportedEtwEventsLost;
     private long _lastReportedNetworkEtwEventsLost;
     private long _networkQueueEventsDropped;
     private long _lastReportedNetworkQueueEventsDropped;
-    private long _networkUnattributedEvents;
-    private long _networkEventsObserved;
+    private long _lastReportedNetworkProcessingFailures;
     private int _maximumQueueDepth;
     private int _networkMaximumQueueDepth;
     private NetworkAvailabilityReason _networkReason;
     private bool _disposed;
 
-    public async ValueTask<PhysicalDiskEventBatch> ReadBatchAsync(CancellationToken cancellationToken)
+    public async ValueTask<PhysicalDiskEventBatch> ReadBatchAsync(
+        IReadOnlyList<ProcessInstanceId> processes,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Task<MetricAvailability> started = EnsureStarted();
@@ -89,7 +102,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
 
         Interlocked.Exchange(ref _etwEventsLost, eventsLost);
         int depthBeforeDrain = _events.Reader.Count;
-        List<PhysicalDiskIoEvent> events = new(EventQueueCapacity);
+        List<PhysicalDiskIoEvent> events = CreateDrainBuffer<PhysicalDiskIoEvent>(depthBeforeDrain);
         while (_events.Reader.TryRead(out PhysicalDiskIoEvent? diskEvent))
         {
             events.Add(diskEvent);
@@ -115,10 +128,20 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             Interlocked.Read(ref _eventsObserved),
             depthBeforeDrain,
             Volatile.Read(ref _maximumQueueDepth),
-            EtwBufferSizeMegabytes);
+            EtwBufferSizeMegabytes,
+            Interlocked.Read(ref _readEventsObserved),
+            Interlocked.Read(ref _writeEventsObserved),
+            ToUnsigned(Interlocked.Read(ref _readBytesObserved)),
+            ToUnsigned(Interlocked.Read(ref _writeBytesObserved)),
+            Interlocked.Read(ref _metadataLookupFailures),
+            Interlocked.Read(ref _sessionStartFailures),
+            Interlocked.Read(ref _accessDeniedFailures),
+            ReadLastSuccessfulEventTimestamp());
     }
 
-    public async ValueTask<NetworkEventBatch> ReadNetworkBatchAsync(CancellationToken cancellationToken)
+    public async ValueTask<NetworkEventBatch> ReadNetworkBatchAsync(
+        IReadOnlyList<ProcessInstanceId> processes,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Task<MetricAvailability> started = EnsureStarted();
@@ -130,9 +153,9 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         long eventsLost;
         lock (_gate)
         {
-            availability = _availability;
+            availability = _networkAvailability;
             reason = _networkReason;
-            detail = _detail;
+            detail = _networkDetail;
             eventsLost = Interlocked.Read(ref _etwEventsLost);
             if (_session is not null)
             {
@@ -148,13 +171,14 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
 
         Interlocked.Exchange(ref _etwEventsLost, eventsLost);
         int depthBeforeDrain = _networkEvents.Reader.Count;
-        List<NetworkTrafficEvent> events = new(NetworkEventQueueCapacity);
+        List<NetworkTrafficEvent> events = CreateDrainBuffer<NetworkTrafficEvent>(depthBeforeDrain);
         while (_networkEvents.Reader.TryRead(out NetworkTrafficEvent? networkEvent))
         {
             events.Add(networkEvent);
         }
 
         long queueEventsDropped = Interlocked.Read(ref _networkQueueEventsDropped);
+        NetworkEventStatistics.Snapshot statistics = _networkStatistics.Read();
         if (eventsLost > Interlocked.Read(ref _lastReportedNetworkEtwEventsLost))
         {
             Interlocked.Exchange(ref _lastReportedNetworkEtwEventsLost, eventsLost);
@@ -172,27 +196,59 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             reason = NetworkAvailabilityReason.ResourceExhausted;
             detail = "The bounded network event queue overflowed; retained values are lower bounds.";
         }
+        else if (statistics.EventProcessingFailures > Interlocked.Read(ref _lastReportedNetworkProcessingFailures))
+        {
+            Interlocked.Exchange(
+                ref _lastReportedNetworkProcessingFailures,
+                statistics.EventProcessingFailures);
+            availability = MetricAvailability.Partial;
+            reason = NetworkAvailabilityReason.CollectorError;
+            detail = "One or more network events could not be parsed; retained values are lower bounds.";
+        }
 
         NetworkEndpointSnapshotReader.EndpointSnapshot endpointSnapshot =
             availability is MetricAvailability.Available or MetricAvailability.Partial
                 ? NetworkEndpointSnapshotReader.Read()
                 : default;
-
         return new NetworkEventBatch(
             events,
             availability,
             reason,
             eventsLost,
             queueEventsDropped,
-            Interlocked.Read(ref _networkUnattributedEvents),
+            statistics.UnattributedEvents,
             detail,
-            Interlocked.Read(ref _networkEventsObserved),
+            statistics.EventsObserved,
             depthBeforeDrain,
             Volatile.Read(ref _networkMaximumQueueDepth),
             EtwBufferSizeMegabytes,
             endpointSnapshot.TcpConnections,
-            endpointSnapshot.UdpEndpoints);
+            endpointSnapshot.UdpEndpoints)
+        {
+            SendEvents = statistics.SendEvents,
+            ReceiveEvents = statistics.ReceiveEvents,
+            TcpSendEvents = statistics.TcpSendEvents,
+            TcpReceiveEvents = statistics.TcpReceiveEvents,
+            UdpSendEvents = statistics.UdpSendEvents,
+            UdpReceiveEvents = statistics.UdpReceiveEvents,
+            IPv4Events = statistics.IPv4Events,
+            IPv6Events = statistics.IPv6Events,
+            TotalSourceSendBytes = statistics.SourceSendBytes,
+            TotalSourceReceiveBytes = statistics.SourceReceiveBytes,
+            SystemProcessEvents = statistics.SystemProcessEvents,
+            UnknownProcessEvents = statistics.UnknownProcessEvents,
+            SessionStartFailures = Interlocked.Read(ref _sessionStartFailures),
+            AccessDeniedFailures = Interlocked.Read(ref _accessDeniedFailures),
+            EventProcessingFailures = statistics.EventProcessingFailures,
+            UnsupportedEventVersions = statistics.UnsupportedEventVersions,
+            QueueCapacity = NetworkEventQueueCapacity,
+            LastSuccessfulEventTimestampUtc = statistics.LastSuccessfulEventTimestampUtc,
+            CollectorStatus = availability
+        };
     }
+
+    internal static List<T> CreateDrainBuffer<T>(int depthBeforeDrain) =>
+        new(Math.Max(0, depthBeforeDrain));
 
     public void Dispose()
     {
@@ -270,8 +326,10 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             {
                 _started = new TaskCompletionSource<MetricAvailability>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _availability = MetricAvailability.WarmingUp;
+                _networkAvailability = MetricAvailability.WarmingUp;
                 _networkReason = NetworkAvailabilityReason.None;
                 _detail = "Starting the kernel metric ETW session.";
+                _networkDetail = _detail;
                 _runTask = Task.Run(() => RunSession(_shutdown.Token), CancellationToken.None);
             }
 
@@ -281,6 +339,8 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
 
     private void RunSession(CancellationToken cancellationToken)
     {
+        bool sessionStarted = false;
+        string operation = "TraceEventSession.StartTrace";
         try
         {
             // Session ownership stays explicit: never restart or replace a same-name session owned elsewhere.
@@ -290,6 +350,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
                 StopOnDispose = true,
                 BufferSizeMB = EtwBufferSizeMegabytes
             };
+            operation = "TraceEventSession.EnableKernelProvider";
             session.EnableKernelProvider(
                 KernelTraceEventParser.Keywords.DiskIO |
                 KernelTraceEventParser.Keywords.DiskIOInit |
@@ -308,15 +369,21 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             parser.DiskIOWriteInit += OnDiskIoInit;
             parser.DiskIORead += data => OnDiskIo(data, PhysicalDiskOperation.Read);
             parser.DiskIOWrite += data => OnDiskIo(data, PhysicalDiskOperation.Write);
-            parser.TcpIpSend += data => OnNetwork(data, NetworkDirection.Upload, NetworkTransport.Tcp, data.size);
-            parser.TcpIpRecv += data => OnNetwork(data, NetworkDirection.Download, NetworkTransport.Tcp, data.size);
-            parser.TcpIpSendIPV6 += data => OnNetwork(data, NetworkDirection.Upload, NetworkTransport.Tcp, data.size);
-            parser.TcpIpRecvIPV6 += data => OnNetwork(data, NetworkDirection.Download, NetworkTransport.Tcp, data.size);
-            parser.UdpIpSend += data => OnNetwork(data, NetworkDirection.Upload, NetworkTransport.Udp, data.size);
-            parser.UdpIpRecv += data => OnNetwork(data, NetworkDirection.Download, NetworkTransport.Udp, data.size);
-            parser.UdpIpSendIPV6 += data => OnNetwork(data, NetworkDirection.Upload, NetworkTransport.Udp, data.size);
-            parser.UdpIpRecvIPV6 += data => OnNetwork(data, NetworkDirection.Download, NetworkTransport.Udp, data.size);
+            try
+            {
+                AttachNetworkCallbacks(parser);
+                SetNetworkStatus(MetricAvailability.Available, NetworkAvailabilityReason.None, null);
+            }
+            catch (Exception exception) when (IsRecoverableNetworkEventException(exception))
+            {
+                _networkStatistics.RecordProcessingFailure();
+                SetNetworkStatus(
+                    MetricAvailability.Error,
+                    NetworkAvailabilityReason.CollectorError,
+                    $"Network ETW callbacks could not be attached: {exception.GetType().Name}.");
+            }
             SetStatus(MetricAvailability.Available, null);
+            sessionStarted = true;
             using CancellationTokenRegistration registration = cancellationToken.Register(
                 static state => ((ETWTraceEventSource)state!).StopProcessing(),
                 session.Source);
@@ -325,7 +392,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
 
             if (!cancellationToken.IsCancellationRequested)
             {
-                SetFailure(
+                SetSessionFailure(
                     MetricAvailability.Error,
                     NetworkAvailabilityReason.CollectorError,
                     "The kernel metric ETW session ended unexpectedly.");
@@ -333,8 +400,17 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            (MetricAvailability availability, NetworkAvailabilityReason reason, string detail) = ClassifyFailure(exception);
-            SetFailure(availability, reason, detail);
+            (MetricAvailability availability, NetworkAvailabilityReason reason, string detail) = ClassifyFailure(exception, operation);
+            if (!sessionStarted)
+            {
+                Interlocked.Increment(ref _sessionStartFailures);
+                if (availability == MetricAvailability.AccessDenied)
+                {
+                    Interlocked.Increment(ref _accessDeniedFailures);
+                }
+            }
+
+            SetSessionFailure(availability, reason, detail);
         }
         finally
         {
@@ -348,8 +424,8 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
 
     private void OnThreadStart(ThreadTraceData data)
     {
-        int threadId = data.ParentThreadID > 0 ? data.ParentThreadID : data.ThreadID;
-        int processId = data.ParentProcessID > 0 ? data.ParentProcessID : data.ProcessID;
+        int threadId = data.ThreadID;
+        int processId = data.ProcessID;
         if (threadId > 0 && processId > 0)
         {
             _threadProcesses.Set(threadId, processId);
@@ -358,7 +434,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
 
     private void OnThreadEnd(ThreadTraceData data)
     {
-        int threadId = data.ParentThreadID > 0 ? data.ParentThreadID : data.ThreadID;
+        int threadId = data.ThreadID;
         if (threadId > 0)
         {
             _threadProcesses.Remove(threadId);
@@ -368,8 +444,22 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
     private void OnDiskIo(DiskIOTraceData data, PhysicalDiskOperation operation)
     {
         Interlocked.Increment(ref _eventsObserved);
+        int transferSize = Math.Max(0, data.TransferSize);
+        if (operation == PhysicalDiskOperation.Read)
+        {
+            Interlocked.Increment(ref _readEventsObserved);
+            SaturatingAdd(ref _readBytesObserved, transferSize);
+        }
+        else
+        {
+            Interlocked.Increment(ref _writeEventsObserved);
+            SaturatingAdd(ref _writeBytesObserved, transferSize);
+        }
+
         int threadId = ReadIssuingThreadId(data);
-        int processId = data.Irp > 0 && _irpProcesses.TryTake(data.Irp, out int initiatingProcessId)
+        // One initiating IRP can produce several split disk completions. Keep the bounded
+        // correlation until a later init replaces it or normal eviction removes it.
+        int processId = data.Irp > 0 && _irpProcesses.TryGetValue(data.Irp, out int initiatingProcessId)
             ? initiatingProcessId
             : 0;
         if (processId <= 0 && threadId > 0)
@@ -401,10 +491,11 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             Math.Max(0, threadId),
             EtwTimestampNormalizer.NormalizeToUtc(data.TimeStamp),
             operation,
-            Math.Max(0, data.TransferSize));
+            transferSize);
         if (_events.Writer.TryWrite(diskEvent))
         {
             UpdateMaximum(ref _maximumQueueDepth, _events.Reader.Count);
+            UpdateLastSuccessfulEventTimestamp(diskEvent.TimestampUtc);
         }
         else
         {
@@ -439,62 +530,138 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         }
     }
 
-    private void OnNetwork(
-        TraceEvent data,
+    private void OnNetwork<TEvent>(
+        TEvent data,
         NetworkDirection direction,
         NetworkTransport transport,
-        int transferSize)
+        NetworkAddressFamily addressFamily,
+        Func<TEvent, int> transferSizeReader)
+        where TEvent : TraceEvent
     {
-        Interlocked.Increment(ref _networkEventsObserved);
-        int processId = ReadNetworkProcessId(data);
-        if (processId <= 0)
+        if (!TryReadNetworkTransferSize(data, transferSizeReader, out int transferSize))
         {
-            Interlocked.Increment(ref _networkUnattributedEvents);
+            _networkStatistics.RecordMalformedEvent();
             return;
         }
 
-        NetworkTrafficEvent networkEvent = new(
-            processId,
-            EtwTimestampNormalizer.NormalizeToUtc(data.TimeStamp),
-            direction,
-            transport,
-            Math.Max(0, transferSize));
-        if (_networkEvents.Writer.TryWrite(networkEvent))
+        try
         {
-            UpdateMaximum(ref _networkMaximumQueueDepth, _networkEvents.Reader.Count);
+            if (!_networkStatistics.TryRecord(direction, transport, addressFamily, transferSize))
+            {
+                return;
+            }
+
+            // TraceEvent's typed kernel network parsers copy the payload PID into
+            // ProcessID during FixupData. Do not infer ownership from ThreadID.
+            int processId = data.ProcessID;
+            if (processId is 0 or SystemProcessId)
+            {
+                _networkStatistics.RecordSystemProcess();
+                return;
+            }
+
+            if (processId < 0)
+            {
+                _networkStatistics.RecordUnknownProcess();
+                return;
+            }
+
+            NetworkTrafficEvent networkEvent = new(
+                processId,
+                EtwTimestampNormalizer.NormalizeToUtc(data.TimeStamp),
+                direction,
+                transport,
+                addressFamily,
+                transferSize);
+            if (_networkEvents.Writer.TryWrite(networkEvent))
+            {
+                UpdateMaximum(ref _networkMaximumQueueDepth, _networkEvents.Reader.Count);
+                _networkStatistics.RecordSuccessfulEvent(networkEvent.TimestampUtc);
+            }
+            else
+            {
+                Interlocked.Increment(ref _networkQueueEventsDropped);
+            }
         }
-        else
+        catch (Exception exception) when (IsRecoverableNetworkEventException(exception))
         {
-            Interlocked.Increment(ref _networkQueueEventsDropped);
+            _networkStatistics.RecordProcessingFailure();
         }
     }
 
-    private static int ReadNetworkProcessId(TraceEvent data)
+    private void AttachNetworkCallbacks(KernelTraceEventParser parser)
     {
-        foreach (string name in new[] { "PID", "ProcessId", "ProcessID" })
+        parser.TcpIpSend += data => OnNetwork(
+            data,
+            NetworkDirection.Upload,
+            NetworkTransport.Tcp,
+            NetworkAddressFamily.IPv4,
+            static data => data.size);
+        parser.TcpIpRecv += data => OnNetwork(
+            data,
+            NetworkDirection.Download,
+            NetworkTransport.Tcp,
+            NetworkAddressFamily.IPv4,
+            static data => data.size);
+        parser.TcpIpSendIPV6 += data => OnNetwork(
+            data,
+            NetworkDirection.Upload,
+            NetworkTransport.Tcp,
+            NetworkAddressFamily.IPv6,
+            static data => data.size);
+        parser.TcpIpRecvIPV6 += data => OnNetwork(
+            data,
+            NetworkDirection.Download,
+            NetworkTransport.Tcp,
+            NetworkAddressFamily.IPv6,
+            static data => data.size);
+        parser.UdpIpSend += data => OnNetwork(
+            data,
+            NetworkDirection.Upload,
+            NetworkTransport.Udp,
+            NetworkAddressFamily.IPv4,
+            static data => data.size);
+        parser.UdpIpRecv += data => OnNetwork(
+            data,
+            NetworkDirection.Download,
+            NetworkTransport.Udp,
+            NetworkAddressFamily.IPv4,
+            static data => data.size);
+        parser.UdpIpSendIPV6 += data => OnNetwork(
+            data,
+            NetworkDirection.Upload,
+            NetworkTransport.Udp,
+            NetworkAddressFamily.IPv6,
+            static data => data.size);
+        parser.UdpIpRecvIPV6 += data => OnNetwork(
+            data,
+            NetworkDirection.Download,
+            NetworkTransport.Udp,
+            NetworkAddressFamily.IPv6,
+            static data => data.size);
+    }
+
+    private static bool IsRecoverableNetworkEventException(Exception exception) =>
+        exception is ArgumentException
+            or ArithmeticException
+            or InvalidOperationException
+            or IndexOutOfRangeException;
+
+    internal static bool TryReadNetworkTransferSize<TEvent>(
+        TEvent data,
+        Func<TEvent, int> transferSizeReader,
+        out int transferSize)
+    {
+        try
         {
-            int index = data.PayloadIndex(name);
-            if (index < 0)
-            {
-                continue;
-            }
-
-            try
-            {
-                int processId = Convert.ToInt32(
-                    data.PayloadValue(index),
-                    System.Globalization.CultureInfo.InvariantCulture);
-                if (processId > 0)
-                {
-                    return processId;
-                }
-            }
-            catch (Exception exception) when (exception is FormatException or InvalidCastException or OverflowException)
-            {
-            }
+            transferSize = transferSizeReader(data);
+            return true;
         }
-
-        return data.ProcessID;
+        catch (Exception exception) when (IsRecoverableNetworkEventException(exception))
+        {
+            transferSize = 0;
+            return false;
+        }
     }
 
     private static void UpdateMaximum(ref int target, int candidate)
@@ -532,18 +699,25 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         return data.ThreadID;
     }
 
-    private static int ResolveProcessIdFromThread(int threadId)
+    private int ResolveProcessIdFromThread(int threadId)
     {
         nint threadHandle = OpenThread(ThreadQueryLimitedInformation, false, (uint)threadId);
         if (threadHandle == 0)
         {
+            Interlocked.Increment(ref _metadataLookupFailures);
             return 0;
         }
 
         try
         {
             uint processId = GetProcessIdOfThread(threadHandle);
-            return processId <= int.MaxValue ? (int)processId : 0;
+            if (processId is 0 or > int.MaxValue)
+            {
+                Interlocked.Increment(ref _metadataLookupFailures);
+                return 0;
+            }
+
+            return (int)processId;
         }
         finally
         {
@@ -556,13 +730,25 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         lock (_gate)
         {
             _availability = availability;
-            _networkReason = NetworkAvailabilityReason.None;
             _detail = detail;
             _started?.TrySetResult(availability);
         }
     }
 
-    private void SetFailure(
+    private void SetNetworkStatus(
+        MetricAvailability availability,
+        NetworkAvailabilityReason reason,
+        string? detail)
+    {
+        lock (_gate)
+        {
+            _networkAvailability = availability;
+            _networkReason = reason;
+            _networkDetail = detail;
+        }
+    }
+
+    private void SetSessionFailure(
         MetricAvailability availability,
         NetworkAvailabilityReason reason,
         string detail)
@@ -570,15 +756,18 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         lock (_gate)
         {
             _availability = availability;
+            _networkAvailability = availability;
             _networkReason = reason;
             _detail = detail;
+            _networkDetail = detail;
             _nextRetryUtc = DateTimeOffset.UtcNow + RetryDelay;
             _started?.TrySetResult(availability);
         }
     }
 
-    private static (MetricAvailability Availability, NetworkAvailabilityReason Reason, string Detail) ClassifyFailure(
-        Exception exception)
+    internal static (MetricAvailability Availability, NetworkAvailabilityReason Reason, string Detail) ClassifyFailure(
+        Exception exception,
+        string operation)
     {
         Win32Exception? win32 = FindWin32Exception(exception);
         if (exception is UnauthorizedAccessException || win32?.NativeErrorCode == 5)
@@ -586,7 +775,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             return (
                 MetricAvailability.AccessDenied,
                 NetworkAvailabilityReason.AccessDenied,
-                "Kernel metric ETW access was denied. Run with approved elevation or add the user to Performance Log Users.");
+                $"Kernel metric ETW access was denied in {operation}. Win32 error 5 (ERROR_ACCESS_DENIED). Run with approved elevation or add the user to Performance Log Users.");
         }
 
         if (win32?.NativeErrorCode == 183 || exception.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
@@ -594,7 +783,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             return (
                 MetricAvailability.Unavailable,
                 NetworkAvailabilityReason.SessionConflict,
-                $"The ETW session '{SessionName}' already exists; Monitoring XS did not replace it.");
+                $"{operation} reported ERROR_ALREADY_EXISTS (183) for ETW session '{SessionName}'; Monitoring XS did not replace it.");
         }
 
         if (exception is PlatformNotSupportedException)
@@ -638,6 +827,49 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
 
         return null;
     }
+
+    private DateTimeOffset? ReadLastSuccessfulEventTimestamp()
+    {
+        long ticks = Interlocked.Read(ref _lastSuccessfulEventTimestampUtcTicks);
+        return ticks <= 0 ? null : new DateTimeOffset(ticks, TimeSpan.Zero);
+    }
+
+    private void UpdateLastSuccessfulEventTimestamp(DateTimeOffset timestampUtc)
+    {
+        long candidate = timestampUtc.UtcDateTime.Ticks;
+        long current = Interlocked.Read(ref _lastSuccessfulEventTimestampUtcTicks);
+        while (candidate > current)
+        {
+            long observed = Interlocked.CompareExchange(
+                ref _lastSuccessfulEventTimestampUtcTicks,
+                candidate,
+                current);
+            if (observed == current)
+            {
+                return;
+            }
+
+            current = observed;
+        }
+    }
+
+    private static void SaturatingAdd(ref long target, int value)
+    {
+        long current = Interlocked.Read(ref target);
+        while (current < long.MaxValue)
+        {
+            long candidate = long.MaxValue - current < value ? long.MaxValue : current + value;
+            long observed = Interlocked.CompareExchange(ref target, candidate, current);
+            if (observed == current)
+            {
+                return;
+            }
+
+            current = observed;
+        }
+    }
+
+    private static ulong ToUnsigned(long value) => value <= 0 ? 0UL : (ulong)value;
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern nint OpenThread(uint desiredAccess, [MarshalAs(UnmanagedType.Bool)] bool inheritHandle, uint threadId);
@@ -720,7 +952,7 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         private sealed record Entry(int ThreadId, int ProcessId);
     }
 
-    private sealed class BoundedIrpProcessMap
+    internal sealed class BoundedIrpProcessMap
     {
         private readonly int _capacity;
         private readonly Dictionary<ulong, LinkedListNode<Entry>> _entries;
@@ -737,6 +969,13 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         {
             lock (_gate)
             {
+                if (_entries.TryGetValue(irp, out LinkedListNode<Entry>? existing)
+                    && existing.Value.ProcessId != SystemProcessId
+                    && processId == SystemProcessId)
+                {
+                    return;
+                }
+
                 if (_entries.Remove(irp, out LinkedListNode<Entry>? previous))
                 {
                     _age.Remove(previous);
@@ -753,13 +992,12 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             }
         }
 
-        public bool TryTake(ulong irp, out int processId)
+        public bool TryGetValue(ulong irp, out int processId)
         {
             lock (_gate)
             {
-                if (_entries.Remove(irp, out LinkedListNode<Entry>? node))
+                if (_entries.TryGetValue(irp, out LinkedListNode<Entry>? node))
                 {
-                    _age.Remove(node);
                     processId = node.Value.ProcessId;
                     return true;
                 }

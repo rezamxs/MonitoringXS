@@ -37,7 +37,26 @@ public sealed class PhysicalDiskAggregationService : IPhysicalDiskAggregationSer
             samples.Select(item => item.Diagnostics.EventRatePerSecond).DefaultIfEmpty().Max(),
             samples.Select(item => item.Diagnostics.CurrentQueueDepth).DefaultIfEmpty().Max(),
             samples.Select(item => item.Diagnostics.MaximumQueueDepth).DefaultIfEmpty().Max(),
-            samples.Select(item => item.Diagnostics.EtwBufferSizeMegabytes).DefaultIfEmpty().Max());
+            samples.Select(item => item.Diagnostics.EtwBufferSizeMegabytes).DefaultIfEmpty().Max(),
+            samples.Select(item => item.Diagnostics.ReadEventsObserved).DefaultIfEmpty().Max(),
+            samples.Select(item => item.Diagnostics.WriteEventsObserved).DefaultIfEmpty().Max(),
+            samples.Select(item => item.Diagnostics.ReadBytesObserved).DefaultIfEmpty().Max(),
+            samples.Select(item => item.Diagnostics.WriteBytesObserved).DefaultIfEmpty().Max(),
+            samples.Select(item => item.Diagnostics.MetadataLookupFailures).DefaultIfEmpty().Max(),
+            samples.Select(item => item.Diagnostics.SessionStartFailures).DefaultIfEmpty().Max(),
+            samples.Select(item => item.Diagnostics.AccessDeniedFailures).DefaultIfEmpty().Max(),
+            samples.Select(item => item.Diagnostics.ProcessingLatencyMilliseconds).DefaultIfEmpty().Max(),
+            samples
+                .Select(item => item.Diagnostics.LastSuccessfulEventTimestampUtc)
+                .Where(item => item.HasValue)
+                .Select(item => item!.Value)
+                .OrderByDescending(item => item)
+                .Cast<DateTimeOffset?>()
+                .FirstOrDefault(),
+            samples
+                .Select(item => item.Diagnostics.CollectorStatus)
+                .FirstOrDefault(item => item.HasValue),
+            samples.Any(item => item.Diagnostics.SessionTotalsAreLowerBounds));
 
         return new PhysicalDiskMetricSet(
             SumDouble(samples.Select(item => item.ReadBytesPerSecond), processes.Length),

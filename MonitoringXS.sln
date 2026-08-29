@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringXS.DesignSystem",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringXS.ElevatedHelper", "src\MonitoringXS.ElevatedHelper\MonitoringXS.ElevatedHelper.csproj", "{A1000008-0000-4000-8000-000000000008}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringXS.PrivilegedBroker", "src\MonitoringXS.PrivilegedBroker\MonitoringXS.PrivilegedBroker.csproj", "{A1000009-0000-4000-8000-000000000009}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringXS.Core.Tests", "tests\MonitoringXS.Core.Tests\MonitoringXS.Core.Tests.csproj", "{A1000011-0000-4000-8000-000000000011}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringXS.Application.Tests", "tests\MonitoringXS.Application.Tests\MonitoringXS.Application.Tests.csproj", "{A1000012-0000-4000-8000-000000000012}"
@@ -29,6 +31,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringXS.IntegrationTests", "tests\MonitoringXS.IntegrationTests\MonitoringXS.IntegrationTests.csproj", "{A1000015-0000-4000-8000-000000000015}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringXS.App.Tests", "tests\MonitoringXS.App.Tests\MonitoringXS.App.Tests.csproj", "{A1000016-0000-4000-8000-000000000016}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringXS.ArchitectureTests", "tests\MonitoringXS.ArchitectureTests\MonitoringXS.ArchitectureTests.csproj", "{A1000017-0000-4000-8000-000000000017}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringXS.Benchmarks", "benchmarks\MonitoringXS.Benchmarks\MonitoringXS.Benchmarks.csproj", "{A1000020-0000-4000-8000-000000000020}"
 EndProject
@@ -70,6 +74,10 @@ Global
 		{A1000008-0000-4000-8000-000000000008}.Debug|x64.Build.0 = Debug|Any CPU
 		{A1000008-0000-4000-8000-000000000008}.Release|x64.ActiveCfg = Release|Any CPU
 		{A1000008-0000-4000-8000-000000000008}.Release|x64.Build.0 = Release|Any CPU
+		{A1000009-0000-4000-8000-000000000009}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A1000009-0000-4000-8000-000000000009}.Debug|x64.Build.0 = Debug|Any CPU
+		{A1000009-0000-4000-8000-000000000009}.Release|x64.ActiveCfg = Release|Any CPU
+		{A1000009-0000-4000-8000-000000000009}.Release|x64.Build.0 = Release|Any CPU
 		{A1000011-0000-4000-8000-000000000011}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{A1000011-0000-4000-8000-000000000011}.Debug|x64.Build.0 = Debug|Any CPU
 		{A1000011-0000-4000-8000-000000000011}.Release|x64.ActiveCfg = Release|Any CPU
@@ -94,6 +102,10 @@ Global
 		{A1000016-0000-4000-8000-000000000016}.Debug|x64.Build.0 = Debug|x64
 		{A1000016-0000-4000-8000-000000000016}.Release|x64.ActiveCfg = Release|x64
 		{A1000016-0000-4000-8000-000000000016}.Release|x64.Build.0 = Release|x64
+		{A1000017-0000-4000-8000-000000000017}.Debug|x64.ActiveCfg = Debug|x64
+		{A1000017-0000-4000-8000-000000000017}.Debug|x64.Build.0 = Debug|x64
+		{A1000017-0000-4000-8000-000000000017}.Release|x64.ActiveCfg = Release|x64
+		{A1000017-0000-4000-8000-000000000017}.Release|x64.Build.0 = Release|x64
 		{A1000020-0000-4000-8000-000000000020}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{A1000020-0000-4000-8000-000000000020}.Debug|x64.Build.0 = Debug|Any CPU
 		{A1000020-0000-4000-8000-000000000020}.Release|x64.ActiveCfg = Release|Any CPU

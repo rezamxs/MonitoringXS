@@ -1,0 +1,20 @@
+# Lefthook configuration for Monitoring XS
+# Lightweight Git hooks — only CHEAP checks on pre-commit.
+# Heavyweight checks belong in CI/explicit validation.
+# Install: lefthook install (after installing lefthook)
+
+pre-commit:
+  parallel: true
+  commands:
+    whitespace-check:
+      run: git diff --check --cached
+      description: "Check for trailing whitespace and mixed line endings"
+
+# Do NOT run on pre-commit:
+# - Full solution build
+# - Full solution tests
+# - PerfView / profiling
+# - CodeQL
+# - Installer lifecycle validation
+# - Coverage collection
+# These belong in explicit validation scripts or CI.

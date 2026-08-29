@@ -14,6 +14,9 @@ public sealed record ApplicationMetricSnapshot(
     int ProcessCount,
     IReadOnlyList<ProcessDescriptor> Processes)
 {
+    public IReadOnlyDictionary<ProcessInstanceId, ProcessMetricSample> ProcessMetrics { get; init; } =
+        new Dictionary<ProcessInstanceId, ProcessMetricSample>();
+
     public PhysicalDiskMetricSet PhysicalDisk { get; init; } = PhysicalDiskMetricSet.Unavailable(
         MetricAvailability.Unsupported,
         "Physical-disk attribution is not configured.");
@@ -22,4 +25,9 @@ public sealed record ApplicationMetricSnapshot(
         MetricAvailability.Unsupported,
         NetworkAvailabilityReason.Unsupported,
         "Network attribution is not configured.");
+
+    public GpuMetricSet Gpu { get; init; } = GpuMetricSet.Unavailable(
+        MetricAvailability.Unsupported,
+        GpuAvailabilityReason.CounterSetUnavailable,
+        "GPU attribution is not configured.");
 }

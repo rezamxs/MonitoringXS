@@ -47,9 +47,9 @@ if (args.Length > 0 && string.Equals(args[0], "etw-raw", StringComparison.Ordina
 if (args.Length > 0 && string.Equals(args[0], "etw-probe", StringComparison.OrdinalIgnoreCase))
 {
     await using EtwPhysicalDiskEventSource probeSource = new();
-    PhysicalDiskEventBatch first = await probeSource.ReadBatchAsync(CancellationToken.None);
+    PhysicalDiskEventBatch first = await probeSource.ReadBatchAsync([], CancellationToken.None);
     await Task.Delay(TimeSpan.FromSeconds(2));
-    PhysicalDiskEventBatch second = await probeSource.ReadBatchAsync(CancellationToken.None);
+    PhysicalDiskEventBatch second = await probeSource.ReadBatchAsync([], CancellationToken.None);
     Console.WriteLine($"first_availability={first.Availability}");
     Console.WriteLine($"first_detail={first.Detail}");
     Console.WriteLine($"second_availability={second.Availability}");
@@ -191,7 +191,9 @@ file sealed class BenchmarkEventSource(params PhysicalDiskEventBatch[] batches) 
 {
     private readonly Queue<PhysicalDiskEventBatch> _batches = new(batches);
 
-    public ValueTask<PhysicalDiskEventBatch> ReadBatchAsync(CancellationToken cancellationToken)
+    public ValueTask<PhysicalDiskEventBatch> ReadBatchAsync(
+        IReadOnlyList<ProcessInstanceId> processes,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         return ValueTask.FromResult(_batches.Dequeue());

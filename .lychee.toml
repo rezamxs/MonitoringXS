@@ -1,0 +1,62 @@
+# lychee configuration for Monitoring XS documentation link validation
+# Scope: README, docs/**/*.md, CONTRIBUTING, other tracked documentation
+
+# Accept these status codes as valid
+accept = [200, 204, 301, 302, 307, 308]
+
+# Timeout for each request in seconds
+timeout = 30
+
+# Maximum number of concurrent requests
+max_concurrency = 8
+
+# Retry failed links
+retry_count = 2
+retry_wait_time = 2
+
+# Exclude patterns — intentional localhost/example URLs and build artifacts
+exclude = [
+    # Intentional example/placeholder URLs
+    "localhost",
+    "127\\.0\\.0\\.1",
+    "example\\.com",
+    "example\\.org",
+    # Build artifacts and generated content
+    "bin/",
+    "obj/",
+    "artifacts/",
+    "\\.git/",
+    "node_modules/",
+    # NuGet/package feeds (not public links)
+    "api\\.nuget\\.org",
+    # Internal/private URLs
+    "file:///",
+]
+
+# Exclude paths from scanning
+exclude_path = [
+    "bin/",
+    "obj/",
+    "artifacts/",
+    ".artifacts/",
+    "TestResults/",
+    "BenchmarkDotNet.Artifacts/",
+    "GeneratedFiles/",
+    ".tools/",
+    ".vs/",
+    ".idea/",
+    "context-packs/",
+    ".tooling/",
+]
+
+# Include only markdown files
+include = ["\\.md$"]
+
+# Base URL for relative links
+base_url = "https://github.com/rezamxs/MonitoringXS"
+
+# User agent
+user_agent = "MonitoringXS-LinkChecker/1.0"
+
+# Verbose output
+verbose = false

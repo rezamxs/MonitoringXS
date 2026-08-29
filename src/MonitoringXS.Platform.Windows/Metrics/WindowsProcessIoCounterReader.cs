@@ -23,7 +23,7 @@ public sealed class WindowsProcessIoCounterReader : IProcessIoCounterReader
             return Failure(Marshal.GetLastPInvokeError(), "The process start time could not be verified.");
         }
 
-        DateTimeOffset observedStart = DateTimeOffset.FromFileTime(creation.ToInt64());
+        DateTimeOffset observedStart = DateTimeOffset.FromFileTime(creation.ToInt64()).ToUniversalTime();
         if (observedStart != process.StartTimeUtc)
         {
             return MetricValue<ProcessIoCounters>.Unavailable(

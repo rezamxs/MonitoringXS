@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Collections;
 using MonitoringXS.Core.Models;
@@ -12,10 +13,8 @@ public sealed class MonitoringCoordinator
     private readonly IApplicationAttributionService _attribution;
     private readonly IProcessMetricCollector _collector;
     private readonly IMetricAggregationService _aggregation;
-    private readonly IPhysicalDiskMetricCollector? _physicalDiskCollector;
-    private readonly IPhysicalDiskAggregationService? _physicalDiskAggregation;
-    private readonly INetworkMetricCollector? _networkCollector;
-    private readonly INetworkMetricAggregationService? _networkAggregation;
+    private readonly MonitoringCapturePipeline _pipeline;
+    private readonly SystemOverviewService? _systemOverview;
     private readonly Dictionary<string, BoundedTimeSeries<ApplicationHistoryPoint>> _history = new(StringComparer.Ordinal);
 
     public MonitoringCoordinator(
@@ -23,26 +22,24 @@ public sealed class MonitoringCoordinator
         IApplicationAttributionService attribution,
         IProcessMetricCollector collector,
         IMetricAggregationService aggregation,
-        IPhysicalDiskMetricCollector? physicalDiskCollector = null,
-        IPhysicalDiskAggregationService? physicalDiskAggregation = null,
-        INetworkMetricCollector? networkCollector = null,
-        INetworkMetricAggregationService? networkAggregation = null)
+        MonitoringCapturePipeline? pipeline = null,
+        SystemOverviewService? systemOverview = null)
     {
         _discovery = discovery;
         _attribution = attribution;
         _collector = collector;
         _aggregation = aggregation;
-        _physicalDiskCollector = physicalDiskCollector;
-        _physicalDiskAggregation = physicalDiskAggregation;
-        _networkCollector = networkCollector;
-        _networkAggregation = networkAggregation;
+        _pipeline = pipeline ?? new MonitoringCapturePipeline([]);
+        _systemOverview = systemOverview;
     }
 
-    public async ValueTask<MonitoringDashboardSnapshot> CaptureAsync(CancellationToken cancellationToken)
+    public async ValueTask<MonitoringSnapshot> CaptureAsync(CancellationToken cancellationToken)
     {
         DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
-        IReadOnlyList<ProcessDescriptor> processes = await _discovery.DiscoverAsync(cancellationToken);
-        IReadOnlyList<AttributionResult> attribution = await _attribution.AttributeAsync(processes, cancellationToken);
+        ProcessDiscoverySnapshot discovery = await _discovery.DiscoverAsync(cancellationToken);
+        IReadOnlyList<AttributionResult> attribution = await _attribution.AttributeAsync(
+            discovery.Processes,
+            cancellationToken);
         ProcessDescriptor[] attributedProcesses = attribution
             .Where(result => !result.IsHidden && result.Application is not null)
             .Select(result => result.Process)
@@ -51,41 +48,58 @@ public sealed class MonitoringCoordinator
             attributedProcesses,
             capturedAt,
             cancellationToken);
-        IReadOnlyList<ApplicationMetricSnapshot> applications = _aggregation.Aggregate(attribution, metrics, capturedAt);
-        if (_physicalDiskCollector is not null && _physicalDiskAggregation is not null)
+        IReadOnlyList<ApplicationMetricSnapshot> baseApplications =
+            _aggregation.Aggregate(attribution, metrics, capturedAt);
+        MonitoringMetricCaptureResult metricCapture = await _pipeline.CaptureAsync(
+            new(capturedAt, attributedProcesses, attribution),
+            baseApplications,
+            cancellationToken);
+        ApplicationMetricSnapshot[] applications = metricCapture.Applications.ToArray();
+
+        UpdateRecentHistory(applications, capturedAt);
+        Dictionary<string, IReadOnlyList<ApplicationHistoryPoint>> historySnapshot = _history.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<ApplicationHistoryPoint>)pair.Value.Snapshot().Select(item => item.Value).ToArray(),
+            StringComparer.Ordinal);
+
+        SystemOverviewSnapshot? systemOverview = null;
+        IReadOnlyList<SystemOverviewHistoryPoint>? systemOverviewHistory = null;
+        if (_systemOverview is not null)
         {
-            IReadOnlyList<PhysicalDiskProcessSample> physicalDiskSamples = await _physicalDiskCollector.CollectAsync(
-                attributedProcesses,
-                capturedAt,
-                cancellationToken);
-            IReadOnlyDictionary<string, PhysicalDiskMetricSet> physicalDiskByApplication =
-                _physicalDiskAggregation.Aggregate(attribution, physicalDiskSamples);
-            applications = applications
-                .Select(application => physicalDiskByApplication.TryGetValue(
-                    application.Application.LogicalApplicationId,
-                    out PhysicalDiskMetricSet? physicalDisk)
-                    ? application with { PhysicalDisk = physicalDisk }
-                    : application)
-                .ToArray();
+            try
+            {
+                systemOverview = await _systemOverview.CaptureAsync(
+                    metricCapture.PhysicalDiskDiagnostics,
+                    metricCapture.NetworkDiagnostics,
+                    metricCapture.GpuBatch,
+                    cancellationToken);
+                systemOverviewHistory = _systemOverview.GetHistory();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Trace.TraceError(
+                    "System overview capture failed ({0}).",
+                    exception.GetType().Name);
+            }
         }
 
-        if (_networkCollector is not null && _networkAggregation is not null)
-        {
-            IReadOnlyList<NetworkProcessSample> networkSamples = await _networkCollector.CollectAsync(
-                attributedProcesses,
-                capturedAt,
-                cancellationToken);
-            IReadOnlyDictionary<string, NetworkMetricSet> networkByApplication =
-                _networkAggregation.Aggregate(attribution, networkSamples);
-            applications = applications
-                .Select(application => networkByApplication.TryGetValue(
-                    application.Application.LogicalApplicationId,
-                    out NetworkMetricSet? network)
-                    ? application with { Network = network }
-                    : application)
-                .ToArray();
-        }
+        return new MonitoringSnapshot(
+            capturedAt,
+            discovery,
+            applications,
+            historySnapshot,
+            systemOverview,
+            systemOverviewHistory);
+    }
 
+    private void UpdateRecentHistory(
+        IReadOnlyList<ApplicationMetricSnapshot> applications,
+        DateTimeOffset capturedAt)
+    {
         HashSet<string> activeIds = applications
             .Select(application => application.Application.LogicalApplicationId)
             .ToHashSet(StringComparer.Ordinal);
@@ -107,22 +121,10 @@ public sealed class MonitoringCoordinator
                 _history.Add(application.Application.LogicalApplicationId, series);
             }
 
-            ApplicationHistoryPoint point = new(
+            series.Add(capturedAt, new(
                 capturedAt,
                 application.CpuPercent.IsAvailable ? application.CpuPercent.Value : null,
-                application.WorkingSetBytes.IsAvailable ? application.WorkingSetBytes.Value : null);
-            series.Add(capturedAt, point);
+                application.WorkingSetBytes.IsAvailable ? application.WorkingSetBytes.Value : null));
         }
-
-        Dictionary<string, IReadOnlyList<ApplicationHistoryPoint>> historySnapshot = _history.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<ApplicationHistoryPoint>)pair.Value.Snapshot().Select(item => item.Value).ToArray(),
-            StringComparer.Ordinal);
-
-        return new MonitoringDashboardSnapshot(
-            capturedAt,
-            applications.Where(item => item.Application.Disposition is ApplicationDisposition.Installed or ApplicationDisposition.Packaged).ToArray(),
-            applications.Where(item => item.Application.Disposition is ApplicationDisposition.Portable or ApplicationDisposition.Unresolved).ToArray(),
-            historySnapshot);
     }
 }

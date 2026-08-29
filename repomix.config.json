@@ -1,0 +1,38 @@
+{
+  "output": {
+    "filePath": "context-packs/repomix-output.md",
+    "style": "markdown",
+    "removeComments": false,
+    "removeEmptyLines": true,
+    "topFilesLength": 10,
+    "showLineNumbers": true,
+    "copyToClipboard": false
+  },
+  "include": [],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/bin/**",
+      "**/obj/**",
+      "**/.git/**",
+      "**/.vs/**",
+      "**/.idea/**",
+      "**/artifacts/**",
+      "**/.artifacts/**",
+      "**/TestResults/**",
+      "**/BenchmarkDotNet.Artifacts/**",
+      "**/GeneratedFiles/**",
+      "**/.tools/**",
+      "**/context-packs/**",
+      "**/.tooling/indexes/**",
+      "**/*.db",
+      "**/*.db-shm",
+      "**/*.db-wal",
+      "**/*.etl",
+      "**/*.dmp",
+      "**/*.msix",
+      "**/*.log"
+    ]
+  }
+}

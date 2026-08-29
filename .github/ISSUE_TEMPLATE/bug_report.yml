@@ -1,32 +1,148 @@
-name: Bug report
-description: Report a reproducible Monitoring XS problem
+name: Bug Report
+description: Report a bug in Monitoring XS
 title: "[Bug]: "
-labels: [bug]
+labels: ["bug"]
 body:
   - type: markdown
     attributes:
-      value: Remove sensitive process, path, command-line, and network information before submitting.
-  - type: input
-    id: version
+      value: |
+        Thank you for reporting a bug. Please fill out the fields below.
+
+  - type: checkboxes
+    id: confirmation
     attributes:
-      label: Monitoring XS version or commit
-    validations:
-      required: true
-  - type: input
-    id: windows
-    attributes:
-      label: Windows edition and build
-    validations:
-      required: true
+      label: Confirmation
+      description: Before submitting, please confirm the following.
+      options:
+        - label: I have searched existing issues for the same problem.
+          required: true
+        - label: I have removed sensitive information from any logs or screenshots included.
+          required: true
+
   - type: textarea
-    id: steps
+    id: description
     attributes:
-      label: Reproduction steps
+      label: Description
+      description: What happened?
+      placeholder: Describe the observed behavior.
     validations:
       required: true
+
   - type: textarea
     id: expected
     attributes:
-      label: Expected and actual behavior
+      label: Expected behavior
+      description: What did you expect to happen?
+      placeholder: Describe the expected behavior.
     validations:
       required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can this be reproduced?
+      placeholder: |
+        1. Open...
+        2. Select...
+        3. Observe...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Monitoring XS version
+      description: The application version. You can find it in About or Diagnostics within the app.
+      placeholder: e.g. 0.5.0
+    validations:
+      required: true
+
+  - type: input
+    id: windows_version
+    attributes:
+      label: Windows version
+      description: Your Windows version and update. Exact build number is optional.
+      placeholder: e.g. Windows 11 24H2, Windows 10 22H2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Architecture
+      description: System architecture.
+      options:
+        - x64
+        - ARM64
+        - Other / Unknown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      description: Which part of the application is affected?
+      multiple: true
+      options:
+        - Application monitoring
+        - CPU
+        - Memory
+        - Process I/O
+        - Physical Disk
+        - Network
+        - GPU
+        - History
+        - Process Actions
+        - Diagnostics
+        - Installer / Uninstaller
+        - Privileged Metrics Service
+        - Localization / UI
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: Reproducibility
+      description: How often does this occur?
+      options:
+        - Always
+        - Often
+        - Sometimes
+        - Once
+        - Unable to reproduce again
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics / logs
+      description: |
+        Paste relevant Diagnostics output or log excerpts if available.
+        **Do not post secrets, credentials, tokens, private paths, or other sensitive information.**
+        Logs are helpful but not required.
+      placeholder: Paste sanitized diagnostics or log excerpts here (optional).
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Add screenshots if they help explain the issue. Remove any sensitive content first.
+      placeholder: Drag and drop or paste screenshots here (optional).
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Any other information that may be relevant.
+      placeholder: Additional details, related issues, environment notes, etc. (optional).
+    validations:
+      required: false

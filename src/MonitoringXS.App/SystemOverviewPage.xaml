@@ -1,0 +1,424 @@
+<UserControl
+    x:Class="MonitoringXS.App.SystemOverviewPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:MonitoringXS.App.Controls"
+    xmlns:local="using:MonitoringXS.App">
+    <UserControl.Resources>
+        <local:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <local:InvertedBooleanToVisibilityConverter x:Key="InvertedBooleanToVisibilityConverter" />
+
+        <Style x:Key="SystemOverviewStatusStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <DataTemplate x:Key="SummaryMetricTemplate">
+            <Border
+                Padding="14"
+                AutomationProperties.HelpText="{Binding StatusText}"
+                AutomationProperties.Name="{Binding Title}"
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource SubtleBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="10"
+                ToolTipService.ToolTip="{Binding Explanation}">
+                <StackPanel Spacing="6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon
+                            FontSize="16"
+                            Foreground="{StaticResource DataAccentBrush}"
+                            Glyph="{Binding IconGlyph}" />
+                        <TextBlock
+                            Grid.Column="1"
+                            AutomationProperties.HeadingLevel="Level3"
+                            FontSize="14"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="{Binding Title}"
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            Grid.Column="2"
+                            AutomationProperties.LiveSetting="Polite"
+                            Style="{StaticResource SystemOverviewStatusStyle}"
+                            Text="{Binding StatusLabel}"
+                            ToolTipService.ToolTip="{Binding StatusText}"
+                            Visibility="{Binding HasStatus, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </Grid>
+                    <TextBlock
+                        FontSize="12"
+                        Foreground="{StaticResource SecondaryTextBrush}"
+                        Text="{Binding PrimaryLabel}"
+                        Visibility="{Binding HasSecondaryValue, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <TextBlock
+                        FlowDirection="LeftToRight"
+                        FontFamily="Cascadia Mono, Segoe UI Variable"
+                        FontSize="22"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PrimaryTextBrush}"
+                        Text="{Binding PrimaryValue}"
+                        TextWrapping="Wrap" />
+                    <Grid>
+                        <Grid
+                            ColumnSpacing="6"
+                            Visibility="{Binding HasSecondaryValue, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="{Binding SecondaryLabel}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                Grid.Column="1"
+                                FlowDirection="LeftToRight"
+                                FontFamily="Cascadia Mono, Segoe UI Variable"
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource PrimaryTextBrush}"
+                                Text="{Binding SecondaryValue}"
+                                TextWrapping="Wrap" />
+                        </Grid>
+                    </Grid>
+                    <controls:MetricSparkline
+                        Height="52"
+                        AutomationProperties.HelpText="{Binding ChartSummary}"
+                        AutomationProperties.Name="{Binding PrimaryChartAutomationName}"
+                        ChartScale="{Binding ChartScale}"
+                        EmptyText="{Binding ChartEmptyText}"
+                        IsEmbedded="True"
+                        Samples="{Binding PrimarySamples}"
+                        ShowSummary="False"
+                        SummaryText="{Binding ChartSummary}"
+                        UnitText="{Binding UnitText}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="PrimaryMetricTemplate">
+            <Border
+                Padding="18"
+                AutomationProperties.HelpText="{Binding StatusText}"
+                AutomationProperties.Name="{Binding Title}"
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource SubtleBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                ToolTipService.ToolTip="{Binding Explanation}">
+                <StackPanel Spacing="10">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon
+                            FontSize="18"
+                            Foreground="{StaticResource DataAccentBrush}"
+                            Glyph="{Binding IconGlyph}" />
+                        <TextBlock
+                            Grid.Column="1"
+                            AutomationProperties.HeadingLevel="Level3"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Text="{Binding Title}"
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            Grid.Column="2"
+                            AutomationProperties.LiveSetting="Polite"
+                            Style="{StaticResource SystemOverviewStatusStyle}"
+                            Text="{Binding StatusLabel}"
+                            ToolTipService.ToolTip="{Binding StatusText}"
+                            Visibility="{Binding HasStatus, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </Grid>
+                    <Grid ColumnSpacing="24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="{Binding PrimaryLabel}" />
+                            <TextBlock
+                                FlowDirection="LeftToRight"
+                                FontFamily="Cascadia Mono, Segoe UI Variable"
+                                FontSize="28"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource PrimaryTextBrush}"
+                                Text="{Binding PrimaryValue}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel
+                            Grid.Column="1"
+                            MinWidth="120"
+                            Spacing="2"
+                            Visibility="{Binding HasSecondaryValue, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="{Binding SecondaryLabel}" />
+                            <TextBlock
+                                FlowDirection="LeftToRight"
+                                FontFamily="Cascadia Mono, Segoe UI Variable"
+                                FontSize="18"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource PrimaryTextBrush}"
+                                Text="{Binding SecondaryValue}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
+                    <controls:MetricSparkline
+                        Height="64"
+                        AutomationProperties.HelpText="{Binding ChartSummary}"
+                        AutomationProperties.Name="{Binding PrimaryChartAutomationName}"
+                        ChartScale="{Binding ChartScale}"
+                        EmptyText="{Binding ChartEmptyText}"
+                        IsEmbedded="True"
+                        Samples="{Binding PrimarySamples}"
+                        ShowSummary="False"
+                        SummaryText="{Binding ChartSummary}"
+                        UnitText="{Binding UnitText}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ActivityMetricTemplate">
+            <Border
+                Padding="16"
+                AutomationProperties.HelpText="{Binding StatusText}"
+                AutomationProperties.Name="{Binding Title}"
+                BorderBrush="{StaticResource SubtleBorderBrush}"
+                BorderThickness="0,0,0,1">
+                <Grid x:Name="ActivityLayout" RowSpacing="12">
+                    <VisualStateManager.VisualStateGroups>
+                        <VisualStateGroup>
+                            <VisualState x:Name="NarrowActivity" />
+                            <VisualState x:Name="WideActivity">
+                                <VisualState.StateTriggers>
+                                    <AdaptiveTrigger MinWindowWidth="760" />
+                                </VisualState.StateTriggers>
+                                <VisualState.Setters>
+                                    <Setter Target="ActivityLayout.ColumnSpacing" Value="20" />
+                                    <Setter Target="ActivityLayout.RowSpacing" Value="0" />
+                                    <Setter Target="ActivityValuesColumn.Width" Value="280" />
+                                    <Setter Target="ActivityChartsColumn.Width" Value="*" />
+                                    <Setter Target="ActivityCharts.(Grid.Row)" Value="0" />
+                                    <Setter Target="ActivityCharts.(Grid.Column)" Value="1" />
+                                </VisualState.Setters>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateManager.VisualStateGroups>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="ActivityValuesColumn" Width="*" />
+                        <ColumnDefinition x:Name="ActivityChartsColumn" Width="0" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Spacing="8">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon
+                                FontSize="17"
+                                Foreground="{StaticResource DataAccentBrush}"
+                                Glyph="{Binding IconGlyph}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                AutomationProperties.HeadingLevel="Level3"
+                                FontSize="17"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource PrimaryTextBrush}"
+                                Text="{Binding Title}"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                Grid.Column="2"
+                                AutomationProperties.LiveSetting="Polite"
+                                Style="{StaticResource SystemOverviewStatusStyle}"
+                                Text="{Binding StatusLabel}"
+                                ToolTipService.ToolTip="{Binding StatusText}"
+                                Visibility="{Binding HasStatus, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </Grid>
+                        <Grid ColumnSpacing="18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2">
+                                <TextBlock FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding PrimaryLabel}" />
+                                <TextBlock
+                                    FlowDirection="LeftToRight"
+                                    FontFamily="Cascadia Mono, Segoe UI Variable"
+                                    FontSize="18"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource PrimaryTextBrush}"
+                                    Text="{Binding PrimaryValue}"
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel
+                                Grid.Column="1"
+                                Spacing="2"
+                                Visibility="{Binding HasSecondaryValue, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding SecondaryLabel}" />
+                                <TextBlock
+                                    FlowDirection="LeftToRight"
+                                    FontFamily="Cascadia Mono, Segoe UI Variable"
+                                    FontSize="18"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource PrimaryTextBrush}"
+                                    Text="{Binding SecondaryValue}"
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <Grid x:Name="ActivityCharts" Grid.Row="1">
+                        <controls:MetricSparkline
+                            Height="56"
+                            AutomationProperties.HelpText="{Binding ChartSummary}"
+                            AutomationProperties.Name="{Binding PrimaryChartAutomationName}"
+                            ChartScale="{Binding ChartScale}"
+                            EmptyText="{Binding ChartEmptyText}"
+                            IsEmbedded="True"
+                            Samples="{Binding PrimarySamples}"
+                            ShowSummary="False"
+                            SummaryText="{Binding ChartSummary}"
+                            UnitText="{Binding UnitText}"
+                            Visibility="{Binding HasSecondarySeries, Converter={StaticResource InvertedBooleanToVisibilityConverter}}" />
+                        <Grid
+                            ColumnSpacing="12"
+                            Visibility="{Binding HasSecondarySeries, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="4">
+                                <TextBlock FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding PrimaryLabel}" />
+                                <controls:MetricSparkline
+                                    Height="56"
+                                    AutomationProperties.HelpText="{Binding ChartSummary}"
+                                    AutomationProperties.Name="{Binding PrimaryChartAutomationName}"
+                                    ChartScale="{Binding ChartScale}"
+                                    EmptyText="{Binding ChartEmptyText}"
+                                    IsEmbedded="True"
+                                    Samples="{Binding PrimarySamples}"
+                                    ShowSummary="False"
+                                    SummaryText="{Binding ChartSummary}"
+                                    UnitText="{Binding UnitText}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding SecondaryLabel}" />
+                                <controls:MetricSparkline
+                                    Height="56"
+                                    AutomationProperties.HelpText="{Binding ChartSummary}"
+                                    AutomationProperties.Name="{Binding SecondaryChartAutomationName}"
+                                    ChartScale="{Binding ChartScale}"
+                                    EmptyText="{Binding ChartEmptyText}"
+                                    IsEmbedded="True"
+                                    Samples="{Binding SecondarySamples}"
+                                    ShowSummary="False"
+                                    SummaryText="{Binding ChartSummary}"
+                                    UnitText="{Binding UnitText}" />
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer
+        HorizontalContentAlignment="Stretch"
+        HorizontalScrollBarVisibility="Disabled"
+        VerticalScrollBarVisibility="Auto">
+        <StackPanel
+            MaxWidth="1800"
+            Padding="24,20,24,32"
+            HorizontalAlignment="Stretch"
+            Spacing="16">
+            <StackPanel Spacing="4">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <SymbolIcon Symbol="ViewAll" />
+                    <TextBlock
+                        Grid.Column="1"
+                        AutomationProperties.HeadingLevel="Level1"
+                        FontSize="28"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PrimaryTextBrush}"
+                        Text="{Binding PageTitle}" />
+                </Grid>
+                <TextBlock
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="{Binding Subtitle}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+
+            <ItemsRepeater ItemTemplate="{StaticResource SummaryMetricTemplate}" ItemsSource="{Binding SummaryCards}">
+                <ItemsRepeater.Layout>
+                    <UniformGridLayout
+                        ItemsStretch="Fill"
+                        MaximumRowsOrColumns="5"
+                        MinColumnSpacing="12"
+                        MinItemWidth="205"
+                        MinRowSpacing="12" />
+                </ItemsRepeater.Layout>
+            </ItemsRepeater>
+
+            <TextBlock
+                AutomationProperties.HeadingLevel="Level2"
+                Style="{StaticResource SectionTitleStyle}"
+                Text="{Binding PrimaryMetricsTitle}" />
+            <ItemsRepeater ItemTemplate="{StaticResource PrimaryMetricTemplate}" ItemsSource="{Binding PrimaryCards}">
+                <ItemsRepeater.Layout>
+                    <UniformGridLayout
+                        ItemsStretch="Fill"
+                        MaximumRowsOrColumns="2"
+                        MinColumnSpacing="16"
+                        MinItemWidth="440"
+                        MinRowSpacing="16" />
+                </ItemsRepeater.Layout>
+            </ItemsRepeater>
+
+            <StackPanel Spacing="2">
+                <TextBlock
+                    AutomationProperties.HeadingLevel="Level2"
+                    Style="{StaticResource SectionTitleStyle}"
+                    Text="{Binding SecondaryMetricsTitle}" />
+                <TextBlock
+                    AutomationProperties.HelpText="{Binding ChartHelpText}"
+                    FontSize="12"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="{Binding ChartHelpText}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+            <Border
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource SubtleBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12">
+                <ItemsRepeater ItemTemplate="{StaticResource ActivityMetricTemplate}" ItemsSource="{Binding SecondaryCards}" />
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

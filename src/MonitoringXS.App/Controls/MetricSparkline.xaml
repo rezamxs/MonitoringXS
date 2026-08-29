@@ -10,28 +10,101 @@
         BorderBrush="{StaticResource SubtleBorderBrush}"
         BorderThickness="1"
         CornerRadius="8"
-        SizeChanged="ChartRoot_SizeChanged">
+        SizeChanged="ChartRoot_SizeChanged"
+        PointerMoved="OnPointerMoved"
+        PointerExited="OnPointerExited">
+        <ToolTipService.ToolTip>
+            <TextBlock
+                x:Name="TooltipText"
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="Wrap"
+                MaxWidth="320" />
+        </ToolTipService.ToolTip>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Polyline
+        <Grid
+            x:Name="PlotArea"
+            Grid.Row="0"
+            FlowDirection="LeftToRight"
+            IsHitTestVisible="False">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <TextBlock
+                x:Name="TopAxisLabel"
+                Margin="2,8,0,0"
+                Foreground="{StaticResource SecondaryTextBrush}"
+                FontSize="10"
+                FlowDirection="LeftToRight" />
+            <TextBlock
+                x:Name="BottomAxisLabel"
+                Grid.Row="2"
+                Margin="2,0,0,8"
+                VerticalAlignment="Bottom"
+                Foreground="{StaticResource SecondaryTextBrush}"
+                FontSize="10"
+                FlowDirection="LeftToRight" />
+            <Border
+                x:Name="MidGridLine"
+                Grid.Row="1"
+                VerticalAlignment="Top"
+                BorderBrush="{StaticResource SubtleBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Opacity="0.55" />
+            <Border
+                x:Name="BaselineGridLine"
+                Grid.Row="2"
+                VerticalAlignment="Top"
+                BorderBrush="{StaticResource SubtleBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Opacity="0.55" />
+        </Grid>
+        <Path
             x:Name="Line"
-            Margin="8"
+            Grid.Row="0"
             Stroke="{StaticResource DataAccentBrush}"
             StrokeLineJoin="Round"
             StrokeThickness="2" />
+        <Canvas
+            x:Name="Markers"
+            Grid.Row="0"
+            IsHitTestVisible="False" />
         <TextBlock
             x:Name="EmptyState"
+            Grid.Row="0"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Foreground="{StaticResource SecondaryTextBrush}"
+            x:Uid="SparklineEmpty"
             Text="Waiting for real samples…" />
+        <TextBlock
+            x:Name="StartAxisLabel"
+            Grid.Row="0"
+            Margin="54,0,0,8"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            Foreground="{StaticResource SecondaryTextBrush}"
+            FontSize="10"
+            FlowDirection="LeftToRight" />
+        <TextBlock
+            x:Name="EndAxisLabel"
+            Grid.Row="0"
+            Margin="0,0,12,8"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Foreground="{StaticResource SecondaryTextBrush}"
+            FontSize="10"
+            FlowDirection="LeftToRight" />
         <TextBlock
             x:Name="Summary"
             Grid.Row="1"
             Margin="10,2,10,8"
             Foreground="{StaticResource SecondaryTextBrush}"
+            x:Uid="SparklineSummary"
             Text="CPU history is warming up."
             TextWrapping="Wrap" />
     </Grid>

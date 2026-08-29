@@ -29,7 +29,7 @@ public sealed class WindowsProcessResourceCounterReader : IProcessResourceCounte
         DateTimeOffset observedStart;
         try
         {
-            observedStart = DateTimeOffset.FromFileTime(creation.ToInt64());
+            observedStart = DateTimeOffset.FromFileTime(creation.ToInt64()).ToUniversalTime();
         }
         catch (ArgumentOutOfRangeException)
         {

@@ -1,6 +1,7 @@
 using MonitoringXS.Application;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
+using System.Diagnostics;
 
 namespace MonitoringXS.Application.Tests;
 
@@ -18,10 +19,10 @@ public sealed class MonitoringCoordinatorTests
             new Collector(process),
             new Aggregator(identity, process));
 
-        MonitoringDashboardSnapshot result = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot result = await coordinator.CaptureAsync(CancellationToken.None);
 
-        Assert.Empty(result.InstalledApplications);
-        Assert.Single(result.PortableApplications);
+        Assert.DoesNotContain(result.Applications, item => item.Application.Disposition == ApplicationDisposition.Installed);
+        Assert.Single(result.Applications, item => item.Application.Disposition == ApplicationDisposition.Portable);
         Assert.Single(result.OneMinuteHistory["tool"]);
     }
 
@@ -40,10 +41,10 @@ public sealed class MonitoringCoordinatorTests
             new Collector(process),
             aggregator);
 
-        MonitoringDashboardSnapshot firstCapture = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot firstCapture = await coordinator.CaptureAsync(CancellationToken.None);
         attribution.Identity = second;
         aggregator.Identity = second;
-        MonitoringDashboardSnapshot secondCapture = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot secondCapture = await coordinator.CaptureAsync(CancellationToken.None);
 
         Assert.Contains("first", firstCapture.OneMinuteHistory.Keys);
         Assert.DoesNotContain("first", secondCapture.OneMinuteHistory.Keys);
@@ -76,7 +77,7 @@ public sealed class MonitoringCoordinatorTests
         DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
         ProcessDescriptor process = new(new ProcessInstanceId(46, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
         ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
-        MonitoringCoordinator coordinator = new(
+        MonitoringCoordinator coordinator = CreateCoordinator(
             new Discovery(process),
             new Attribution(process, identity),
             new Collector(process),
@@ -84,9 +85,9 @@ public sealed class MonitoringCoordinatorTests
             new PhysicalCollector(process),
             new PhysicalAggregator(identity));
 
-        MonitoringDashboardSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
 
-        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
         Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
         Assert.Equal(123d, snapshot.PhysicalDisk.ReadBytesPerSecond.Value);
     }
@@ -97,7 +98,7 @@ public sealed class MonitoringCoordinatorTests
         DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
         ProcessDescriptor process = new(new ProcessInstanceId(47, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
         ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
-        MonitoringCoordinator coordinator = new(
+        MonitoringCoordinator coordinator = CreateCoordinator(
             new Discovery(process),
             new Attribution(process, identity),
             new Collector(process),
@@ -107,23 +108,278 @@ public sealed class MonitoringCoordinatorTests
             new NetworkCollector(process),
             new NetworkAggregator(identity));
 
-        MonitoringDashboardSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
 
-        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.InstalledApplications);
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
         Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
         Assert.Equal(123d, snapshot.PhysicalDisk.ReadBytesPerSecond.Value);
         Assert.Equal(789d, snapshot.Network.DownloadBytesPerSecond.Value);
     }
 
+    [Fact]
+    public async Task CaptureAsyncMergesGpuWithoutReplacingExistingMetrics()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        ProcessDescriptor process = new(new ProcessInstanceId(48, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
+        ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
+        MonitoringCoordinator coordinator = CreateCoordinator(
+            new Discovery(process),
+            new Attribution(process, identity),
+            new Collector(process),
+            new Aggregator(identity, process),
+            new PhysicalCollector(process),
+            new PhysicalAggregator(identity),
+            new NetworkCollector(process),
+            new NetworkAggregator(identity),
+            new GpuCollector(process),
+            new GpuAggregator(identity));
+
+        MonitoringSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
+        Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
+        Assert.Equal(123d, snapshot.PhysicalDisk.ReadBytesPerSecond.Value);
+        Assert.Equal(789d, snapshot.Network.DownloadBytesPerSecond.Value);
+        Assert.Equal(45d, snapshot.Gpu.UtilizationPercent.Value);
+        Assert.Equal(256UL, snapshot.Gpu.DedicatedMemoryBytes.Value);
+    }
+
+    [Fact]
+    public async Task GpuFailureDoesNotBreakOtherApplicationMetrics()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        ProcessDescriptor process = new(new ProcessInstanceId(49, start), "visible", @"C:\Apps\visible.exe", "Visible", null, null, "Visible", null, false, true);
+        ApplicationIdentity identity = new("visible", "Visible", null, ApplicationDisposition.Installed, @"C:\Apps", ClassificationConfidence.High, "test");
+        MonitoringCoordinator coordinator = CreateCoordinator(
+            new Discovery(process),
+            new Attribution(process, identity),
+            new Collector(process),
+            new Aggregator(identity, process),
+            gpuCollector: new ThrowingGpuCollector(),
+            gpuAggregation: new GpuAggregator(identity));
+
+        MonitoringSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
+        Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
+        Assert.Equal(MetricAvailability.Error, snapshot.Gpu.UtilizationPercent.Availability);
+        Assert.Equal(GpuAvailabilityReason.CounterReadFailure, snapshot.Gpu.Reason);
+    }
+
+    [Fact]
+    public async Task BrokerUnavailableDoesNotBreakCpuMemoryProcessIoOrGpu()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        ProcessDescriptor process = new(
+            new ProcessInstanceId(50, start),
+            "visible",
+            @"C:\Apps\visible.exe",
+            "Visible",
+            null,
+            null,
+            "Visible",
+            null,
+            false,
+            true);
+        ApplicationIdentity identity = new(
+            "visible",
+            "Visible",
+            null,
+            ApplicationDisposition.Installed,
+            @"C:\Apps",
+            ClassificationConfidence.High,
+            "test");
+        MonitoringCoordinator coordinator = CreateCoordinator(
+            new Discovery(process),
+            new Attribution(process, identity),
+            new Collector(process),
+            new Aggregator(identity, process),
+            new UnavailablePhysicalCollector(process),
+            new PhysicalAggregator(identity),
+            new UnavailableNetworkCollector(process),
+            new NetworkAggregator(identity),
+            new GpuCollector(process),
+            new GpuAggregator(identity));
+
+        MonitoringSnapshot dashboard =
+            await coordinator.CaptureAsync(CancellationToken.None);
+
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
+        Assert.Equal(1d, snapshot.CpuPercent.Value);
+        Assert.Equal(1024, snapshot.WorkingSetBytes.Value);
+        Assert.Equal(10d, snapshot.IoReadBytesPerSecond.Value);
+        Assert.Equal(45d, snapshot.Gpu.UtilizationPercent.Value);
+        Assert.Equal(
+            MetricAvailability.Unavailable,
+            snapshot.PhysicalDisk.ReadBytesPerSecond.Availability);
+        Assert.Equal(
+            MetricAvailability.Unavailable,
+            snapshot.Network.DownloadBytesPerSecond.Availability);
+    }
+
+    [Fact]
+    public async Task TransientBrokerCollectorsRecoverWithoutBlockingOtherMetricsOrHistory()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        ProcessDescriptor process = new(
+            new ProcessInstanceId(51, start),
+            "visible",
+            @"C:\Apps\visible.exe",
+            "Visible",
+            null,
+            null,
+            "Visible",
+            null,
+            false,
+            true);
+        ApplicationIdentity identity = new(
+            "visible",
+            "Visible",
+            null,
+            ApplicationDisposition.Installed,
+            @"C:\Apps",
+            ClassificationConfidence.High,
+            "test");
+        MonitoringCoordinator coordinator = CreateCoordinator(
+            new Discovery(process),
+            new Attribution(process, identity),
+            new Collector(process),
+            new Aggregator(identity, process),
+            new TransientPhysicalCollector(process),
+            new PhysicalAggregator(identity),
+            new TransientNetworkCollector(process),
+            new NetworkAggregator(identity),
+            new GpuCollector(process),
+            new GpuAggregator(identity));
+
+        MonitoringSnapshot failed = await coordinator.CaptureAsync(CancellationToken.None);
+        MonitoringSnapshot recovered = await coordinator.CaptureAsync(CancellationToken.None);
+
+        ApplicationMetricSnapshot failedSnapshot = Assert.Single(failed.Applications);
+        Assert.Equal(1d, failedSnapshot.CpuPercent.Value);
+        Assert.Equal(1024, failedSnapshot.WorkingSetBytes.Value);
+        Assert.Equal(10d, failedSnapshot.IoReadBytesPerSecond.Value);
+        Assert.Equal(45d, failedSnapshot.Gpu.UtilizationPercent.Value);
+        Assert.Equal(MetricAvailability.Error, failedSnapshot.PhysicalDisk.ReadBytesPerSecond.Availability);
+        Assert.Equal(MetricAvailability.Error, failedSnapshot.Network.DownloadBytesPerSecond.Availability);
+
+        ApplicationMetricSnapshot recoveredSnapshot = Assert.Single(recovered.Applications);
+        Assert.Equal(123d, recoveredSnapshot.PhysicalDisk.ReadBytesPerSecond.Value);
+        Assert.Equal(789d, recoveredSnapshot.Network.DownloadBytesPerSecond.Value);
+        Assert.Equal(2, recovered.OneMinuteHistory["visible"].Count);
+    }
+
+    [Fact]
+    public async Task BrokerTimeoutIsBoundedAndDoesNotPreventOtherCollectors()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        ProcessDescriptor process = new(
+            new ProcessInstanceId(52, start),
+            "visible",
+            @"C:\Apps\visible.exe",
+            "Visible",
+            null,
+            null,
+            "Visible",
+            null,
+            false,
+            true);
+        ApplicationIdentity identity = new(
+            "visible",
+            "Visible",
+            null,
+            ApplicationDisposition.Installed,
+            @"C:\Apps",
+            ClassificationConfidence.High,
+            "test");
+        CancellationAwarePhysicalCollector physical = new();
+        MonitoringCoordinator coordinator = CreateCoordinator(
+            new Discovery(process),
+            new Attribution(process, identity),
+            new Collector(process),
+            new Aggregator(identity, process),
+            physical,
+            new PhysicalAggregator(identity),
+            new NetworkCollector(process),
+            new NetworkAggregator(identity),
+            new GpuCollector(process),
+            new GpuAggregator(identity));
+        Stopwatch elapsed = Stopwatch.StartNew();
+
+        MonitoringSnapshot dashboard = await coordinator.CaptureAsync(CancellationToken.None);
+
+        elapsed.Stop();
+        ApplicationMetricSnapshot snapshot = Assert.Single(dashboard.Applications);
+        // The pipeline aborts the stage via WaitAsync at the 750 ms deadline;
+        // the abandoned collector observes the linked cancellation token
+        // asynchronously afterwards, so poll briefly rather than asserting
+        // synchronously. The bounded-deadline contract itself is checked below.
+        for (int attempts = 0;
+             !physical.CancellationObserved && attempts < 200;
+             attempts++)
+        {
+            await Task.Delay(10, CancellationToken.None);
+        }
+        Assert.True(physical.CancellationObserved);
+        Assert.True(elapsed.Elapsed < TimeSpan.FromSeconds(2));
+        Assert.Equal(1d, snapshot.CpuPercent.Value);
+        Assert.Equal(789d, snapshot.Network.DownloadBytesPerSecond.Value);
+        Assert.Equal(45d, snapshot.Gpu.UtilizationPercent.Value);
+        Assert.Equal(MetricAvailability.Error, snapshot.PhysicalDisk.ReadBytesPerSecond.Availability);
+    }
+
+    private static MonitoringCoordinator CreateCoordinator(
+        IProcessDiscoveryService discovery,
+        IApplicationAttributionService attribution,
+        IProcessMetricCollector collector,
+        IMetricAggregationService aggregation,
+        IPhysicalDiskMetricCollector? physicalDiskCollector = null,
+        IPhysicalDiskAggregationService? physicalDiskAggregation = null,
+        INetworkMetricCollector? networkCollector = null,
+        INetworkMetricAggregationService? networkAggregation = null,
+        IGpuMetricCollector? gpuCollector = null,
+        IGpuMetricAggregationService? gpuAggregation = null)
+    {
+        List<IMetricCaptureStage> stages = [];
+        if (physicalDiskCollector is not null && physicalDiskAggregation is not null)
+        {
+            stages.Add(new PhysicalDiskMetricStage(physicalDiskCollector, physicalDiskAggregation));
+        }
+
+        if (networkCollector is not null && networkAggregation is not null)
+        {
+            stages.Add(new NetworkMetricStage(networkCollector, networkAggregation));
+        }
+
+        if (gpuCollector is not null && gpuAggregation is not null)
+        {
+            stages.Add(new GpuMetricStage(gpuCollector, gpuAggregation));
+        }
+
+        return new(
+            discovery,
+            attribution,
+            collector,
+            aggregation,
+            new MonitoringCapturePipeline(stages));
+    }
+
     private sealed class Discovery(ProcessDescriptor process) : IProcessDiscoveryService
     {
-        public ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken) => ValueTask.FromResult<IReadOnlyList<ProcessDescriptor>>([process]);
+        public ValueTask<ProcessDiscoverySnapshot> DiscoverAsync(CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new ProcessDiscoverySnapshot(
+                [process.InstanceId.ProcessId],
+                [process],
+                []));
     }
 
     private sealed class MultiDiscovery(IReadOnlyList<ProcessDescriptor> processes) : IProcessDiscoveryService
     {
-        public ValueTask<IReadOnlyList<ProcessDescriptor>> DiscoverAsync(CancellationToken cancellationToken) =>
-            ValueTask.FromResult(processes);
+        public ValueTask<ProcessDiscoverySnapshot> DiscoverAsync(CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new ProcessDiscoverySnapshot(
+                processes.Select(process => process.InstanceId.ProcessId).ToArray(),
+                processes,
+                []));
     }
 
     private sealed class Attribution(ProcessDescriptor process, ApplicationIdentity identity) : IApplicationAttributionService
@@ -206,6 +462,65 @@ public sealed class MonitoringCoordinatorTests
                 default)]);
     }
 
+    private sealed class UnavailablePhysicalCollector(ProcessDescriptor process)
+        : IPhysicalDiskMetricCollector
+    {
+        public ValueTask<IReadOnlyList<PhysicalDiskProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAt,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IReadOnlyList<PhysicalDiskProcessSample>>(
+            [
+                new(
+                    process.InstanceId,
+                    capturedAt.ToUniversalTime(),
+                    MetricValue<double>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<double>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    default)
+            ]);
+    }
+
+    private sealed class TransientPhysicalCollector(ProcessDescriptor process)
+        : IPhysicalDiskMetricCollector
+    {
+        private int _calls;
+
+        public ValueTask<IReadOnlyList<PhysicalDiskProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAt,
+            CancellationToken cancellationToken) =>
+            Interlocked.Increment(ref _calls) == 1
+                ? ValueTask.FromException<IReadOnlyList<PhysicalDiskProcessSample>>(
+                    new TimeoutException("Simulated Broker timeout."))
+                : new PhysicalCollector(process).CollectAsync(processes, capturedAt, cancellationToken);
+    }
+
+    private sealed class CancellationAwarePhysicalCollector : IPhysicalDiskMetricCollector
+    {
+        public bool CancellationObserved { get; private set; }
+
+        public async ValueTask<IReadOnlyList<PhysicalDiskProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAt,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                return [];
+            }
+            catch (OperationCanceledException)
+            {
+                CancellationObserved = true;
+                throw;
+            }
+        }
+    }
+
     private sealed class PhysicalAggregator(ApplicationIdentity identity) : IPhysicalDiskAggregationService
     {
         public IReadOnlyDictionary<string, PhysicalDiskMetricSet> Aggregate(
@@ -240,6 +555,43 @@ public sealed class MonitoringCoordinatorTests
                 default)]);
     }
 
+    private sealed class UnavailableNetworkCollector(ProcessDescriptor process)
+        : INetworkMetricCollector
+    {
+        public ValueTask<IReadOnlyList<NetworkProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAt,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IReadOnlyList<NetworkProcessSample>>(
+            [
+                new(
+                    process.InstanceId,
+                    capturedAt.ToUniversalTime(),
+                    MetricValue<double>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<double>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<ulong>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<int>.Unavailable(MetricAvailability.Unavailable),
+                    MetricValue<int>.Unavailable(MetricAvailability.Unavailable),
+                    default)
+            ]);
+    }
+
+    private sealed class TransientNetworkCollector(ProcessDescriptor process)
+        : INetworkMetricCollector
+    {
+        private int _calls;
+
+        public ValueTask<IReadOnlyList<NetworkProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAt,
+            CancellationToken cancellationToken) =>
+            Interlocked.Increment(ref _calls) == 1
+                ? ValueTask.FromException<IReadOnlyList<NetworkProcessSample>>(
+                    new InvalidOperationException("Simulated transient collector failure."))
+                : new NetworkCollector(process).CollectAsync(processes, capturedAt, cancellationToken);
+    }
+
     private sealed class NetworkAggregator(ApplicationIdentity identity) : INetworkMetricAggregationService
     {
         public IReadOnlyDictionary<string, NetworkMetricSet> Aggregate(
@@ -253,6 +605,55 @@ public sealed class MonitoringCoordinatorTests
                     metrics[0].SessionUploadedBytes,
                     metrics[0].ActiveTcpConnectionCount,
                     metrics[0].UdpEndpointCount,
+                    metrics[0].Diagnostics)
+            };
+    }
+
+    private sealed class GpuCollector(ProcessDescriptor process) : IGpuMetricCollector
+    {
+        public ValueTask<IReadOnlyList<GpuProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAtUtc,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IReadOnlyList<GpuProcessSample>>(
+            [
+                new(
+                    process.InstanceId,
+                    capturedAtUtc,
+                    MetricValue<double>.Available(45),
+                    MetricValue<ulong>.Available(256),
+                    MetricValue<ulong>.Available(128),
+                    [new(new GpuEngineId(1, 0, 0, "3D"), 45)],
+                    new GpuCollectorDiagnostics
+                    {
+                        ProviderName = GpuCollectorDiagnostics.WindowsPdhProvider,
+                        CollectorStatus = MetricAvailability.Available,
+                        Reason = GpuAvailabilityReason.None
+                    })
+            ]);
+    }
+
+    private sealed class ThrowingGpuCollector : IGpuMetricCollector
+    {
+        public ValueTask<IReadOnlyList<GpuProcessSample>> CollectAsync(
+            IReadOnlyList<ProcessDescriptor> processes,
+            DateTimeOffset capturedAtUtc,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Simulated PDH failure.");
+    }
+
+    private sealed class GpuAggregator(ApplicationIdentity identity) : IGpuMetricAggregationService
+    {
+        public IReadOnlyDictionary<string, GpuMetricSet> Aggregate(
+            IReadOnlyList<AttributionResult> attribution,
+            IReadOnlyList<GpuProcessSample> metrics) =>
+            new Dictionary<string, GpuMetricSet>(StringComparer.Ordinal)
+            {
+                [identity.LogicalApplicationId] = new(
+                    metrics[0].UtilizationPercent,
+                    metrics[0].DedicatedMemoryBytes,
+                    metrics[0].SharedMemoryBytes,
+                    metrics[0].Engines[0].Engine,
                     metrics[0].Diagnostics)
             };
     }

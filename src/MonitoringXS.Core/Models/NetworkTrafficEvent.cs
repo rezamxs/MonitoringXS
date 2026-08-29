@@ -4,18 +4,20 @@ public sealed record NetworkTrafficEvent
 {
     public NetworkTrafficEvent(
         int processId,
-        DateTimeOffset timestamp,
+        DateTimeOffset timestampUtc,
         NetworkDirection direction,
         NetworkTransport transport,
+        NetworkAddressFamily addressFamily,
         int transferSize)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(processId);
         ArgumentOutOfRangeException.ThrowIfNegative(transferSize);
 
         ProcessId = processId;
-        TimestampUtc = timestamp.ToUniversalTime();
+        TimestampUtc = timestampUtc.ToUniversalTime();
         Direction = direction;
         Transport = transport;
+        AddressFamily = addressFamily;
         TransferSize = transferSize;
     }
 
@@ -27,6 +29,8 @@ public sealed record NetworkTrafficEvent
     public NetworkDirection Direction { get; }
 
     public NetworkTransport Transport { get; }
+
+    public NetworkAddressFamily AddressFamily { get; }
 
     public int TransferSize { get; }
 }
