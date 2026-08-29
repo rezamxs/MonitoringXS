@@ -318,7 +318,7 @@ public sealed class SqliteMetricHistoryStore :
         }
     }
 
-    private static IReadOnlyDictionary<MetricHistoryMetric, MetricHistoryQueryResult> FailedQueries(
+    private static Dictionary<MetricHistoryMetric, MetricHistoryQueryResult> FailedQueries(
         IEnumerable<MetricHistoryMetric> metrics,
         string error) => metrics.ToDictionary(
             metric => metric,
@@ -802,7 +802,7 @@ public sealed class SqliteMetricHistoryStore :
         }
     }
 
-    private async Task ConfigureConnectionAsync(
+    private static async Task ConfigureConnectionAsync(
         SqliteConnection connection,
         CancellationToken cancellationToken)
     {
