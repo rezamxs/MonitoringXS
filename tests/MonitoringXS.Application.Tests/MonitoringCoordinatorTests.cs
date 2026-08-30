@@ -27,6 +27,32 @@ public sealed class MonitoringCoordinatorTests
     }
 
     [Fact]
+    public async Task CaptureAsyncRecordsStageTimingsWithoutFabricatingAbsentStages()
+    {
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        ProcessDescriptor process = new(new ProcessInstanceId(42, start), "tool", @"C:\Tools\tool.exe", "Tool", null, null, "Tool", null, false, true);
+        ApplicationIdentity identity = new("tool", "Tool", null, ApplicationDisposition.Portable, @"C:\Tools", ClassificationConfidence.Medium, "test");
+        MonitoringCoordinator coordinator = new(
+            new Discovery(process),
+            new Attribution(process, identity),
+            new Collector(process),
+            new Aggregator(identity, process));
+
+        await coordinator.CaptureAsync(CancellationToken.None);
+
+        CaptureTickTimings? timings = coordinator.LastCaptureTimings;
+        Assert.NotNull(timings);
+        Assert.NotNull(timings.Discovery);
+        Assert.NotNull(timings.Attribution);
+        Assert.NotNull(timings.ProcessCollection);
+        Assert.NotNull(timings.Aggregation);
+        Assert.NotNull(timings.MetricPipeline);
+        Assert.Null(timings.Total);
+        Assert.Null(timings.PhysicalDiskStage);
+        Assert.Null(timings.SystemOverview);
+    }
+
+    [Fact]
     public async Task CaptureAsyncEvictsHistoryForApplicationsThatAreNoLongerActive()
     {
         DateTimeOffset start = DateTimeOffset.UtcNow.AddMinutes(-1);

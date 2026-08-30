@@ -27,7 +27,11 @@ public interface IMetricCaptureStage
     MetricCaptureContribution Failed(Exception exception);
 }
 
-public abstract record MetricCaptureContribution(MetricFamily Family);
+public abstract record MetricCaptureContribution(MetricFamily Family)
+{
+    /// <summary>Wall-clock duration of the stage invocation that produced this contribution.</summary>
+    public TimeSpan Duration { get; init; }
+}
 
 public sealed record PhysicalDiskMetricContribution(
     IReadOnlyDictionary<string, PhysicalDiskMetricSet> Metrics,
@@ -51,7 +55,8 @@ public sealed record MonitoringMetricCaptureResult(
     IReadOnlyList<ApplicationMetricSnapshot> Applications,
     PhysicalDiskCollectorDiagnostics? PhysicalDiskDiagnostics,
     NetworkCollectorDiagnostics? NetworkDiagnostics,
-    GpuCounterBatch? GpuBatch);
+    GpuCounterBatch? GpuBatch,
+    IReadOnlyDictionary<MetricFamily, TimeSpan>? StageDurations = null);
 
 public sealed class MonitoringCapturePipeline
 {
@@ -90,8 +95,10 @@ public sealed class MonitoringCapturePipeline
         PhysicalDiskCollectorDiagnostics? diskDiagnostics = null;
         NetworkCollectorDiagnostics? networkDiagnostics = null;
         GpuCounterBatch? gpuBatch = null;
+        Dictionary<MetricFamily, TimeSpan> stageDurations = new();
         foreach (MetricCaptureContribution contribution in contributions)
         {
+            stageDurations[contribution.Family] = contribution.Duration;
             switch (contribution)
             {
                 case PhysicalDiskMetricContribution disk:
@@ -126,7 +133,7 @@ public sealed class MonitoringCapturePipeline
             };
         }).ToArray();
 
-        return new(applications, diskDiagnostics, networkDiagnostics, gpuBatch);
+        return new(applications, diskDiagnostics, networkDiagnostics, gpuBatch, stageDurations);
     }
 
     private static T? Resolve<T>(IReadOnlyDictionary<string, T>? metrics, string id, T? failure)
@@ -142,6 +149,7 @@ public sealed class MonitoringCapturePipeline
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(CollectorTimeout);
         MetricCaptureContribution contribution;
+        long stageStart = Stopwatch.GetTimestamp();
         try
         {
             Task<MetricCaptureContribution> capture = stage.CaptureAsync(context, timeout.Token).AsTask();
@@ -170,7 +178,7 @@ public sealed class MonitoringCapturePipeline
                 "Metric stage {0} failed ({1}).",
                 stage.Family,
                 exception.GetType().Name);
-            return stage.Failed(exception);
+            return stage.Failed(exception) with { Duration = Stopwatch.GetElapsedTime(stageStart) };
         }
 
         if (contribution.Family != stage.Family)
@@ -179,7 +187,7 @@ public sealed class MonitoringCapturePipeline
                 $"Metric stage {stage.GetType().Name} returned {contribution.Family} instead of {stage.Family}.");
         }
 
-        return contribution;
+        return contribution with { Duration = Stopwatch.GetElapsedTime(stageStart) };
     }
 }
 

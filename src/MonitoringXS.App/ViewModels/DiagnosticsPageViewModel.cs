@@ -339,6 +339,10 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
             Item("DiagnosticsRetention", _localization.Format("DiagnosticsHours", _history.Retention.TotalHours)),
             Item("DiagnosticsStorageQueue", $"{history.QueueDepth}/{_history.QueueCapacity}", technical: true),
             Item("DiagnosticsStorageWrites", $"{history.BatchesWritten} / {history.SamplesWritten}", technical: true),
+            Item("DiagnosticsTickHistoryWrite", FormatMilliseconds(
+                history.LastWriteMicroseconds is long lastWriteMicros
+                    ? TimeSpan.FromMicroseconds(lastWriteMicros)
+                    : null), technical: true),
             Item("DiagnosticsStorageDrops", history.QueueDrops.ToString(CultureInfo.InvariantCulture), technical: true),
             Item("DiagnosticsStorageFailures", history.WriteFailures.ToString(CultureInfo.InvariantCulture), technical: true),
             Item("DiagnosticsStorageRecovery", history.LastError?.Contains("corrupt", StringComparison.OrdinalIgnoreCase) == true
@@ -349,6 +353,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
         PhysicalDiskCollectorDiagnostics diskDiagnostics = applications.FirstOrDefault()?.PhysicalDisk.Diagnostics ?? default;
         NetworkCollectorDiagnostics networkDiagnostics = applications.FirstOrDefault()?.Network.Diagnostics ?? default;
         GpuCollectorDiagnostics gpuDiagnostics = applications.FirstOrDefault()?.Gpu.Diagnostics ?? default;
+        CaptureTickTimings? tick = _runtime.LastTickTimings;
         Replace(AdvancedItems,
         [
             Item("DiagnosticsServiceIdentity", "MonitoringXS.PrivilegedEtwBroker", technical: true),
@@ -375,7 +380,20 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
             Item("DiagnosticsGpuDuration", $"{gpuDiagnostics.CollectionDurationMilliseconds.ToString("0.###", CultureInfo.InvariantCulture)} ms", technical: true),
             Item("DiagnosticsGpuPartial", gpuDiagnostics.CollectorStatus == MetricAvailability.Partial
                 ? _localization.Get(LocalizationKeys.PartialLowerBound)
-                : AvailabilityText(gpuDiagnostics.CollectorStatus))
+                : AvailabilityText(gpuDiagnostics.CollectorStatus)),
+            Item("DiagnosticsTickTotal", FormatMilliseconds(tick?.Total), technical: true),
+            Item("DiagnosticsTickCapture", FormatMilliseconds(tick?.Capture), technical: true),
+            Item("DiagnosticsTickDiscovery", FormatMilliseconds(tick?.Discovery), technical: true),
+            Item("DiagnosticsTickAttribution", FormatMilliseconds(tick?.Attribution), technical: true),
+            Item("DiagnosticsTickProcessCollection", FormatMilliseconds(tick?.ProcessCollection), technical: true),
+            Item("DiagnosticsTickAggregation", FormatMilliseconds(tick?.Aggregation), technical: true),
+            Item("DiagnosticsTickPipeline", FormatMilliseconds(tick?.MetricPipeline), technical: true),
+            Item("DiagnosticsTickDiskStage", FormatMilliseconds(tick?.PhysicalDiskStage), technical: true),
+            Item("DiagnosticsTickNetworkStage", FormatMilliseconds(tick?.NetworkStage), technical: true),
+            Item("DiagnosticsTickGpuStage", FormatMilliseconds(tick?.GpuStage), technical: true),
+            Item("DiagnosticsTickSystemOverview", FormatMilliseconds(tick?.SystemOverview), technical: true),
+            Item("DiagnosticsTickPublish", FormatMilliseconds(tick?.SnapshotPublish), technical: true),
+            Item("DiagnosticsTickHistoryEnqueue", FormatMilliseconds(tick?.HistoryEnqueue), technical: true)
         ]);
 
         CopyStatusText = string.Empty;
@@ -458,6 +476,10 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
 
     private string FormatDuration(TimeSpan value) =>
         _localization.Format("DiagnosticsDuration", (int)value.TotalHours, value.Minutes, value.Seconds);
+
+    private string FormatMilliseconds(TimeSpan? value) => value is null
+        ? _localization.Get(LocalizationKeys.Unavailable)
+        : $"{value.Value.TotalMilliseconds.ToString("0.###", CultureInfo.InvariantCulture)} ms";
 
     private string FormatSelfCpu()
     {

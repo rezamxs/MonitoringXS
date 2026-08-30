@@ -356,6 +356,20 @@
   <data name="DiagnosticsSafeSummaryTitle" xml:space="preserve"><value>خلاصهٔ امن عیب‌یابی Monitoring XS</value></data>
   <data name="DiagnosticsEnabled" xml:space="preserve"><value>فعال</value></data>
   <data name="DiagnosticsSeconds" xml:space="preserve"><value>{0:0.##} ثانیه</value></data>
+  <data name="DiagnosticsTickTotal" xml:space="preserve"><value>مدت کل چرخهٔ نمونه‌برداری</value></data>
+  <data name="DiagnosticsTickCapture" xml:space="preserve"><value>مدت کل مرحلهٔ برداشت</value></data>
+  <data name="DiagnosticsTickDiscovery" xml:space="preserve"><value>مدت کشف فرایندها</value></data>
+  <data name="DiagnosticsTickAttribution" xml:space="preserve"><value>مدت انتساب برنامه‌ها</value></data>
+  <data name="DiagnosticsTickProcessCollection" xml:space="preserve"><value>مدت گردآوری سنجه‌های فرایند</value></data>
+  <data name="DiagnosticsTickAggregation" xml:space="preserve"><value>مدت تجمیع سنجه‌ها</value></data>
+  <data name="DiagnosticsTickPipeline" xml:space="preserve"><value>مدت خط لولهٔ سنجه‌های پیشرفته</value></data>
+  <data name="DiagnosticsTickDiskStage" xml:space="preserve"><value>مدت مرحلهٔ گردآوری دیسک فیزیکی</value></data>
+  <data name="DiagnosticsTickNetworkStage" xml:space="preserve"><value>مدت مرحلهٔ گردآوری شبکه</value></data>
+  <data name="DiagnosticsTickGpuStage" xml:space="preserve"><value>مدت مرحلهٔ گردآوری گرافیک</value></data>
+  <data name="DiagnosticsTickSystemOverview" xml:space="preserve"><value>مدت برداشت نمای کلی سیستم</value></data>
+  <data name="DiagnosticsTickPublish" xml:space="preserve"><value>مدت انتشار نمونه</value></data>
+  <data name="DiagnosticsTickHistoryEnqueue" xml:space="preserve"><value>مدت افزودن به صف تاریخچه</value></data>
+  <data name="DiagnosticsTickHistoryWrite" xml:space="preserve"><value>مدت نوشتن دستهٔ تاریخچه</value></data>
   <data name="DiagnosticsHours" xml:space="preserve"><value>{0:0.##} ساعت</value></data>
   <data name="DiagnosticsDuration" xml:space="preserve"><value>{0} ساعت، {1} دقیقه و {2} ثانیه</value></data>
   <data name="DiagnosticsVersion" xml:space="preserve"><value>نسخهٔ برنامه</value></data>
