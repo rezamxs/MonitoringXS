@@ -94,9 +94,6 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
 
     public IReadOnlyList<ApplicationHistoryPoint> History { get; private set; } = [];
 
-    /// <summary>True when the latest snapshot still observed live processes for this application.</summary>
-    public bool IsRunning { get; private set; }
-
     public void Update(ApplicationMetricSnapshot snapshot, IReadOnlyList<ApplicationHistoryPoint> history)
     {
         LatestSnapshot = snapshot;
@@ -167,7 +164,6 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         ProcessCountText = snapshot.ProcessCount == 1
             ? _localization.Format(LocalizationKeys.ProcessCountSingular, snapshot.ProcessCount)
             : _localization.Format(LocalizationKeys.ProcessCountPlural, snapshot.ProcessCount);
-        IsRunning = snapshot.ProcessCount > 0;
         bool hasPartialMetric = snapshot.CpuPercent.Availability == MetricAvailability.Partial
             || snapshot.WorkingSetBytes.Availability == MetricAvailability.Partial
             || snapshot.IoReadBytesPerSecond.Availability == MetricAvailability.Partial

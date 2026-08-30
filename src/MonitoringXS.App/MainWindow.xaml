@@ -1051,22 +1051,6 @@
                                             UseSystemFocusVisuals="True" />
                                     </Grid>
 
-                                    <StackPanel
-                                        x:Name="ToolbarRunningGroup"
-                                        Grid.Row="0"
-                                        Grid.Column="2"
-                                        VerticalAlignment="Center"
-                                        Orientation="Horizontal"
-                                        Spacing="8">
-                                        <ToggleButton
-                                            x:Uid="RunningOnlyToggle"
-                                            Height="36"
-                                            Padding="12,0"
-                                            CornerRadius="6"
-                                            IsChecked="{x:Bind ViewModel.IsRunningOnly, Mode=TwoWay}"
-                                            UseSystemFocusVisuals="True" />
-                                    </StackPanel>
-
                                     <TextBlock x:Uid="NoComparableData"
                                         x:Name="NoComparableDataText"
                                         Grid.Row="1"
@@ -1146,19 +1130,6 @@
                                         CornerRadius="8"
                                         Visibility="{Binding HasNoSearchResults, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <TextBlock x:Uid="NoSearchResults"
-                                            AutomationProperties.LiveSetting="Polite"
-                                            Foreground="{StaticResource SecondaryTextBrush}"
-                                            TextWrapping="Wrap" />
-                                    </Border>
-                                    <Border
-                                        Margin="0,0,0,8"
-                                        Padding="14"
-                                        Background="{StaticResource SurfaceBrush}"
-                                        BorderBrush="{StaticResource SubtleBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="8"
-                                        Visibility="{Binding HasNoRunningApplications, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock x:Uid="NoRunningApps"
                                             AutomationProperties.LiveSetting="Polite"
                                             Foreground="{StaticResource SecondaryTextBrush}"
                                             TextWrapping="Wrap" />

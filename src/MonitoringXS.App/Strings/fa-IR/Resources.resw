@@ -295,10 +295,6 @@
   <data name="ClearApplicationSearchButton.AutomationProperties.Name" xml:space="preserve"><value>پاک کردن جست‌وجوی برنامه‌ها</value></data>
   <data name="ClearApplicationSearchButton.AutomationProperties.HelpText" xml:space="preserve"><value>فهرست کامل و فعلی برنامه‌ها را برمی‌گرداند.</value></data>
   <data name="NoSearchResults.Text" xml:space="preserve"><value>هیچ برنامه‌ای با این جست‌وجو مطابقت ندارد.</value></data>
-  <data name="NoRunningApps.Text" xml:space="preserve"><value>در حال حاضر هیچ برنامه‌ای در حال اجرا نیست. برای دیدن همهٔ برنامه‌ها، «فقط در حال اجرا» را خاموش کنید.</value></data>
-  <data name="RunningOnlyToggle.Content" xml:space="preserve"><value>فقط در حال اجرا</value></data>
-  <data name="RunningOnlyToggle.AutomationProperties.Name" xml:space="preserve"><value>نمایش فقط برنامه‌های در حال اجرا</value></data>
-  <data name="RunningOnlyToggle.AutomationProperties.HelpText" xml:space="preserve"><value>فهرست را به برنامه‌هایی با دست‌کم یک پردازش در حال اجرا محدود می‌کند.</value></data>
   <data name="MetricExplanations.Header" xml:space="preserve"><value>توضیح سنجه‌ها</value></data>
   <data name="MetricAdvancedDetails.Header" xml:space="preserve"><value>جزئیات پیشرفته</value></data>
   <data name="MetricProviderLabel.Text" xml:space="preserve"><value>ارائه‌دهندهٔ فنی</value></data>
