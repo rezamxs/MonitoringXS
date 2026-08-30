@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml.Controls;
 using MonitoringXS.App.Localization;
 using MonitoringXS.Core.Models;
@@ -25,7 +26,14 @@ public sealed partial class AboutPage : UserControl, IDisposable
         VersionText.Text = AppIdentity.DisplayVersion;
         BetaBadge.Text = AppIdentity.BetaChannel;
         DescriptionText.Text = _localization.Get(LocalizationKeys.AboutDescription);
-        PlatformLabel.Text = _localization.Get(LocalizationKeys.AboutPlatform);
+        string architecture = RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X86 => _localization.Get(LocalizationKeys.ProcessArchitectureX86),
+            Architecture.X64 => _localization.Get(LocalizationKeys.ProcessArchitectureX64),
+            Architecture.Arm64 => _localization.Get(LocalizationKeys.ProcessArchitectureArm64),
+            _ => _localization.Get(LocalizationKeys.ProcessArchitectureUnknown)
+        };
+        PlatformLabel.Text = $"{_localization.Get(LocalizationKeys.AboutPlatform)} · {architecture}";
         OpenSourceLabel.Text = _localization.Get(LocalizationKeys.AboutOpenSource);
         PrivacySummary.Text = _localization.Get(LocalizationKeys.AboutPrivacySummary);
         PrivacyDetail.Text = _localization.Get(LocalizationKeys.AboutPrivacyDetail);
