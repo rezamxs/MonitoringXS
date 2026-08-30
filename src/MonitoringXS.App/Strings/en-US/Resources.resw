@@ -111,6 +111,8 @@
   <data name="CopyDetailsButton.AutomationProperties.HelpText" xml:space="preserve"><value>Copies safe process identity and current application metrics without command lines or secrets.</value></data>
   <data name="MetricCpuLabel.Text" xml:space="preserve"><value>CPU</value></data>
   <data name="MetricMemoryLabel.Text" xml:space="preserve"><value>Working set</value></data>
+  <data name="MetricCpuSparkline.AutomationProperties.Name" xml:space="preserve"><value>CPU history for the selected application</value></data>
+  <data name="MetricMemorySparkline.AutomationProperties.Name" xml:space="preserve"><value>Memory history for the selected application</value></data>
   <data name="MetricIoReadLabel.Text" xml:space="preserve"><value>Process I/O read</value></data>
   <data name="MetricIoWriteLabel.Text" xml:space="preserve"><value>Process I/O write</value></data>
   <data name="MetricDiskTitle.Text" xml:space="preserve"><value>Physical disk</value></data>
@@ -123,7 +125,7 @@
   <data name="MetricBusiestEngineLabel.Text" xml:space="preserve"><value>Busiest engine</value></data>
   <data name="MetricDedicatedLabel.Text" xml:space="preserve"><value>Dedicated memory</value></data>
   <data name="MetricSharedLabel.Text" xml:space="preserve"><value>Shared memory</value></data>
-  <data name="MetricCpuHistoryTitle.Text" xml:space="preserve"><value>CPU · last minute</value></data>
+  <data name="ProcessDetailsAdvanced.Header" xml:space="preserve"><value>Advanced process details</value></data>
   <data name="AdvancedInfo.Header" xml:space="preserve"><value>Advanced application information</value></data>
   <data name="ClassificationEvidence.Text" xml:space="preserve"><value>Classification evidence</value></data>
   <data name="DiskTotals.Text" xml:space="preserve"><value>Physical-disk session totals</value></data>

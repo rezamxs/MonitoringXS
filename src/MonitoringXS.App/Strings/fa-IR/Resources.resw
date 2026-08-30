@@ -111,6 +111,8 @@
   <data name="CopyDetailsButton.AutomationProperties.HelpText" xml:space="preserve"><value>هویت تأییدشدهٔ پردازش و سنجه‌های فعلی برنامه را بدون خط فرمان یا اطلاعات محرمانه کپی می‌کند.</value></data>
   <data name="MetricCpuLabel.Text" xml:space="preserve"><value>مصرف پردازنده</value></data>
   <data name="MetricMemoryLabel.Text" xml:space="preserve"><value>مصرف حافظه</value></data>
+  <data name="MetricCpuSparkline.AutomationProperties.Name" xml:space="preserve"><value>تاریخچهٔ مصرف پردازندهٔ برنامهٔ انتخاب‌شده</value></data>
+  <data name="MetricMemorySparkline.AutomationProperties.Name" xml:space="preserve"><value>تاریخچهٔ مصرف حافظهٔ برنامهٔ انتخاب‌شده</value></data>
   <data name="MetricIoReadLabel.Text" xml:space="preserve"><value>خواندن I/O</value></data>
   <data name="MetricIoWriteLabel.Text" xml:space="preserve"><value>نوشتن I/O</value></data>
   <data name="MetricDiskTitle.Text" xml:space="preserve"><value>دیسک فیزیکی</value></data>
@@ -123,7 +125,7 @@
   <data name="MetricBusiestEngineLabel.Text" xml:space="preserve"><value>فعال‌ترین موتور GPU</value></data>
   <data name="MetricDedicatedLabel.Text" xml:space="preserve"><value>حافظهٔ اختصاصی</value></data>
   <data name="MetricSharedLabel.Text" xml:space="preserve"><value>حافظهٔ اشتراکی</value></data>
-  <data name="MetricCpuHistoryTitle.Text" xml:space="preserve"><value>CPU · یک دقیقهٔ اخیر</value></data>
+  <data name="ProcessDetailsAdvanced.Header" xml:space="preserve"><value>جزئیات پیشرفتهٔ پردازش</value></data>
   <data name="AdvancedInfo.Header" xml:space="preserve"><value>اطلاعات پیشرفتهٔ برنامه</value></data>
   <data name="ClassificationEvidence.Text" xml:space="preserve"><value>شواهد دسته‌بندی</value></data>
   <data name="DiskTotals.Text" xml:space="preserve"><value>مجموع نشست دیسک فیزیکی</value></data>
