@@ -63,6 +63,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     public partial string SearchText { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial bool IsRunningOnly { get; set; }
+
     public MainWindowViewModel(
         ILogger<MainWindowViewModel> logger,
         LocalizationService? localization = null,
@@ -148,6 +151,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool HasNoSearchResults =>
         !string.IsNullOrWhiteSpace(SearchText) && !VisibleCards().Any();
 
+    public bool HasNoRunningApplications =>
+        IsRunningOnly && string.IsNullOrWhiteSpace(SearchText) && !VisibleCards().Any();
+
     public void ApplySnapshot(MonitoringSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -171,6 +177,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         ApplyCurrentSort(snapshot.CapturedAt, force: membershipChanged);
         OnPropertyChanged(nameof(HasNoComparableData));
         OnPropertyChanged(nameof(HasNoSearchResults));
+        OnPropertyChanged(nameof(HasNoRunningApplications));
         UpdateOpenTabs(snapshot);
         LastUpdated = snapshot.CapturedAt.ToLocalTime();
         UpdateStatusMessage();
@@ -327,9 +334,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         List<IApplicationListItemViewModel> desiredItems =
         [
             _installedSection,
-            .. InstalledApplications.Where(MatchesSearch),
+            .. InstalledApplications.Where(MatchesFilter),
             _portableSection,
-            .. PortableApplications.Where(MatchesSearch)
+            .. PortableApplications.Where(MatchesFilter)
         ];
         ApplyOrder(ApplicationItems, desiredItems);
 
@@ -407,6 +414,15 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
         OnPropertyChanged(nameof(HasNoSearchResults));
         OnPropertyChanged(nameof(HasNoComparableData));
+        OnPropertyChanged(nameof(HasNoRunningApplications));
+    }
+
+    partial void OnIsRunningOnlyChanged(bool value)
+    {
+        ApplyCurrentSort(DateTimeOffset.UtcNow, force: true);
+        OnPropertyChanged(nameof(HasNoSearchResults));
+        OnPropertyChanged(nameof(HasNoComparableData));
+        OnPropertyChanged(nameof(HasNoRunningApplications));
     }
 
     private void NotifySortPresentationChanged()
@@ -445,12 +461,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             ApplicationItems.Clear();
             ApplicationItems.Add(_installedSection);
-            foreach (ApplicationCardViewModel card in InstalledApplications.Where(MatchesSearch))
+            foreach (ApplicationCardViewModel card in InstalledApplications.Where(MatchesFilter))
             {
                 ApplicationItems.Add(card);
             }
             ApplicationItems.Add(_portableSection);
-            foreach (ApplicationCardViewModel card in PortableApplications.Where(MatchesSearch))
+            foreach (ApplicationCardViewModel card in PortableApplications.Where(MatchesFilter))
             {
                 ApplicationItems.Add(card);
             }
@@ -478,10 +494,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     }
 
     private IEnumerable<ApplicationCardViewModel> VisibleCards() =>
-        InstalledApplications.Concat(PortableApplications).Where(MatchesSearch);
+        InstalledApplications.Concat(PortableApplications).Where(MatchesFilter);
 
     private bool MatchesSearch(ApplicationCardViewModel card) =>
         ApplicationSearchMatcher.Matches(card, SearchText, _localization.Culture);
+
+    private bool MatchesFilter(ApplicationCardViewModel card) =>
+        MatchesSearch(card) && (!IsRunningOnly || card.IsRunning);
 
     private void PersistSortPreference()
     {

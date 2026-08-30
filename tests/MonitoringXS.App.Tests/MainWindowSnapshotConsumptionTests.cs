@@ -33,11 +33,40 @@ public sealed class MainWindowSnapshotConsumptionTests
         Assert.Equal(2, viewModel.InstalledApplications.Count);
     }
 
-    private static MonitoringSnapshot Snapshot(double firstCpu, double secondCpu)
+    [Fact]
+    public void RunningOnlyFilterHidesExitedApplicationsAndReportsEmptyState()
+    {
+        using MainWindowViewModel viewModel = new(
+            NullLogger<MainWindowViewModel>.Instance,
+            new LocalizationService());
+
+        viewModel.ApplySnapshot(Snapshot(10, 20));
+        viewModel.IsRunningOnly = true;
+
+        Assert.True(viewModel.InstalledApplications[0].IsRunning);
+        Assert.True(viewModel.InstalledApplications[1].IsRunning);
+        Assert.Equal(4, viewModel.ApplicationItems.Count);
+
+        viewModel.ApplySnapshot(Snapshot(10, 0, secondProcessCount: 0));
+        Assert.True(viewModel.InstalledApplications[0].IsRunning);
+        Assert.False(viewModel.InstalledApplications[1].IsRunning);
+        Assert.False(viewModel.HasNoRunningApplications);
+        Assert.Equal(3, viewModel.ApplicationItems.Count);
+
+        viewModel.ApplySnapshot(Snapshot(0, 0, firstProcessCount: 0, secondProcessCount: 0));
+        Assert.True(viewModel.HasNoRunningApplications);
+        Assert.Equal(2, viewModel.ApplicationItems.Count);
+    }
+
+    private static MonitoringSnapshot Snapshot(
+        double firstCpu,
+        double secondCpu,
+        int firstProcessCount = 1,
+        int secondProcessCount = 1)
     {
         DateTimeOffset capturedAt = DateTimeOffset.UtcNow;
-        ApplicationMetricSnapshot first = Application("one", "One", 101, firstCpu, capturedAt);
-        ApplicationMetricSnapshot second = Application("two", "Two", 102, secondCpu, capturedAt);
+        ApplicationMetricSnapshot first = Application("one", "One", 101, firstCpu, capturedAt, firstProcessCount);
+        ApplicationMetricSnapshot second = Application("two", "Two", 102, secondCpu, capturedAt, secondProcessCount);
         return new(
             capturedAt,
             new ProcessDiscoverySnapshot([101, 102], [.. first.Processes, .. second.Processes], []),
@@ -54,7 +83,8 @@ public sealed class MainWindowSnapshotConsumptionTests
         string name,
         int pid,
         double cpu,
-        DateTimeOffset capturedAt)
+        DateTimeOffset capturedAt,
+        int processCount = 1)
     {
         ProcessDescriptor process = new(
             new ProcessInstanceId(pid, capturedAt.AddMinutes(-1)),
@@ -85,7 +115,7 @@ public sealed class MainWindowSnapshotConsumptionTests
             MetricValue<ulong>.Available(1),
             MetricValue<ulong>.Available(1),
             MetricValue<ulong>.Available(1),
-            1,
-            [process]);
+            processCount,
+            processCount == 0 ? [] : [process]);
     }
 }

@@ -294,6 +294,10 @@
   <data name="ClearApplicationSearchButton.AutomationProperties.Name" xml:space="preserve"><value>Clear application search</value></data>
   <data name="ClearApplicationSearchButton.AutomationProperties.HelpText" xml:space="preserve"><value>Restores the complete current application list.</value></data>
   <data name="NoSearchResults.Text" xml:space="preserve"><value>No applications match this search.</value></data>
+  <data name="NoRunningApps.Text" xml:space="preserve"><value>No applications are running right now. Turn off Running only to see all applications.</value></data>
+  <data name="RunningOnlyToggle.Content" xml:space="preserve"><value>Running only</value></data>
+  <data name="RunningOnlyToggle.AutomationProperties.Name" xml:space="preserve"><value>Show only running applications</value></data>
+  <data name="RunningOnlyToggle.AutomationProperties.HelpText" xml:space="preserve"><value>Filters the list to applications with at least one running process.</value></data>
   <data name="MetricExplanations.Header" xml:space="preserve"><value>Metric explanations</value></data>
   <data name="MetricAdvancedDetails.Header" xml:space="preserve"><value>Advanced details</value></data>
   <data name="MetricProviderLabel.Text" xml:space="preserve"><value>Technical provider</value></data>
