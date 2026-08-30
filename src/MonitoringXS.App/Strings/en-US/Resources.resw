@@ -165,6 +165,7 @@
   <data name="HistoryPageRoot.AutomationProperties.Name" xml:space="preserve"><value>Application metric history page</value></data>
   <data name="HistoryLoadingProgress.AutomationProperties.Name" xml:space="preserve"><value>Loading application history</value></data>
   <data name="HistoryApplicationSelector.AutomationProperties.Name" xml:space="preserve"><value>History application</value></data>
+  <data name="HistorySelectorHint.Text" xml:space="preserve"><value>One entry per logical application. Process runs are merged into that entry.</value></data>
   <data name="HistoryRangeSelector.AutomationProperties.Name" xml:space="preserve"><value>History time range</value></data>
   <data name="HistoryCharts.AutomationProperties.Name" xml:space="preserve"><value>History metric charts</value></data>
   <data name="HistoryPageTitle.Text" xml:space="preserve"><value>History</value></data>

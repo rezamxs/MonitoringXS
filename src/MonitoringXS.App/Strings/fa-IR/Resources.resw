@@ -165,6 +165,7 @@
   <data name="HistoryPageRoot.AutomationProperties.Name" xml:space="preserve"><value>صفحهٔ تاریخچهٔ سنجه‌های برنامه</value></data>
   <data name="HistoryLoadingProgress.AutomationProperties.Name" xml:space="preserve"><value>در حال بارگذاری تاریخچهٔ برنامه</value></data>
   <data name="HistoryApplicationSelector.AutomationProperties.Name" xml:space="preserve"><value>برنامهٔ تاریخچه</value></data>
+  <data name="HistorySelectorHint.Text" xml:space="preserve"><value>برای هر برنامه یک ورودی نشان داده می‌شود؛ اجراهای مختلف پردازش در همان ورودی ترکیب شده‌اند.</value></data>
   <data name="HistoryRangeSelector.AutomationProperties.Name" xml:space="preserve"><value>بازهٔ زمانی تاریخچه</value></data>
   <data name="HistoryCharts.AutomationProperties.Name" xml:space="preserve"><value>نمودارهای سنجه‌های تاریخچه</value></data>
   <data name="HistoryPageTitle.Text" xml:space="preserve"><value>تاریخچه</value></data>
