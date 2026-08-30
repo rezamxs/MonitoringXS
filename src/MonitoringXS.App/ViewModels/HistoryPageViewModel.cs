@@ -105,7 +105,8 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
                 async () => await _store.ListApplicationsAsync(cancellationToken),
                 cancellationToken);
             Applications.Clear();
-            foreach (MetricHistoryApplication application in result.Applications)
+            foreach (MetricHistoryApplication application in result.Applications
+                .OrderByDescending(item => item.UpdatedUtc))
             {
                 Applications.Add(application);
             }

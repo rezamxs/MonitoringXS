@@ -22,11 +22,16 @@
                 <Grid
                     Width="24"
                     Height="24">
-                    <SymbolIcon
+                    <FontIcon
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="20"
                         Foreground="{StaticResource SecondaryTextBrush}"
-                        Symbol="AllApps"
+                        Glyph="&#xE71D;"
                         Visibility="{Binding HasFallbackIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Image
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         Width="20"
                         Height="20"
                         Source="{Binding AppIconSource}"
@@ -102,11 +107,16 @@
                             Width="44"
                             Height="44"
                             AutomationProperties.Name="{Binding Title}">
-                            <SymbolIcon
+                            <FontIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontSize="32"
                                 Foreground="{StaticResource SecondaryTextBrush}"
-                                Symbol="AllApps"
+                                Glyph="&#xE71D;"
                                 Visibility="{Binding HasFallbackIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             <Image
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
                                 Width="32"
                                 Height="32"
                                 Source="{Binding AppIconSource}"
@@ -125,136 +135,6 @@
                                 TextWrapping="Wrap" />
                         </StackPanel>
                     </Grid>
-                    <Border
-                        Style="{StaticResource SectionSurfaceStyle}"
-                        DataContext="{Binding ProcessActions}">
-                        <StackPanel Spacing="12">
-                            <StackPanel Spacing="4">
-                                <TextBlock x:Uid="ProcessDetailsTitle"
-                                    Style="{StaticResource SectionTitleStyle}"
-                                    Text="Process details and actions" />
-                                <TextBlock x:Uid="ProcessDetailsDescription"
-                                    Foreground="{StaticResource SecondaryTextBrush}"
-                                    Text="Actions remain non-elevated and revalidate PID, start time, and executable identity."
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-                            <Grid MaxWidth="460" HorizontalAlignment="Stretch" ColumnSpacing="8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Grid
-                                    Width="32"
-                                    Height="32">
-                                    <SymbolIcon
-                                        Foreground="{StaticResource SecondaryTextBrush}"
-                                        Symbol="AllApps"
-                                        Visibility="{Binding DataContext.HasFallbackIcon, ElementName=ApplicationDetailRoot, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                    <Image
-                                        Width="28"
-                                        Height="28"
-                                        Source="{Binding DataContext.AppIconSource, ElementName=ApplicationDetailRoot}"
-                                        Stretch="Uniform"
-                                        Visibility="{Binding DataContext.HasAppIcon, ElementName=ApplicationDetailRoot, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                </Grid>
-                                <ComboBox x:Uid="ProcessSelector"
-                                    Grid.Column="1"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.Name="Process for application actions"
-                                    DisplayMemberPath="Label"
-                                    ItemsSource="{Binding Processes, Mode=OneWay}"
-                                    SelectedItem="{Binding SelectedProcess, Mode=TwoWay}"
-                                    UseSystemFocusVisuals="True" />
-                            </Grid>
-                            <StackPanel Spacing="4">
-                                <TextBlock
-                                    FontWeight="SemiBold"
-                                    FlowDirection="LeftToRight"
-                                    Text="{Binding IdentityText, Mode=OneWay}" />
-                                <TextBlock
-                                    Foreground="{StaticResource SecondaryTextBrush}"
-                                    FlowDirection="LeftToRight"
-                                    Text="{Binding StartTimeText, Mode=OneWay}" />
-                                <TextBlock x:Uid="ProcessPath"
-                                    AutomationProperties.Name="Selected process executable path"
-                                    FlowDirection="LeftToRight"
-                                    Foreground="{StaticResource SecondaryTextBrush}"
-                                    Text="{Binding ExecutablePathText, Mode=OneWay}"
-                                    TextWrapping="Wrap"
-                                    ToolTipService.ToolTip="{Binding ExecutablePathText, Mode=OneWay}" />
-                            </StackPanel>
-                            <TextBlock
-                                AutomationProperties.Name="Selected process metadata"
-                                Foreground="{StaticResource SecondaryTextBrush}"
-                                Text="{Binding ProcessDetailsText, Mode=OneWay}"
-                                TextWrapping="Wrap" />
-                            <Grid ColumnSpacing="8" RowSpacing="8">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Button x:Uid="EndTaskButton"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.HelpText="Ends only the selected process after confirmation and identity revalidation."
-                                    AutomationProperties.Name="End selected task"
-                                    Command="{Binding EndTaskCommand}"
-                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                    UseSystemFocusVisuals="True">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <SymbolIcon Symbol="Stop" />
-                                        <TextBlock x:Uid="EndTaskButtonLabel" Text="End Task" />
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Uid="EndTreeButton"
-                                    Grid.Column="1"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.HelpText="Ends verified descendants from leaves to root after stronger confirmation."
-                                    AutomationProperties.Name="End selected process tree"
-                                    Command="{Binding EndProcessTreeCommand}"
-                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                    UseSystemFocusVisuals="True">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <SymbolIcon Symbol="Delete" />
-                                        <TextBlock x:Uid="EndTreeButtonLabel" Text="End Process Tree" />
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Uid="OpenLocationButton"
-                                    Grid.Row="1"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.HelpText="Opens Explorer and selects the verified executable."
-                                    AutomationProperties.Name="Open selected process file location"
-                                    Command="{Binding OpenFileLocationCommand}"
-                                    UseSystemFocusVisuals="True">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <SymbolIcon Symbol="OpenFile" />
-                                        <TextBlock x:Uid="OpenLocationButtonLabel" Text="Open File Location" />
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Uid="CopyDetailsButton"
-                                    Grid.Row="1"
-                                    Grid.Column="1"
-                                    HorizontalAlignment="Stretch"
-                                    AutomationProperties.HelpText="Copies safe process identity and current application metrics without command lines or secrets."
-                                    AutomationProperties.Name="Copy selected process details"
-                                    Command="{Binding CopyProcessDetailsCommand}"
-                                    UseSystemFocusVisuals="True">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <SymbolIcon Symbol="Copy" />
-                                        <TextBlock x:Uid="CopyDetailsButtonLabel" Text="Copy Process Details" />
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-                            <TextBlock
-                                AutomationProperties.LiveSetting="Assertive"
-                                Foreground="{StaticResource SecondaryTextBrush}"
-                                Text="{Binding StatusText, Mode=OneWay}"
-                                TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
                     <Grid x:Name="DetailMetricGrid" ColumnSpacing="12" RowSpacing="12">
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup>
@@ -302,6 +182,7 @@
                                 <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="24" Text="{Binding CpuText}" />
                                 <TextBlock FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding CpuStatusText}" TextWrapping="Wrap" />
                                 <controls:MetricSparkline
+                                    x:Uid="MetricCpuSparkline"
                                     Height="48"
                                     ChartScale="Percent"
                                     IsEmbedded="True"
@@ -328,6 +209,7 @@
                                 <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="24" Text="{Binding MemoryText}" />
                                 <TextBlock FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Text="{Binding MemoryStatusText}" TextWrapping="Wrap" />
                                 <controls:MetricSparkline
+                                    x:Uid="MetricMemorySparkline"
                                     Height="48"
                                     ChartScale="Dynamic"
                                     IsEmbedded="True"
@@ -567,12 +449,6 @@
                             </Border>
                         </Grid>
                     </StackPanel>
-                    <StackPanel Spacing="10">
-                        <TextBlock x:Uid="MetricCpuHistoryTitle" Style="{StaticResource SectionTitleStyle}" Text="CPU · last minute" />
-                        <controls:MetricSparkline
-                            AutomationProperties.Name="CPU history for the selected application"
-                            Samples="{Binding CpuSamples}" />
-                    </StackPanel>
                     <Expander x:Uid="MetricExplanations">
                         <ItemsControl
                             Margin="0,12,0,0"
@@ -626,6 +502,143 @@
                                 TextWrapping="Wrap" />
                         </StackPanel>
                     </Expander>
+                    <Border
+                        Style="{StaticResource SectionSurfaceStyle}"
+                        DataContext="{Binding ProcessActions}">
+                        <StackPanel Spacing="12">
+                            <StackPanel Spacing="4">
+                                <TextBlock x:Uid="ProcessDetailsTitle"
+                                    Style="{StaticResource SectionTitleStyle}"
+                                    Text="Process details and actions" />
+                                <TextBlock x:Uid="ProcessDetailsDescription"
+                                    Foreground="{StaticResource SecondaryTextBrush}"
+                                    Text="Actions remain non-elevated and revalidate PID, start time, and executable identity."
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Grid MaxWidth="460" HorizontalAlignment="Stretch" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid
+                                    Width="32"
+                                    Height="32">
+                                    <FontIcon
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="28"
+                                        Foreground="{StaticResource SecondaryTextBrush}"
+                                        Glyph="&#xE71D;"
+                                        Visibility="{Binding DataContext.HasFallbackIcon, ElementName=ApplicationDetailRoot, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <Image
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Width="28"
+                                        Height="28"
+                                        Source="{Binding DataContext.AppIconSource, ElementName=ApplicationDetailRoot}"
+                                        Stretch="Uniform"
+                                        Visibility="{Binding DataContext.HasAppIcon, ElementName=ApplicationDetailRoot, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                </Grid>
+                                <ComboBox x:Uid="ProcessSelector"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.Name="Process for application actions"
+                                    DisplayMemberPath="Label"
+                                    ItemsSource="{Binding Processes, Mode=OneWay}"
+                                    SelectedItem="{Binding SelectedProcess, Mode=TwoWay}"
+                                    UseSystemFocusVisuals="True" />
+                            </Grid>
+                            <StackPanel Spacing="4">
+                                <TextBlock
+                                    FontWeight="SemiBold"
+                                    FlowDirection="LeftToRight"
+                                    Text="{Binding IdentityText, Mode=OneWay}" />
+                                <TextBlock
+                                    Foreground="{StaticResource SecondaryTextBrush}"
+                                    FlowDirection="LeftToRight"
+                                    Text="{Binding StartTimeText, Mode=OneWay}" />
+                                <TextBlock x:Uid="ProcessPath"
+                                    AutomationProperties.Name="Selected process executable path"
+                                    FlowDirection="LeftToRight"
+                                    Foreground="{StaticResource SecondaryTextBrush}"
+                                    Text="{Binding ExecutablePathText, Mode=OneWay}"
+                                    TextWrapping="Wrap"
+                                    ToolTipService.ToolTip="{Binding ExecutablePathText, Mode=OneWay}" />
+                            </StackPanel>
+                            <Expander x:Uid="ProcessDetailsAdvanced" HorizontalAlignment="Stretch">
+                                <TextBlock
+                                    AutomationProperties.Name="Selected process metadata"
+                                    Foreground="{StaticResource SecondaryTextBrush}"
+                                    Text="{Binding ProcessDetailsText, Mode=OneWay}"
+                                    TextWrapping="Wrap" />
+                            </Expander>
+                            <Grid ColumnSpacing="8" RowSpacing="8">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button x:Uid="EndTaskButton"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.HelpText="Ends only the selected process after confirmation and identity revalidation."
+                                    AutomationProperties.Name="End selected task"
+                                    Command="{Binding EndTaskCommand}"
+                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                    UseSystemFocusVisuals="True">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Stop" />
+                                        <TextBlock x:Uid="EndTaskButtonLabel" Text="End Task" />
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Uid="EndTreeButton"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.HelpText="Ends verified descendants from leaves to root after stronger confirmation."
+                                    AutomationProperties.Name="End selected process tree"
+                                    Command="{Binding EndProcessTreeCommand}"
+                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                    UseSystemFocusVisuals="True">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Delete" />
+                                        <TextBlock x:Uid="EndTreeButtonLabel" Text="End Process Tree" />
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Uid="OpenLocationButton"
+                                    Grid.Row="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.HelpText="Opens Explorer and selects the verified executable."
+                                    AutomationProperties.Name="Open selected process file location"
+                                    Command="{Binding OpenFileLocationCommand}"
+                                    UseSystemFocusVisuals="True">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="OpenFile" />
+                                        <TextBlock x:Uid="OpenLocationButtonLabel" Text="Open File Location" />
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Uid="CopyDetailsButton"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    AutomationProperties.HelpText="Copies safe process identity and current application metrics without command lines or secrets."
+                                    AutomationProperties.Name="Copy selected process details"
+                                    Command="{Binding CopyProcessDetailsCommand}"
+                                    UseSystemFocusVisuals="True">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Copy" />
+                                        <TextBlock x:Uid="CopyDetailsButtonLabel" Text="Copy Process Details" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <TextBlock
+                                AutomationProperties.LiveSetting="Assertive"
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="{Binding StatusText, Mode=OneWay}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
         </DataTemplate>
@@ -658,11 +671,16 @@
                             <Grid
                                 Width="40"
                                 Height="40">
-                                <SymbolIcon
+                                <FontIcon
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontSize="32"
                                     Foreground="{StaticResource SecondaryTextBrush}"
-                                    Symbol="AllApps"
+                                    Glyph="&#xE71D;"
                                     Visibility="{Binding HasFallbackIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <Image
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
                                     Width="32"
                                     Height="32"
                                     Source="{x:Bind AppIconSource, Mode=OneWay}"

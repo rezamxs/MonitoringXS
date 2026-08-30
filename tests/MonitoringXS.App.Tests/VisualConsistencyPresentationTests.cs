@@ -85,8 +85,8 @@ public sealed class VisualConsistencyPresentationTests
             Assert.Contains("HasAppIcon", image.Attribute("Visibility")?.Value ?? string.Empty, StringComparison.Ordinal);
             Assert.Equal("Grid", image.Parent?.Name.LocalName);
             Assert.Null(image.Parent?.Attribute("Background"));
-            XElement fallback = Assert.Single(image.Parent!.Elements(presentation + "SymbolIcon"));
-            Assert.Equal("AllApps", fallback.Attribute("Symbol")?.Value);
+            XElement fallback = Assert.Single(image.Parent!.Elements(presentation + "FontIcon"));
+            Assert.Equal("\uE71D", fallback.Attribute("Glyph")?.Value);
             Assert.Contains("HasFallbackIcon", fallback.Attribute("Visibility")?.Value ?? string.Empty, StringComparison.Ordinal);
             Assert.InRange(double.Parse(image.Attribute("Width")!.Value, CultureInfo.InvariantCulture), 20, 32);
             Assert.Equal("Uniform", image.Attribute("Stretch")?.Value);
