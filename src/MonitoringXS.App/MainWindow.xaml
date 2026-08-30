@@ -22,11 +22,16 @@
                 <Grid
                     Width="24"
                     Height="24">
-                    <SymbolIcon
+                    <FontIcon
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="20"
                         Foreground="{StaticResource SecondaryTextBrush}"
-                        Symbol="AllApps"
+                        Glyph="&#xE71D;"
                         Visibility="{Binding HasFallbackIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <Image
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
                         Width="20"
                         Height="20"
                         Source="{Binding AppIconSource}"
@@ -102,11 +107,16 @@
                             Width="44"
                             Height="44"
                             AutomationProperties.Name="{Binding Title}">
-                            <SymbolIcon
+                            <FontIcon
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                FontSize="32"
                                 Foreground="{StaticResource SecondaryTextBrush}"
-                                Symbol="AllApps"
+                                Glyph="&#xE71D;"
                                 Visibility="{Binding HasFallbackIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             <Image
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
                                 Width="32"
                                 Height="32"
                                 Source="{Binding AppIconSource}"
@@ -658,11 +668,16 @@
                             <Grid
                                 Width="40"
                                 Height="40">
-                                <SymbolIcon
+                                <FontIcon
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    FontSize="32"
                                     Foreground="{StaticResource SecondaryTextBrush}"
-                                    Symbol="AllApps"
+                                    Glyph="&#xE71D;"
                                     Visibility="{Binding HasFallbackIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <Image
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
                                     Width="32"
                                     Height="32"
                                     Source="{x:Bind AppIconSource, Mode=OneWay}"
