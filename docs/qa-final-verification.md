@@ -21,15 +21,16 @@ Final QA Status: ACCEPT WITH CONDITIONS (Ready for Merge Review).
 ### A. Timestamped PR Snapshot (Snapshot Time: 2026-10-11 15:15:00 UTC)
 * Base Branch: `main` (Merge base commit: `5120d977783e171460e4936250aa7a5dbe00b98b`)
 * Head Branch: `chore/ci-test-coverage`
-* Remote Head at Snapshot: `390482110413cf79ed8f56077eb805dcabb700d8`
+* Remote Head at Snapshot: `1c1498bc8ef49368bd0d2d907f6a9fd72e6bca11`
 * Pull Request: [PR #8](https://github.com/rezamxs/MonitoringXS/pull/8)
 * State: OPEN (Mergeable: MERGEABLE, Reviews: 0)
-* Commit Count at Snapshot: 5 commits
+* Commit Count at Snapshot: 6 commits
   1. `e1e0ccf315df9fd64b019d9149a6fea9d10eddb9`: `fix(platform): tighten attribution, cache dead threads, and fix process enumeration`
   2. `57862cbda112e1f1180f59aa21d022ddde75f7f6`: `chore(ci): report coverage in job summary and improve test tooling`
   3. `f00ecfe4d41ad2d7935d672baddfeb0b9929e2c1`: `docs(architecture): add comprehensive architecture audit and modularity report`
   4. `32f8482778e0ddb4bb76aaabb46e0d60ed438ea7`: `test(pipeline): verify stage timeout isolation, store fault tolerance, and add qa verification report`
   5. `390482110413cf79ed8f56077eb805dcabb700d8`: `docs(qa): refine final verification report with PR 8 scope and timeout analysis`
+  6. `1c1498bc8ef49368bd0d2d907f6a9fd72e6bca11`: `docs(qa): reconcile test revision attribution and pr snapshot details`
 * Changed Files: 20 files (+1236 lines, -37 lines relative to merge base `5120d97`)
 * Working Tree: Clean (0 uncommitted or untracked changes)
 
@@ -45,13 +46,20 @@ Final QA Status: ACCEPT WITH CONDITIONS (Ready for Merge Review).
   - Result: SUCCESS (Duration: 3m 2s)
   - Run ID: `38143526912` (Workflow: CodeQL, Pull Request event)
   - Result: SUCCESS (Duration: 6m 49s)
-* Revision `3904821` (Current PR Head at Snapshot):
+* Revision `3904821`:
   - Run ID: `38149797633` (Workflow: CI, Push event)
   - Result: SUCCESS (Duration: 2m 56s)
   - Run ID: `38149800573` (Workflow: CI, Pull Request event)
   - Result: SUCCESS (Duration: 2m 57s)
   - Run ID: `38149800568` (Workflow: CodeQL, Pull Request event)
   - Result: SUCCESS (Duration: 7m 11s)
+* Revision `1c1498b` (Current PR Head):
+  - Run ID: `38151346307` (Workflow: CI, Pull Request event)
+  - Result: SUCCESS (Duration: 2m 53s)
+  - Run ID: `38151346303` (Workflow: CodeQL, Pull Request event)
+  - Result: SUCCESS (Duration: 7m 11s)
+  - Run ID: `38151343601` (Workflow: CI, Push event)
+  - Result: FAIL (Duration: 2m 20s - intermittent timing in `WindowsProcessActionServiceTests.RealDisposableTreeEndsRootAndChildrenButNotUnrelatedHelper` returning PartialTreeTermination under CI runner load, while passing in parallel PR run `38151346307`)
 
 ---
 
