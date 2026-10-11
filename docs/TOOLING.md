@@ -75,16 +75,18 @@ Invoke-ScriptAnalyzer -Path scripts/ -Settings PSScriptAnalyzerSettings.psd1 -Re
 
 | Field | Value |
 |-------|-------|
-| Version | Built into .NET SDK (XPlat Code Coverage collector) |
-| Install | No separate install needed |
+| Version | coverlet.collector 10.0.1 (central package) with the XPlat Code Coverage collector |
+| Install | Already referenced from every test project |
 | License | MIT |
 | Scope | Development + CI |
 | Runtime Impact | **ZERO** |
 
-Generates cobertura XML format. Does not instrument Release product binaries.
+Generates cobertura XML. Does not instrument shipped Release product binaries. The `build-and-test` job in `.github/workflows/ci.yml` collects cobertura, writes TRX logs, enables hang blame (5 minutes), and uploads `TestResults` as a workflow artifact. Coverage is reported in the job summary; it is not a pass/fail threshold. That job also builds with `-m:1` and `MSBUILDDISABLENODEREUSE=1` because parallel WinUI XAML compilation can terminate the compiler with a `StackOverflowException`.
 
 ```powershell
 .\scripts\tooling\Invoke-Coverage.ps1
+.\scripts\tooling\Invoke-Coverage.ps1 -Configuration Release
+.\scripts\tooling\Invoke-Coverage.ps1 -Configuration Release -SkipRestore -SkipBuild
 ```
 
 ### PerfView — Performance Profiling

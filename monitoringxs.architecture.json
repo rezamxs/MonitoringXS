@@ -1,0 +1,390 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "MonitoringXS Architecture",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/rezamxs/MonitoringXS",
+      "provider": "github",
+      "revision": "5120d977783e171460e4936250aa7a5dbe00b98b"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [
+      40,
+      90
+    ],
+    "cols": 4,
+    "gapX": 130,
+    "gapY": 136,
+    "cellW": 170,
+    "cellH": 76
+  },
+  "components": [
+    {
+      "id": "winui-shell",
+      "type": "frontend",
+      "label": "MonitoringXS.App",
+      "sublabel": "WinUI 3 desktop shell",
+      "row": 0,
+      "col": 0,
+      "sources": [
+        {
+          "path": "src/MonitoringXS.App/App.xaml.cs",
+          "line": 28,
+          "label": "OnLaunched: compose & start runtime"
+        },
+        {
+          "path": "src/MonitoringXS.App/MainWindow.xaml.cs",
+          "line": 259,
+          "label": "Subscribe to snapshot stream"
+        },
+        {
+          "path": "src/MonitoringXS.App/MonitoringXS.App.csproj",
+          "line": 4,
+          "label": "net10.0-windows · WinUI, x64/ARM64"
+        }
+      ],
+      "size": [
+        184,
+        76
+      ]
+    },
+    {
+      "id": "orchestration",
+      "type": "backend",
+      "label": "MonitoringRuntime",
+      "sublabel": "Capture loop · snapshot hub",
+      "row": 0,
+      "col": 1,
+      "sources": [
+        {
+          "path": "src/MonitoringXS.Application/MonitoringRuntime.cs",
+          "line": 154,
+          "label": "Capture → history enqueue → publish"
+        },
+        {
+          "path": "src/MonitoringXS.Application/MonitoringCoordinator.cs",
+          "line": 36,
+          "label": "Discovery → attribution → metrics"
+        },
+        {
+          "path": "src/MonitoringXS.Application/MonitoringSnapshotHub.cs",
+          "line": 22,
+          "label": "Bounded per-subscriber channels"
+        }
+      ],
+      "size": [
+        184,
+        76
+      ]
+    },
+    {
+      "id": "collectors",
+      "type": "backend",
+      "label": "Metric Collectors",
+      "sublabel": "process · disk · network · GPU",
+      "row": 0,
+      "col": 2,
+      "sources": [
+        {
+          "path": "src/MonitoringXS.Collectors/ProcessMetricCollector.cs",
+          "line": 6,
+          "label": "CPU, working set, process I/O"
+        },
+        {
+          "path": "src/MonitoringXS.Collectors/PhysicalDiskMetricCollector.cs",
+          "line": 6,
+          "label": "Physical disk attribution"
+        },
+        {
+          "path": "src/MonitoringXS.Collectors/GpuMetricCollector.cs",
+          "line": 6,
+          "label": "GPU engine utilization"
+        }
+      ],
+      "size": [
+        184,
+        76
+      ]
+    },
+    {
+      "id": "platform-windows",
+      "type": "backend",
+      "label": "Windows Platform Layer",
+      "sublabel": "discovery · metadata · counters",
+      "row": 0,
+      "col": 3,
+      "sources": [
+        {
+          "path": "src/MonitoringXS.Platform.Windows/Processes/WindowsProcessDiscoveryService.cs",
+          "line": 7,
+          "label": "Win32 process discovery"
+        },
+        {
+          "path": "src/MonitoringXS.Platform.Windows/Attribution/ApplicationAttributionService.cs",
+          "line": 8,
+          "label": "Logical-application attribution"
+        },
+        {
+          "path": "src/MonitoringXS.Platform.Windows/Broker/PrivilegedEtwBrokerClient.cs",
+          "line": 334,
+          "label": "Named-pipe client to broker"
+        }
+      ],
+      "size": [
+        184,
+        76
+      ]
+    },
+    {
+      "id": "windows-host",
+      "type": "external",
+      "label": "Local Windows Host",
+      "sublabel": "Win32 · counters · SCM",
+      "row": 2,
+      "col": 3,
+      "sources": [
+        {
+          "path": "src/MonitoringXS.Platform.Windows/Metadata/ExecutableMetadataProvider.cs",
+          "line": 8,
+          "label": "Executable metadata & signatures"
+        },
+        {
+          "path": "src/MonitoringXS.Platform.Windows/Catalogs/MsixPackageApplicationCatalog.cs",
+          "line": 9,
+          "label": "MSIX package catalog"
+        },
+        {
+          "path": "src/MonitoringXS.Platform.Windows/Broker/BrokerServiceProbe.cs",
+          "line": 45,
+          "label": "SCM query (OpenSCManager)"
+        }
+      ],
+      "size": [
+        184,
+        76
+      ]
+    },
+    {
+      "id": "etw-broker",
+      "type": "security",
+      "label": "Privileged ETW Broker",
+      "sublabel": "LocalSystem · kernel ETW",
+      "row": 1,
+      "col": 3,
+      "sources": [
+        {
+          "path": "src/MonitoringXS.PrivilegedBroker/Program.cs",
+          "line": 51,
+          "label": "Requires LocalSystem identity"
+        },
+        {
+          "path": "src/MonitoringXS.Platform.Windows/Broker/PrivilegedEtwBrokerServer.cs",
+          "line": 12,
+          "label": "Pipe server, allowlisted commands"
+        },
+        {
+          "path": "src/MonitoringXS.Platform.Windows/Metrics/EtwPhysicalDiskEventSource.cs",
+          "line": 13,
+          "label": "Kernel ETW disk/network session"
+        }
+      ],
+      "size": [
+        184,
+        76
+      ]
+    },
+    {
+      "id": "history-store",
+      "type": "database",
+      "label": "SQLite History",
+      "sublabel": "24 h retention · downsampling",
+      "row": 1,
+      "col": 1,
+      "sources": [
+        {
+          "path": "src/MonitoringXS.Storage/History/SqliteMetricHistoryStore.cs",
+          "line": 882,
+          "label": "Schema: sessions & metric samples"
+        },
+        {
+          "path": "src/MonitoringXS.Storage/History/SqliteMetricHistoryOptions.cs",
+          "line": 13,
+          "label": "24 h retention · queue 256"
+        },
+        {
+          "path": "src/MonitoringXS.App/Composition/ServiceRegistration.cs",
+          "line": 46,
+          "label": "%LocalAppData% history.db"
+        }
+      ],
+      "size": [
+        184,
+        76
+      ]
+    },
+    {
+      "id": "local-settings",
+      "type": "database",
+      "label": "Local Settings",
+      "sublabel": "settings · overrides JSON",
+      "row": 1,
+      "col": 0,
+      "sources": [
+        {
+          "path": "src/MonitoringXS.App/Composition/ServiceRegistration.cs",
+          "line": 34,
+          "label": "JSON settings & override stores"
+        },
+        {
+          "path": "src/MonitoringXS.Core/Models/ApplicationSettings.cs",
+          "line": 40,
+          "label": "Defaults: 1 s sampling · 24 h history"
+        }
+      ],
+      "size": [
+        184,
+        76
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "MonitoringXS desktop process (unelevated)",
+      "wraps": [
+        "winui-shell",
+        "orchestration",
+        "collectors",
+        "platform-windows",
+        "history-store",
+        "local-settings"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "LocalSystem privilege boundary",
+      "wraps": [
+        "etw-broker"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "winui-shell",
+      "to": "orchestration",
+      "label": "Start & refresh requests",
+      "fromSide": "top",
+      "toSide": "top"
+    },
+    {
+      "from": "orchestration",
+      "to": "winui-shell",
+      "label": "Immutable snapshots",
+      "variant": "emphasis"
+    },
+    {
+      "from": "orchestration",
+      "to": "collectors",
+      "label": "Per-tick capture"
+    },
+    {
+      "from": "collectors",
+      "to": "platform-windows",
+      "label": "Counters & sources"
+    },
+    {
+      "from": "orchestration",
+      "to": "platform-windows",
+      "label": "Discovery & attribution",
+      "fromSide": "top",
+      "toSide": "top",
+      "labelAt": [
+        732,
+        44
+      ]
+    },
+    {
+      "from": "orchestration",
+      "to": "history-store",
+      "label": "Async history enqueue",
+      "labelDy": 50
+    },
+    {
+      "from": "winui-shell",
+      "to": "history-store",
+      "label": "History range queries"
+    },
+    {
+      "from": "winui-shell",
+      "to": "local-settings",
+      "label": "Load & save settings",
+      "labelDy": 50
+    },
+    {
+      "from": "platform-windows",
+      "to": "etw-broker",
+      "label": "Named-pipe protocol v1",
+      "labelAt": [
+        990,
+        245
+      ]
+    },
+    {
+      "from": "etw-broker",
+      "to": "windows-host",
+      "label": "Kernel ETW DiskIo · TcpIp",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        1090,
+        445
+      ]
+    },
+    {
+      "from": "platform-windows",
+      "to": "windows-host",
+      "label": "Win32 · PDH · metadata",
+      "fromSide": "left",
+      "toSide": "left",
+      "labelAt": [
+        880,
+        240
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Capture loop",
+      "items": [
+        "MonitoringRuntime samples on a ~1 s cadence (LiveRefreshCadence)",
+        "Coordinator: discovery → attribution → process metrics → disk/network/GPU stages",
+        "Snapshot hub: one bounded 1-slot channel per subscriber, DropOldest"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Privilege & safety",
+      "items": [
+        "Main app runs unelevated; kernel ETW only via the LocalSystem broker",
+        "Per-user pipe name, magic + version frames, 64 KB request / 4 MB response bounds",
+        "Process actions revalidate PID + start time before acting",
+        "ElevatedHelper exists but exposes no privileged operation (deliberate stub)"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Data & history",
+      "items": [
+        "SQLite history.db under %LocalAppData%\\MonitoringXS (Microsoft.Data.Sqlite)",
+        "24 h retention, 1 h raw samples, downsampling, write queue capped at 256",
+        "Unavailable metrics are shown as unavailable, never as zero"
+      ]
+    }
+  ]
+}

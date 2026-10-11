@@ -10,6 +10,7 @@ permissions:
 jobs:
   build-and-test:
     runs-on: windows-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v6
@@ -19,8 +20,62 @@ jobs:
       - run: dotnet restore MonitoringXS.sln
       - name: Restore indirectly built test helper
         run: dotnet restore tests/MonitoringXS.ProcessActionTestHelper/MonitoringXS.ProcessActionTestHelper.csproj
-      - run: dotnet build MonitoringXS.sln -c Release --no-restore -p:TreatWarningsAsErrors=true
-      - run: dotnet test MonitoringXS.sln -c Release --no-build
+      - run: dotnet build MonitoringXS.sln -c Release --no-restore -p:TreatWarningsAsErrors=true -m:1
+        env:
+          MSBUILDDISABLENODEREUSE: "1"
+      - name: Run tests
+        run: >
+          dotnet test MonitoringXS.sln -c Release --no-build
+          --collect "XPlat Code Coverage"
+          --results-directory TestResults
+          --logger trx
+          --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none
+          --
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+      - name: Summarize coverage
+        if: always()
+        shell: pwsh
+        run: |
+          $summaryPath = $env:GITHUB_STEP_SUMMARY
+          if (-not $summaryPath) { return }
+          $files = @(Get-ChildItem -Path TestResults -Filter coverage.cobertura.xml -Recurse -ErrorAction SilentlyContinue)
+          $lines = @(
+            '## Test coverage',
+            ''
+          )
+          if ($files.Count -eq 0) {
+            $lines += 'No cobertura files were produced.'
+          }
+          else {
+            $lines += '| Package | Line | Branch |'
+            $lines += '| --- | ---: | ---: |'
+            $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            foreach ($file in $files) {
+              try {
+                [xml]$xml = Get-Content -LiteralPath $file.FullName -Raw
+                $packages = @($xml.coverage.packages.package | Where-Object { $_ })
+                foreach ($package in $packages) {
+                  $name = [string]$package.name
+                  if ([string]::IsNullOrWhiteSpace($name) -or -not $seen.Add($name)) { continue }
+                  $lineRate = [double]$package.'line-rate'
+                  $branchRate = [double]$package.'branch-rate'
+                  $lines += ('| {0} | {1:P1} | {2:P1} |' -f $name, $lineRate, $branchRate)
+                }
+              }
+              catch {
+                $lines += ('| {0} | parse failed | parse failed |' -f $file.Name)
+              }
+            }
+          }
+          Add-Content -LiteralPath $summaryPath -Value ($lines -join [Environment]::NewLine) -Encoding utf8
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+          if-no-files-found: warn
+          retention-days: 14
 
   psscriptanalyzer:
     runs-on: windows-latest
