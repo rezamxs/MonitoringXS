@@ -464,14 +464,10 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
             : 0;
         if (processId <= 0 && threadId > 0)
         {
-            _threadProcesses.TryGetValue(threadId, out processId);
-            if (processId <= 0)
+            if (!_threadProcesses.TryGetValue(threadId, out processId))
             {
                 processId = ResolveProcessIdFromThread(threadId);
-                if (processId > 0)
-                {
-                    _threadProcesses.Set(threadId, processId);
-                }
+                _threadProcesses.Set(threadId, processId > 0 ? processId : -1);
             }
         }
 
@@ -513,14 +509,10 @@ public sealed class EtwPhysicalDiskEventSource : IPhysicalDiskEventSource, INetw
         int processId = data.ProcessID;
         if (processId <= 0 && data.ThreadID > 0)
         {
-            _threadProcesses.TryGetValue(data.ThreadID, out processId);
-            if (processId <= 0)
+            if (!_threadProcesses.TryGetValue(data.ThreadID, out processId))
             {
                 processId = ResolveProcessIdFromThread(data.ThreadID);
-                if (processId > 0)
-                {
-                    _threadProcesses.Set(data.ThreadID, processId);
-                }
+                _threadProcesses.Set(data.ThreadID, processId > 0 ? processId : -1);
             }
         }
 

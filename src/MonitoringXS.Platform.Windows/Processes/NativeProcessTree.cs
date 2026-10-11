@@ -48,7 +48,7 @@ internal static class NativeProcessTree
 
         const int noMoreFiles = 18;
         int finalError = Marshal.GetLastPInvokeError();
-        if (finalError != noMoreFiles)
+        if (finalError is not (noMoreFiles or 0))
         {
             throw new Win32Exception(finalError, "Process enumeration ended unexpectedly.");
         }

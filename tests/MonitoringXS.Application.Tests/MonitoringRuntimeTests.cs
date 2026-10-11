@@ -139,6 +139,32 @@ public sealed class MonitoringRuntimeTests
     }
 
     [Fact]
+    public async Task HistoryStoreFailureDoesNotStopLiveMonitoringOrSnapshotPublishing()
+    {
+        FailingHistoryStore failingStore = new();
+        MonitoringSnapshotHub hub = new();
+        TaskCompletionSource captured = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        await using MonitoringRuntime runtime = new(
+            cancellationToken =>
+            {
+                captured.TrySetResult();
+                return ValueTask.FromResult(Snapshot(1));
+            },
+            hub,
+            new LiveRefreshCadence(TimeSpan.FromHours(1)),
+            failingStore);
+
+        _ = runtime.Start();
+        await captured.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => hub.Latest is not null);
+        await runtime.StopAsync();
+
+        Assert.True(failingStore.Attempted);
+        Assert.NotNull(hub.Latest);
+    }
+
+    [Fact]
     public async Task RequestedCaptureCompletesAfterNextAcceptedSnapshot()
     {
         int calls = 0;
@@ -267,6 +293,44 @@ public sealed class MonitoringRuntimeTests
             DateTimeOffset toUtc,
             CancellationToken cancellationToken) =>
             ValueTask.FromResult(new MetricHistoryQueryResult([], true));
+
+        public void Dispose()
+        {
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private sealed class FailingHistoryStore : IMetricHistoryStore
+    {
+        public bool Attempted { get; private set; }
+        public MetricHistoryStoreDiagnostics Diagnostics => new(0, 0, 0, 0, 0, 0, 0, 0, 0, null);
+
+        public ValueTask<MetricHistoryWriteResult> EnqueueAsync(
+            IReadOnlyList<ApplicationMetricSnapshot> snapshots,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("disk write fault");
+
+        public ValueTask<MetricHistoryWriteResult> EnqueueAsync(
+            MetricHistoryCapture capture,
+            CancellationToken cancellationToken)
+        {
+            Attempted = true;
+            throw new InvalidOperationException("disk write fault");
+        }
+
+        public ValueTask FlushAsync(CancellationToken cancellationToken) => ValueTask.CompletedTask;
+
+        public ValueTask<MetricHistoryApplicationsResult> ListApplicationsAsync(CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new MetricHistoryApplicationsResult([], false));
+
+        public ValueTask<MetricHistoryQueryResult> QueryAsync(
+            string logicalApplicationId,
+            MetricHistoryMetric metric,
+            DateTimeOffset fromUtc,
+            DateTimeOffset toUtc,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult(new MetricHistoryQueryResult([], false));
 
         public void Dispose()
         {
