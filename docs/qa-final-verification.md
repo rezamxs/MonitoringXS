@@ -5,9 +5,9 @@
 This document provides the definitive independent quality assurance audit and technical verification for MonitoringXS on branch `chore/ci-test-coverage` targeting `main`.
 
 Key Findings:
-* Pull Request #8 is officially open and mergeable, containing 20 changed files (+1236, -37 lines relative to merge base `5120d97`).
+* Pull Request #8 is officially open and mergeable, containing 20 changed files (+1319, -37 lines relative to merge base `5120d97`).
 * Solution test suite execution achieves 578 passing tests, 0 failures, 0 skipped.
-* GitHub Actions CI status for PR HEAD revision `3904821` is 100% green across all workflows (CI build, psscriptanalyzer, gitleaks, actionlint, and CodeQL).
+* GitHub Actions CI status for PR HEAD revision `4771117` is 100% green across all workflows (CI build push run 38152413624, CI build PR run 38152417823, CodeQL run 38152417902, psscriptanalyzer, gitleaks, and actionlint).
 * Platform stability commit `e1e0ccf` is reviewed and retained in PR #8 due to being a prerequisite for clean CI test runs on Windows.
 * Capture pipeline timeout mechanisms isolate slow stages within approximately 750 milliseconds, but underlying tasks remain active if they do not cooperate with cancellation tokens.
 * SQLite history storage technical debt is characterized: logical sample pruning does not shrink physical file allocation in WAL mode without vacuuming.
@@ -34,7 +34,27 @@ Final QA Status: ACCEPT WITH CONDITIONS (Ready for Merge Review).
 * Changed Files: 20 files (+1236 lines, -37 lines relative to merge base `5120d97`)
 * Working Tree: Clean (0 uncommitted or untracked changes)
 
-### B. CI Execution History by Revision
+### B. Latest Verification Snapshot (Snapshot Time: 2026-10-11 16:35:00 UTC)
+* Target Audit SHA: `477111773f7b0f715ff7eed6425a0d06a696add0`
+* Remote Branch SHA (`refs/heads/chore/ci-test-coverage`): `477111773f7b0f715ff7eed6425a0d06a696add0`
+* PR HeadRefOid: `477111773f7b0f715ff7eed6425a0d06a696add0`
+* PR BaseRefOid: `5120d977783e171460e4936250aa7a5dbe00b98b` (`main`)
+* Pull Request: [PR #8](https://github.com/rezamxs/MonitoringXS/pull/8)
+* State: OPEN (Mergeable: MERGEABLE, Reviews: 0)
+* Commit Count from GitHub API: 7 commits
+  1. `e1e0ccf315df9fd64b019d9149a6fea9d10eddb9`: `fix(platform): tighten attribution, cache dead threads, and fix process enumeration`
+  2. `57862cbda112e1f1180f59aa21d022ddde75f7f6`: `chore(ci): report coverage in job summary and improve test tooling`
+  3. `f00ecfe4d41ad2d7935d672baddfeb0b9929e2c1`: `docs(architecture): add comprehensive architecture audit and modularity report`
+  4. `32f8482778e0ddb4bb76aaabb46e0d60ed438ea7`: `test(pipeline): verify stage timeout isolation, store fault tolerance, and add qa verification report`
+  5. `390482110413cf79ed8f56077eb805dcabb700d8`: `docs(qa): refine final verification report with PR 8 scope and timeout analysis`
+  6. `1c1498bc8ef49368bd0d2d907f6a9fd72e6bca11`: `docs(qa): reconcile test revision attribution and pr snapshot details`
+  7. `477111773f7b0f715ff7eed6425a0d06a696add0`: `docs(qa): record CI check run results and flaky test analysis for head revision`
+* Changed Files: 20 files (+1319 lines, -37 lines relative to merge base `5120d97`)
+* Working Tree: Clean (0 uncommitted or untracked changes)
+* API vs Web UI Discrepancy Note: When PR #8 was originally opened, the branch contained 4 commits (`e1e0ccf` to `32f8482`). Initial browser renders reflected that 4-commit state. Subsequent documentation commits (`3904821`, `1c1498b`, `4771117`) were fast-forward pushed to document audit findings. The live GitHub GraphQL/REST API accurately reports all 7 commits.
+* Public PR Body Verification: The legacy phrase "Hard 750ms pipeline stage timeout isolation" was completely removed and updated via the GitHub API to accurately reflect the 750ms observation deadline, background continuation of non-cooperative tasks, and suppressed continuation exceptions.
+
+### C. CI Execution History by Revision
 * Revision `f00ecfe`:
   - Run ID: `38136892341` (Workflow: CI, Push event)
   - Date: 2026-10-11 11:48:09 UTC
@@ -53,13 +73,27 @@ Final QA Status: ACCEPT WITH CONDITIONS (Ready for Merge Review).
   - Result: SUCCESS (Duration: 2m 57s)
   - Run ID: `38149800568` (Workflow: CodeQL, Pull Request event)
   - Result: SUCCESS (Duration: 7m 11s)
-* Revision `1c1498b` (Current PR Head):
+* Revision `1c1498b`:
   - Run ID: `38151346307` (Workflow: CI, Pull Request event)
   - Result: SUCCESS (Duration: 2m 53s)
   - Run ID: `38151346303` (Workflow: CodeQL, Pull Request event)
   - Result: SUCCESS (Duration: 7m 11s)
   - Run ID: `38151343601` (Workflow: CI, Push event)
   - Result: FAIL (Duration: 2m 20s - intermittent timing in `WindowsProcessActionServiceTests.RealDisposableTreeEndsRootAndChildrenButNotUnrelatedHelper` returning PartialTreeTermination under CI runner load, while passing in parallel PR run `38151346307`)
+* Revision `4771117` (Target Audit Head):
+  - Run ID: `38152413624` (Workflow: CI, Push event)
+    - Result: SUCCESS (Duration: 3m 3s)
+    - Jobs: build-and-test (PASS), psscriptanalyzer (PASS), actionlint (PASS), gitleaks (PASS)
+    - Artifacts: test-results, gitleaks-results.sarif
+  - Run ID: `38152417823` (Workflow: CI, Pull Request event)
+    - Result: SUCCESS (Duration: 2m 43s)
+    - Jobs: build-and-test (PASS), psscriptanalyzer (PASS), actionlint (PASS), gitleaks (PASS)
+    - Artifacts: test-results, gitleaks-results.sarif
+  - Run ID: `38152417902` (Workflow: CodeQL, Pull Request event)
+    - Result: SUCCESS (Duration: 6m 54s)
+    - Jobs: analyze (csharp) (PASS)
+    - Security Alerts: 0
+  - Tooling Warnings: Node.js 20 runner deprecation warning on `upload-artifact@v4` and CodeQL action v3 deprecation warning scheduled for December 2026. Both are upstream CI runner notices and do not represent build failures or codebase vulnerabilities.
 
 ---
 
@@ -67,8 +101,8 @@ Final QA Status: ACCEPT WITH CONDITIONS (Ready for Merge Review).
 
 ### A. Revision Attribution
 * The 578 automated tests were compiled, executed, and validated locally on code revision `32f8482` (which introduced the new pipeline isolation and history store fault tolerance test methods).
-* Revisions `3904821` and subsequent documentation revisions contain purely markdown changes in `docs/`. The compiled C# application and test binaries are identical to revision `32f8482`.
-* GitHub Actions CI independently executed the entire test suite on revision `3904821` in runs `38149797633` and `38149800573`, reporting 100% green build and test passes.
+* Revisions `3904821`, `1c1498b`, `4771117`, and subsequent documentation revisions contain purely markdown changes in `docs/`. The compiled C# application and test binaries are identical to revision `32f8482`.
+* GitHub Actions CI independently executed the entire test suite on revision `4771117` in runs `38152413624` (Push) and `38152417823` (PR), reporting 100% green build and test passes.
 
 ### B. Test Execution Specification
 * Environment: Windows 10 (10.0.19045), .NET SDK 10.0.302, Release Configuration
@@ -192,9 +226,9 @@ In SQLite WAL mode:
 | Claim / Assessment | Confidence Level | Evidence Base |
 | :--- | :--- | :--- |
 | 578 Passing Tests | DIRECT VERIFICATION | 7 TRX log files, dotnet test execution in Release mode on revision 32f8482 |
-| PR #8 Scope & Commits | DIRECT VERIFICATION | GitHub CLI query, git merge-base diff (5 commits, 20 files at snapshot) |
-| GitHub CI Status | DIRECT VERIFICATION | GitHub Actions API (Runs 38149797633, 38149800573, 38149800568) |
-| Hard 750ms Pipeline Timeout | DIRECT VERIFICATION | `PipelineIsolatesSlowStageAndAllowsNextCycleToRun` unit test |
+| PR #8 Scope & Commits | DIRECT VERIFICATION | GitHub CLI query, git merge-base diff (7 commits, 20 files at audited snapshot) |
+| GitHub CI Status | DIRECT VERIFICATION | GitHub Actions API (Runs 38152413624, 38152417823, 38152417902 on HEAD 4771117) |
+| 750ms Pipeline Stage Timeout Deadline | DIRECT VERIFICATION | `PipelineIsolatesSlowStageAndAllowsNextCycleToRun` unit test and runtime analysis |
 | Synchronous Caller Block Risk | SOURCE INFERENCE | Code analysis of `_stages.Select(CaptureStageAsync)` before first `await` |
 | Store Decoupling from Live Hub | DIRECT VERIFICATION | `HistoryStoreFailureDoesNotStopLiveMonitoringOrSnapshotPublishing` unit test |
 | Broker Graceful Degradation | DIRECT VERIFICATION | `PrivilegedEtwBrokerClientTests` and exception mapping analysis |
