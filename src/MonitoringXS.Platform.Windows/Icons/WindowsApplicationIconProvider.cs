@@ -219,6 +219,7 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
                 (uint)width,
                 (uint)height,
                 96,
+                96,
                 pixels);
             await encoder.FlushAsync();
             stream.Seek(0);
@@ -245,9 +246,11 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
         }
         finally
         {
-            if (deviceContext != IntPtr.Zero)
+            if (deviceContext != IntPtr.Zero
+                && ReleaseDC(IntPtr.Zero, deviceContext) == 0)
             {
-                ReleaseDC(IntPtr.Zero, deviceContext);
+                // Best-effort cleanup: a failed ReleaseDC does not fail
+                // icon extraction, which already produced its result or null.
             }
 
             if (colorBitmap != IntPtr.Zero)
