@@ -335,12 +335,12 @@ public sealed class ApplicationAttributionService : IApplicationAttributionServi
         // Identity is now the executable name + display name + publisher;
         // the folder is still stored as InstallationPath and updated on
         // each snapshot, so a move does not create a duplicate.
-        string resolvedPublisher = publisher ?? process.Publisher;
+        string resolvedPublisher = publisher ?? process.Publisher ?? string.Empty;
         string stablePart = string.Join(
             "\n",
             process.NormalizedProcessName,
             displayName,
-            resolvedPublisher ?? string.Empty).ToUpperInvariant();
+            resolvedPublisher).ToUpperInvariant();
         string logicalId = $"exe:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(stablePart)))[..16].ToLowerInvariant()}";
         return new ApplicationIdentity(
             logicalId,
