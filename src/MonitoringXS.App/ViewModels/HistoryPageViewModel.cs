@@ -105,8 +105,13 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
                 async () => await _store.ListApplicationsAsync(cancellationToken),
                 cancellationToken);
             Applications.Clear();
+            // Selector shows only DisplayName + UpdatedUtc, so distinct logical
+            // ids with the same display name (dev builds, version folders) look
+            // like indistinguishable duplicates. Keep only the latest per name.
+            // Older rows stay in the database; they are not deleted.
             foreach (MetricHistoryApplication application in result.Applications
-                .OrderByDescending(item => item.UpdatedUtc))
+                .OrderByDescending(item => item.UpdatedUtc)
+                .DistinctBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
             {
                 Applications.Add(application);
             }
