@@ -281,7 +281,7 @@ public sealed class HistoryPageViewModelTests
 
         store.DelaySixHourQueries = true;
         Task stale = viewModel.SelectRangeAsync(viewModel.Ranges[4], CancellationToken.None);
-        await store.SixHourStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await store.SixHourStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
         store.DelaySixHourQueries = false;
         Task current = viewModel.SelectRangeAsync(viewModel.Ranges[6], CancellationToken.None);
         await current;
