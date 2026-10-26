@@ -105,8 +105,21 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
                 async () => await _store.ListApplicationsAsync(cancellationToken),
                 cancellationToken);
             Applications.Clear();
+            // Selector shows only DisplayName + UpdatedUtc, so distinct logical
+            // ids with the same display name (dev builds, version folders) look
+            // like indistinguishable duplicates. Keep only the latest per name.
+            // Older rows stay in the database; they are not deleted.
+            // History is for apps that are running now, not a graveyard
+            // of every app that ran in the last 24 hours. An app that is
+            // running is sampled every second, so its UpdatedUtc is always
+            // within minutes of now; an app closed longer ago is hidden,
+            // not deleted. If it runs again, its full history reappears,
+            // because the query uses the same stable logical id.
+            DateTimeOffset recentCutoff = _utcNow() - TimeSpan.FromMinutes(5);
             foreach (MetricHistoryApplication application in result.Applications
-                .OrderByDescending(item => item.UpdatedUtc))
+                .Where(item => item.UpdatedUtc >= recentCutoff)
+                .OrderByDescending(item => item.UpdatedUtc)
+                .DistinctBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
             {
                 Applications.Add(application);
             }
@@ -215,8 +228,10 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
         int version = Interlocked.Increment(ref _requestVersion);
         CancellationTokenSource request = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         CancellationTokenSource? previous = Interlocked.Exchange(ref _activeRequest, request);
+        // Cancel only: the superseded load still owns its source and disposes it
+        // in its own finally after its query drains. Disposing here races with
+        // Task.Run / QueryManyAsync registering on that token.
         previous?.Cancel();
-        previous?.Dispose();
         MetricHistoryApplication? application = SelectedApplication;
         HistoryRangeOption range = SelectedRange;
         IsLoading = true;
@@ -332,10 +347,8 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
                 IsLoading = false;
             }
 
-            if (ReferenceEquals(Interlocked.CompareExchange(ref _activeRequest, null, request), request))
-            {
-                request.Dispose();
-            }
+            Interlocked.CompareExchange(ref _activeRequest, null, request);
+            request.Dispose();
         }
     }
 
@@ -349,7 +362,7 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
         _disposed = true;
         _localization.LanguageChanged -= Localization_LanguageChanged;
         CancellationTokenSource? active = Interlocked.Exchange(ref _activeRequest, null);
+        // Cancel only; the owning load disposes its source in its finally.
         active?.Cancel();
-        active?.Dispose();
     }
 }

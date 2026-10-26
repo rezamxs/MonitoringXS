@@ -113,6 +113,60 @@ public sealed class HistoryPageViewModelTests
     }
 
     [Fact]
+    public async Task InitializeDeduplicatesSameDisplayNameKeepingLatest()
+    {
+        DateTimeOffset now = new(2026, 7, 29, 9, 0, 0, TimeSpan.Zero);
+        FakeHistoryStore store = new(
+            [
+                new("app-old", "Monitoring XS", ApplicationDisposition.Portable, now.AddMinutes(-2)),
+                new("app-new", "Monitoring XS", ApplicationDisposition.Portable, now),
+                new("other", "Other", ApplicationDisposition.Installed, now.AddMinutes(-1))
+            ],
+            metric => new MetricHistoryQueryResult(
+            [
+                new("app-new", "lifetime", now.AddMinutes(-1), metric, 5, MetricAvailability.Available, null, false)
+            ],
+            true));
+        using HistoryPageViewModel viewModel = new(
+            store,
+            () => now,
+            TimeSpan.Zero,
+            20);
+
+        await viewModel.InitializeAsync(CancellationToken.None);
+
+        Assert.Equal(2, viewModel.Applications.Count);
+        Assert.Equal("app-new", viewModel.Applications[0].LogicalApplicationId);
+        Assert.Equal("app-new", viewModel.SelectedApplication!.LogicalApplicationId);
+    }
+
+    [Fact]
+    public async Task InitializeHidesApplicationsNotUpdatedInLastFiveMinutes()
+    {
+        DateTimeOffset now = new(2026, 7, 29, 9, 0, 0, TimeSpan.Zero);
+        FakeHistoryStore store = new(
+            [
+                new("running", "Running App", ApplicationDisposition.Installed, now),
+                new("closed", "Closed App", ApplicationDisposition.Installed, now.AddHours(-1))
+            ],
+            metric => new MetricHistoryQueryResult(
+            [
+                new("running", "lifetime", now.AddMinutes(-1), metric, 5, MetricAvailability.Available, null, false)
+            ],
+            true));
+        using HistoryPageViewModel viewModel = new(
+            store,
+            () => now,
+            TimeSpan.Zero,
+            20);
+
+        await viewModel.InitializeAsync(CancellationToken.None);
+
+        Assert.Single(viewModel.Applications);
+        Assert.Equal("running", viewModel.Applications[0].LogicalApplicationId);
+    }
+
+    [Fact]
     public async Task ViewModelSurfacesDatabaseUnavailable()
     {
         FakeHistoryStore store = new(
@@ -281,7 +335,7 @@ public sealed class HistoryPageViewModelTests
 
         store.DelaySixHourQueries = true;
         Task stale = viewModel.SelectRangeAsync(viewModel.Ranges[4], CancellationToken.None);
-        await store.SixHourStarted.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await store.SixHourStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
         store.DelaySixHourQueries = false;
         Task current = viewModel.SelectRangeAsync(viewModel.Ranges[6], CancellationToken.None);
         await current;

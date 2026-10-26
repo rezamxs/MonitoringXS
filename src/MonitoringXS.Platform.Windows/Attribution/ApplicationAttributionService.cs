@@ -329,7 +329,18 @@ public sealed class ApplicationAttributionService : IApplicationAttributionServi
         string? publisher = null)
     {
         string displayName = process.ProductName ?? process.FileDescription ?? process.NormalizedProcessName;
-        string stablePart = process.ExecutablePath?.ToUpperInvariant() ?? process.NormalizedProcessName.ToUpperInvariant();
+        // Root cause of duplicate History entries: the full executable path
+        // was the identity, so every build folder, version folder, or moved
+        // copy of the same portable app became a new logical application.
+        // Identity is now the executable name + display name + publisher;
+        // the folder is still stored as InstallationPath and updated on
+        // each snapshot, so a move does not create a duplicate.
+        string resolvedPublisher = publisher ?? process.Publisher ?? string.Empty;
+        string stablePart = string.Join(
+            "\n",
+            process.NormalizedProcessName,
+            displayName,
+            resolvedPublisher).ToUpperInvariant();
         string logicalId = $"exe:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(stablePart)))[..16].ToLowerInvariant()}";
         return new ApplicationIdentity(
             logicalId,

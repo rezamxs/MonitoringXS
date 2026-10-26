@@ -168,7 +168,7 @@ public sealed class SystemOverviewService
     {
         lock (_gate)
         {
-            return _history.Snapshot().Select(item => item.Value).ToArray();
+            return _history.Values();
         }
     }
 

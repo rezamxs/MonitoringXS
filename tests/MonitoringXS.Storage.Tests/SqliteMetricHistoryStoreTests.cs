@@ -43,7 +43,7 @@ public sealed class SqliteMetricHistoryStoreTests
         await connection.OpenAsync(TestCancellation);
         await using SqliteCommand version = connection.CreateCommand();
         version.CommandText = "PRAGMA user_version;";
-        Assert.Equal(3L, (long)(await version.ExecuteScalarAsync(TestCancellation))!);
+        Assert.Equal(4L, (long)(await version.ExecuteScalarAsync(TestCancellation))!);
     }
 
     [Fact]
@@ -239,6 +239,44 @@ public sealed class SqliteMetricHistoryStoreTests
             TestCancellation);
 
         Assert.Empty(result.Points);
+    }
+
+    [Fact]
+    public async Task CleanupPrunesApplicationsWithNoRemainingSamples()
+    {
+        using TestDatabase database = new();
+        DateTimeOffset expired = DateTimeOffset.UtcNow.AddSeconds(-2);
+        await using SqliteMetricHistoryStore store = new(new(database.Path)
+        {
+            Retention = TimeSpan.FromSeconds(1),
+            RawSampleRetention = TimeSpan.FromMilliseconds(1),
+            DownsampleBucket = TimeSpan.FromSeconds(1),
+            CleanupInterval = TimeSpan.FromMilliseconds(1)
+        });
+        await Task.Delay(10, TestCancellation);
+
+        await store.EnqueueAsync([Snapshot(expired, 10)], TestCancellation);
+        await store.FlushAsync(TestCancellation);
+        // Flush only drains the write queue; cleanup runs in the worker
+        // after a 25ms idle delay, so poll instead of asserting on a race.
+        MetricHistoryApplicationsResult pruned = new([], true);
+        for (int attempt = 0; attempt < 40; attempt++)
+        {
+            pruned = await store.ListApplicationsAsync(TestCancellation);
+            if (pruned.Applications.Count == 0)
+            {
+                break;
+            }
+
+            await Task.Delay(25, TestCancellation);
+        }
+
+        Assert.Empty(pruned.Applications);
+
+        await store.EnqueueAsync([Snapshot(DateTimeOffset.UtcNow, 20)], TestCancellation);
+        await store.FlushAsync(TestCancellation);
+        MetricHistoryApplicationsResult kept = await store.ListApplicationsAsync(TestCancellation);
+        Assert.Single(kept.Applications);
     }
 
     [Fact]

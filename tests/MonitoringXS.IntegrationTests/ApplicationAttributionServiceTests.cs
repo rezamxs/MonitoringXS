@@ -86,6 +86,22 @@ public sealed class ApplicationAttributionServiceTests
     }
 
     [Fact]
+    public async Task PortableToolInDifferentFoldersIsOneLogicalApplication()
+    {
+        ProcessDescriptor first = Process(70, "UsefulTool", true, @"C:\Tools\UsefulTool.exe", product: "Useful Tool", publisher: "Example Publisher");
+        ProcessDescriptor moved = Process(71, "UsefulTool", true, @"D:\Other\UsefulTool.exe", product: "Useful Tool", publisher: "Example Publisher");
+        ProcessDescriptor differentTool = Process(72, "UsefulTool", true, @"C:\Tools\UsefulTool.exe", product: "Other Tool", publisher: "Example Publisher");
+
+        AttributionResult[] results = (await CreateService().AttributeAsync(
+            [first, moved, differentTool],
+            TestContext.Current.CancellationToken)).ToArray();
+
+        Assert.Equal(ApplicationDisposition.Portable, results[0].Application?.Disposition);
+        Assert.Equal(results[0].Application?.LogicalApplicationId, results[1].Application?.LogicalApplicationId);
+        Assert.NotEqual(results[0].Application?.LogicalApplicationId, results[2].Application?.LogicalApplicationId);
+    }
+
+    [Fact]
     public async Task SignedPortableToolIsPlacedInPortableDisposition()
     {
         ProcessDescriptor tool = Process(70, "UsefulTool", true, @"C:\Tools\UsefulTool.exe", product: "Useful Tool", publisher: "Example Publisher");

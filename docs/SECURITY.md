@@ -6,7 +6,7 @@ Process metadata, command lines, executable paths, signatures, network destinati
 
 ## Controls
 
-- Run unelevated by default; no service and no kernel driver.
+- Run unelevated by default; no service or kernel driver is required. The optional privileged ETW broker is installed only by explicit user action and is not required for normal operation.
 - Do not invoke a shell for application actions.
 - Validate executable identity again immediately before destructive or privileged operations.
 - Deny actions against critical/protected Windows processes regardless of UI attribution.

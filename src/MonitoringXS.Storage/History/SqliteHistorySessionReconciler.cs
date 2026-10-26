@@ -179,6 +179,22 @@ internal sealed class SqliteHistorySessionReconciler
         _loaded = true;
     }
 
+    // Cleanup may delete an application's rows (and, by cascade, its
+    // session rows) after retention removes its samples. The in-memory
+    // _active map must forget those logical ids at the same time, or
+    // the next write would reuse a deleted session id, violate the
+    // process_sessions foreign key, roll back the whole batch, and
+    // make the application disappear from ListApplications even
+    // though it is running again. Only the worker thread calls this,
+    // so no lock is needed, matching Accept.
+    public void Forget(IReadOnlyList<string> logicalApplicationIds)
+    {
+        foreach (string logicalId in logicalApplicationIds)
+        {
+            _active.Remove(logicalId);
+        }
+    }
+
     private static async Task<Dictionary<string, ActiveApplication>> LoadActiveAsync(
         SqliteConnection connection,
         SqliteTransaction transaction,

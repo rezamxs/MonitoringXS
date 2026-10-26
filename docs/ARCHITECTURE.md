@@ -73,3 +73,18 @@ main application.
 - Compile against a current Windows SDK while declaring Windows 10 build 17763 as the minimum.
 - Runtime guards are mandatory for APIs newer than the minimum OS.
 - x64 is the primary target; identifiers and interop use pointer-size-safe types for future ARM64 support.
+
+## Why these are not merged (Ponytail review, 2026-10-26)
+
+- The four aggregation services are not duplicates. Base aggregation, physical-disk,
+  network, and GPU aggregation differ in semantics: GPU sums per identical
+  adapter/engine and takes the busiest engine as headline; network retains bytes
+  already observed for an exited helper while another process of the same logical
+  application remains active; process baselines are tracked independently of the
+  current logical-application key, so reclassification moves only future deltas.
+  Merging them into one generic aggregator would erase those distinctions.
+- `MonitoringXS.ElevatedHelper` and `MonitoringXS.PrivilegedBroker` are not
+  duplicates either. The helper is an on-demand, single-operation process;
+  the broker is a long-lived LocalSystem service for ETW. ADR 0004 explicitly
+  rejected repurposing the helper as the broker. Keep both, and do not merge
+  process actions into the broker protocol.

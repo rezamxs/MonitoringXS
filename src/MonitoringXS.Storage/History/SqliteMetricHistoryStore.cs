@@ -11,7 +11,7 @@ public sealed class SqliteMetricHistoryStore :
     IMetricHistoryRetentionController,
     IMetricHistoryDiagnostics
 {
-    public const int SchemaVersion = 3;
+    public const int SchemaVersion = 4;
     private const int RawSampleKind = 0;
     private const int DownsampledSampleKind = 1;
     private const int SqliteCorrupt = 11;
@@ -727,7 +727,60 @@ public sealed class SqliteMetricHistoryStore :
                   WHERE metric_samples.application_session_id = application_sessions.id);
             """;
         await pruneSessions.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+        // Root cause of stale History entries: applications were never
+        // removed, even after retention deleted all of their samples, so
+        // old build folders stayed in the selector forever. Remove only
+        // applications with no remaining samples; a running application
+        // always has samples, and a pruned application is recreated by
+        // the next write if it runs again.
+        // Collect the ids first: deleting the application cascades to
+        // its session rows, and the session reconciler must forget
+        // those ids, or it would reuse a deleted session id on the
+        // next write, fail the foreign key, and roll back the batch.
+        List<string> prunedApplicationIds = [];
+        await using (SqliteCommand collectPruned = connection.CreateCommand())
+        {
+            collectPruned.Transaction = transaction;
+            collectPruned.CommandText = """
+                SELECT logical_application_id FROM applications
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM metric_samples
+                    WHERE metric_samples.logical_application_id = applications.logical_application_id);
+                """;
+            await using SqliteDataReader prunedReader = await collectPruned
+                .ExecuteReaderAsync(cancellationToken)
+                .ConfigureAwait(false);
+            while (await prunedReader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                prunedApplicationIds.Add(prunedReader.GetString(0));
+            }
+        }
+
+        await using SqliteCommand pruneApplications = connection.CreateCommand();
+        pruneApplications.Transaction = transaction;
+        pruneApplications.CommandText = """
+            DELETE FROM applications
+            WHERE NOT EXISTS (
+                SELECT 1 FROM metric_samples
+                WHERE metric_samples.logical_application_id = applications.logical_application_id);
+            """;
+        await pruneApplications.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        _sessionReconciler.Forget(prunedApplicationIds);
+
+        // Best effort: shrink the WAL file after retention cleanup. A failed
+        // checkpoint must not fail cleanup itself.
+        try
+        {
+            await using SqliteCommand checkpoint = connection.CreateCommand();
+            checkpoint.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+            await checkpoint.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            Trace.TraceWarning("SQLite WAL checkpoint failed ({0}).", exception.GetType().Name);
+        }
 
         if (DatabaseBytes() > _options.MaximumDatabaseBytes)
         {
@@ -809,6 +862,7 @@ public sealed class SqliteMetricHistoryStore :
         await ExecutePragmaAsync(connection, "PRAGMA foreign_keys = ON;", cancellationToken);
         await ExecutePragmaAsync(connection, "PRAGMA busy_timeout = 5000;", cancellationToken);
         await ExecutePragmaAsync(connection, "PRAGMA synchronous = NORMAL;", cancellationToken);
+        await ExecutePragmaAsync(connection, "PRAGMA journal_size_limit = 16777216;", cancellationToken);
     }
 
     private async Task EnsureInitializedAsync(
@@ -1082,6 +1136,21 @@ public sealed class SqliteMetricHistoryStore :
                 VALUES (3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
                 PRAGMA user_version = 3;
                 """, cancellationToken);
+        }
+
+        if (version < 4)
+        {
+            await ExecuteAsync(connection, transaction, """
+                CREATE INDEX IF NOT EXISTS ix_metric_samples_time
+                    ON metric_samples(timestamp_utc);
+                CREATE INDEX IF NOT EXISTS ix_metric_samples_session
+                    ON metric_samples(application_session_id)
+                    WHERE application_session_id IS NOT NULL;
+                INSERT OR IGNORE INTO schema_migrations(version, applied_utc)
+                VALUES (4, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                PRAGMA user_version = 4;
+                """, cancellationToken);
+            version = 4;
         }
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
