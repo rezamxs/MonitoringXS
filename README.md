@@ -25,7 +25,7 @@ Working in the current codebase:
 
 Not finished:
 
-- Dashboard and Portable Apps navigation items are visible placeholders
+- Dashboard and Portable Apps pages are not yet implemented and are not shown in navigation
 - Stopped-application presentation and additional actions (graceful close, restart, uninstall)
 - Broader GPU driver/hardware, remote, and virtual-adapter validation
 - High Contrast, 150–200% scaling, Snap Layout, and broader screen-reader validation
