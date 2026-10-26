@@ -132,9 +132,7 @@
   <data name="NetworkDetails.Text" xml:space="preserve"><value>Network session details</value></data>
   <data name="GpuDetails.Text" xml:space="preserve"><value>GPU counter details</value></data>
   <data name="UnavailableImplementation.Text" xml:space="preserve"><value>Process-level tables, command lines, and security fields are not implemented in this vertical slice.</value></data>
-  <data name="NavDashboard.Content" xml:space="preserve"><value>Dashboard</value></data>
   <data name="NavRunning.Content" xml:space="preserve"><value>Running Apps</value></data>
-  <data name="NavPortable.Content" xml:space="preserve"><value>Portable Apps</value></data>
   <data name="NavHistory.Content" xml:space="preserve"><value>History</value></data>
   <data name="NavSettings.Content" xml:space="preserve"><value>Settings</value></data>
   <data name="NavAbout.Content" xml:space="preserve"><value>About</value></data>
