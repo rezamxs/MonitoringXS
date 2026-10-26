@@ -118,9 +118,9 @@ public sealed class HistoryPageViewModelTests
         DateTimeOffset now = new(2026, 7, 29, 9, 0, 0, TimeSpan.Zero);
         FakeHistoryStore store = new(
             [
-                new("app-old", "Monitoring XS", ApplicationDisposition.Portable, now.AddHours(-1)),
+                new("app-old", "Monitoring XS", ApplicationDisposition.Portable, now.AddMinutes(-2)),
                 new("app-new", "Monitoring XS", ApplicationDisposition.Portable, now),
-                new("other", "Other", ApplicationDisposition.Installed, now.AddHours(-2))
+                new("other", "Other", ApplicationDisposition.Installed, now.AddMinutes(-1))
             ],
             metric => new MetricHistoryQueryResult(
             [
@@ -138,6 +138,32 @@ public sealed class HistoryPageViewModelTests
         Assert.Equal(2, viewModel.Applications.Count);
         Assert.Equal("app-new", viewModel.Applications[0].LogicalApplicationId);
         Assert.Equal("app-new", viewModel.SelectedApplication!.LogicalApplicationId);
+    }
+
+    [Fact]
+    public async Task InitializeHidesApplicationsNotUpdatedInLastFiveMinutes()
+    {
+        DateTimeOffset now = new(2026, 7, 29, 9, 0, 0, TimeSpan.Zero);
+        FakeHistoryStore store = new(
+            [
+                new("running", "Running App", ApplicationDisposition.Installed, now),
+                new("closed", "Closed App", ApplicationDisposition.Installed, now.AddHours(-1))
+            ],
+            metric => new MetricHistoryQueryResult(
+            [
+                new("running", "lifetime", now.AddMinutes(-1), metric, 5, MetricAvailability.Available, null, false)
+            ],
+            true));
+        using HistoryPageViewModel viewModel = new(
+            store,
+            () => now,
+            TimeSpan.Zero,
+            20);
+
+        await viewModel.InitializeAsync(CancellationToken.None);
+
+        Assert.Single(viewModel.Applications);
+        Assert.Equal("running", viewModel.Applications[0].LogicalApplicationId);
     }
 
     [Fact]
