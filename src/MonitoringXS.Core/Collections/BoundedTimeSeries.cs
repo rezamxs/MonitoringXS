@@ -27,4 +27,18 @@ public sealed class BoundedTimeSeries<T>
     }
 
     public IReadOnlyList<(DateTimeOffset Timestamp, T Value)> Snapshot() => _items.ToArray();
+
+    // Single-allocation values snapshot: avoids the tuple array + Select copy
+    // that the per-tick history paths used to pay for every series.
+    public IReadOnlyList<T> Values()
+    {
+        T[] values = new T[_items.Count];
+        int index = 0;
+        foreach ((DateTimeOffset _, T value) in _items)
+        {
+            values[index++] = value;
+        }
+
+        return values;
+    }
 }
