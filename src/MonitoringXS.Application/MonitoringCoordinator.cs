@@ -59,7 +59,7 @@ public sealed class MonitoringCoordinator
         UpdateRecentHistory(applications, capturedAt);
         Dictionary<string, IReadOnlyList<ApplicationHistoryPoint>> historySnapshot = _history.ToDictionary(
             pair => pair.Key,
-            pair => (IReadOnlyList<ApplicationHistoryPoint>)pair.Value.Snapshot().Select(item => item.Value).ToArray(),
+            pair => pair.Value.Values(),
             StringComparer.Ordinal);
 
         SystemOverviewSnapshot? systemOverview = null;
