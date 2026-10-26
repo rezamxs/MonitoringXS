@@ -72,6 +72,44 @@ public sealed class ApplicationTabViewModelTests
     }
 
     [Fact]
+    public void CardAndTabTryEveryProcessPathVisibleFirstAndDoNotRetrySameSet()
+    {
+        RecordingIconProvider provider = new();
+        DateTimeOffset start = DateTimeOffset.UtcNow;
+        ProcessDescriptor helper = new(
+            new ProcessInstanceId(43, start),
+            "helper.exe",
+            @"C:\Apps\Sample\helper.exe",
+            null, null, null, null, null, false, false);
+        ProcessDescriptor main = new(
+            new ProcessInstanceId(44, start),
+            "sample.exe",
+            @"C:\Apps\Sample\sample.exe",
+            null, null, null, null, "Sample", null, false, true);
+        ApplicationMetricSnapshot snapshot = Snapshot() with { Processes = [helper, main] };
+        ApplicationCardViewModel card = new(iconProvider: provider)
+        {
+            LogicalApplicationId = "sample-app",
+            Disposition = ApplicationDisposition.Installed
+        };
+        ApplicationTabViewModel tab = new("sample-app", "Sample App", iconProvider: provider);
+
+        card.Update(snapshot, []);
+        tab.Update(snapshot, []);
+        card.Update(snapshot, []);
+        tab.Update(snapshot, []);
+
+        Assert.Equal(
+            [
+                @"C:\Apps\Sample\sample.exe",
+                @"C:\Apps\Sample\helper.exe",
+                @"C:\Apps\Sample\sample.exe",
+                @"C:\Apps\Sample\helper.exe"
+            ],
+            provider.Paths);
+    }
+
+    [Fact]
     public void CpuHistoryCollectionStaysStableBoundedAndPreservesGaps()
     {
         DateTimeOffset start = new(2026, 8, 9, 0, 0, 0, TimeSpan.Zero);
