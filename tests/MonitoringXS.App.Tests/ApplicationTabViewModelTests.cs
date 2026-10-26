@@ -85,7 +85,7 @@ public sealed class ApplicationTabViewModelTests
             new ProcessInstanceId(44, start),
             "sample.exe",
             @"C:\Apps\Sample\sample.exe",
-            null, null, null, null, "Sample", null, false, true);
+            null, null, null, "Sample", null, false, true);
         ApplicationMetricSnapshot snapshot = Snapshot() with { Processes = [helper, main] };
         ApplicationCardViewModel card = new(iconProvider: provider)
         {
