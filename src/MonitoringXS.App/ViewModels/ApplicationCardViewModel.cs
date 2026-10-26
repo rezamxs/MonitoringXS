@@ -15,7 +15,6 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
     private readonly LocalizationService _localization;
     private readonly MetricExplanationService _metricExplanations;
     private readonly IApplicationIconProvider? _iconProvider;
-    private string? _currentIconPath;
     private string[]? _triedIconCandidates;
     private bool _iconLoading;
 
@@ -403,7 +402,6 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
                 return false;
             }
 
-            _currentIconPath = executablePath;
             AppIconSource = bitmap;
             return true;
         }
