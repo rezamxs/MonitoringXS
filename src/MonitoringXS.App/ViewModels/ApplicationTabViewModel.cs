@@ -17,7 +17,6 @@ public sealed partial class ApplicationTabViewModel : ObservableObject, IDisposa
     private readonly LocalizationService _localization;
     private readonly MetricExplanationService _metricExplanations;
     private readonly IApplicationIconProvider? _iconProvider;
-    private string? _currentIconPath;
     private string[]? _triedIconCandidates;
     private bool _iconLoading;
 
@@ -295,7 +294,6 @@ public sealed partial class ApplicationTabViewModel : ObservableObject, IDisposa
                 return false;
             }
 
-            _currentIconPath = executablePath;
             AppIconSource = bitmap;
             return true;
         }
