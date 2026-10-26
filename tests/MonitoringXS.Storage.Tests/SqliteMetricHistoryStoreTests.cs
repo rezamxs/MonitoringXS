@@ -257,7 +257,20 @@ public sealed class SqliteMetricHistoryStoreTests
 
         await store.EnqueueAsync([Snapshot(expired, 10)], TestCancellation);
         await store.FlushAsync(TestCancellation);
-        MetricHistoryApplicationsResult pruned = await store.ListApplicationsAsync(TestCancellation);
+        // Flush only drains the write queue; cleanup runs in the worker
+        // after a 25ms idle delay, so poll instead of asserting on a race.
+        MetricHistoryApplicationsResult pruned = new([], true);
+        for (int attempt = 0; attempt < 40; attempt++)
+        {
+            pruned = await store.ListApplicationsAsync(TestCancellation);
+            if (pruned.Applications.Count == 0)
+            {
+                break;
+            }
+
+            await Task.Delay(25, TestCancellation);
+        }
+
         Assert.Empty(pruned.Applications);
 
         await store.EnqueueAsync([Snapshot(DateTimeOffset.UtcNow, 20)], TestCancellation);
