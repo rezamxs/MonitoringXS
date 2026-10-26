@@ -16,6 +16,8 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
     private readonly MetricExplanationService _metricExplanations;
     private readonly IApplicationIconProvider? _iconProvider;
     private string? _currentIconPath;
+    private string[]? _triedIconCandidates;
+    private bool _iconLoading;
 
     public ApplicationCardViewModel(
         LocalizationService? localization = null,
@@ -312,40 +314,78 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
 
     private void TryLoadIcon(ApplicationMetricSnapshot snapshot)
     {
-        if (_iconProvider is null)
+        if (_iconProvider is null || _iconLoading)
         {
             return;
         }
 
-        // Prefer a visible-window process: helpers first in the snapshot
-        // often have no usable icon, which left the fallback glyph showing.
-        string? executablePath = snapshot.Processes
+        // Root cause of missing icons: only the first process path was
+        // tried, and it was marked as handled before it succeeded, so a
+        // helper/service process with no icon blocked every other process
+        // in the same logical application. Try every distinct process
+        // path in this snapshot, visible-window processes first.
+        // InstallationPath is only used if no process path exists.
+        // A candidate set is tried once, so a
+        // refresh with the same processes does not re-extract icons.
+        string[] candidates = snapshot.Processes
             .OrderByDescending(process => process.HasVisibleWindow)
             .Select(process => process.ExecutablePath)
-            .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path))
-            ?? snapshot.Application.InstallationPath;
-        if (string.IsNullOrWhiteSpace(executablePath)
-            || string.Equals(executablePath, _currentIconPath, StringComparison.OrdinalIgnoreCase))
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        // InstallationPath is a folder for installed apps, not an
+        // executable, so it is only a last resort when no process path
+        // exists at all; otherwise it would shadow real process icons
+        // and add a useless folder-thumbnail extraction per app.
+        if (candidates.Length == 0
+            && !string.IsNullOrWhiteSpace(snapshot.Application.InstallationPath))
+        {
+            candidates = [snapshot.Application.InstallationPath!];
+        }
+        if (candidates.Length == 0
+            || (_triedIconCandidates is not null
+                && candidates.SequenceEqual(_triedIconCandidates, StringComparer.OrdinalIgnoreCase)))
         {
             return;
         }
 
-        _currentIconPath = executablePath;
-        _ = LoadIconAsync(executablePath);
+        _triedIconCandidates = candidates;
+        _iconLoading = true;
+        _ = LoadIconAsync(candidates);
     }
 
-    private async Task LoadIconAsync(string executablePath)
+    private async Task LoadIconAsync(string[] candidates)
     {
         try
         {
-            ApplicationIconData? iconData = await _iconProvider!.GetIconAsync(
-                executablePath,
-                32,
-                CancellationToken.None);
-            if (iconData is null)
+            foreach (string executablePath in candidates)
             {
-                return;
+                ApplicationIconData? iconData = await _iconProvider!.GetIconAsync(
+                    executablePath,
+                    32,
+                    CancellationToken.None);
+                if (iconData is null)
+                {
+                    continue;
+                }
+
+                if (await LoadIconBitmapAsync(executablePath, iconData))
+                {
+                    return;
+                }
             }
+        }
+        finally
+        {
+            _iconLoading = false;
+        }
+    }
+
+    private async Task<bool> LoadIconBitmapAsync(string executablePath, ApplicationIconData iconData)
+    {
+        try
+        {
 
             InMemoryRandomAccessStream stream = new();
             using (DataWriter writer = new(stream.GetOutputStreamAt(0)))
@@ -357,14 +397,20 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             stream.Seek(0);
             BitmapImage bitmap = new();
             await bitmap.SetSourceAsync(stream);
-            if (string.Equals(executablePath, _currentIconPath, StringComparison.OrdinalIgnoreCase))
+            if (_triedIconCandidates is null
+                || !_triedIconCandidates.Contains(executablePath, StringComparer.OrdinalIgnoreCase))
             {
-                AppIconSource = bitmap;
+                return false;
             }
+
+            _currentIconPath = executablePath;
+            AppIconSource = bitmap;
+            return true;
         }
         catch
         {
             // Icon loading is best-effort; the native fallback remains visible.
+            return false;
         }
     }
 
