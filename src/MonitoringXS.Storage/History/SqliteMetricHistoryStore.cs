@@ -11,7 +11,7 @@ public sealed class SqliteMetricHistoryStore :
     IMetricHistoryRetentionController,
     IMetricHistoryDiagnostics
 {
-    public const int SchemaVersion = 3;
+    public const int SchemaVersion = 4;
     private const int RawSampleKind = 0;
     private const int DownsampledSampleKind = 1;
     private const int SqliteCorrupt = 11;
@@ -729,6 +729,19 @@ public sealed class SqliteMetricHistoryStore :
         await pruneSessions.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
+        // Best effort: shrink the WAL file after retention cleanup. A failed
+        // checkpoint must not fail cleanup itself.
+        try
+        {
+            await using SqliteCommand checkpoint = connection.CreateCommand();
+            checkpoint.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+            await checkpoint.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            Trace.TraceWarning("SQLite WAL checkpoint failed ({0}).", exception.GetType().Name);
+        }
+
         if (DatabaseBytes() > _options.MaximumDatabaseBytes)
         {
             await PruneDatabaseAsync(connection, cancellationToken).ConfigureAwait(false);
@@ -809,6 +822,7 @@ public sealed class SqliteMetricHistoryStore :
         await ExecutePragmaAsync(connection, "PRAGMA foreign_keys = ON;", cancellationToken);
         await ExecutePragmaAsync(connection, "PRAGMA busy_timeout = 5000;", cancellationToken);
         await ExecutePragmaAsync(connection, "PRAGMA synchronous = NORMAL;", cancellationToken);
+        await ExecutePragmaAsync(connection, "PRAGMA journal_size_limit = 16777216;", cancellationToken);
     }
 
     private async Task EnsureInitializedAsync(
@@ -1082,6 +1096,21 @@ public sealed class SqliteMetricHistoryStore :
                 VALUES (3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
                 PRAGMA user_version = 3;
                 """, cancellationToken);
+        }
+
+        if (version < 4)
+        {
+            await ExecuteAsync(connection, transaction, """
+                CREATE INDEX IF NOT EXISTS ix_metric_samples_time
+                    ON metric_samples(timestamp_utc);
+                CREATE INDEX IF NOT EXISTS ix_metric_samples_session
+                    ON metric_samples(application_session_id)
+                    WHERE application_session_id IS NOT NULL;
+                INSERT OR IGNORE INTO schema_migrations(version, applied_utc)
+                VALUES (4, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                PRAGMA user_version = 4;
+                """, cancellationToken);
+            version = 4;
         }
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
