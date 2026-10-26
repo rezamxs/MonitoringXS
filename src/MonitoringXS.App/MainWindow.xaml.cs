@@ -39,7 +39,7 @@ public sealed partial class MainWindow : Window, IDisposable
         IMonitoringSnapshotSource snapshots,
         MonitoringRuntime runtime,
         LocalizationService localization,
-        string initialNavigationTag = "dashboard")
+        string initialNavigationTag = "running")
     {
         ViewModel = viewModel;
         _snapshots = snapshots;
@@ -69,14 +69,17 @@ public sealed partial class MainWindow : Window, IDisposable
         Closed += MainWindow_Closed;
         PrimaryNavigation.SelectedItem = PrimaryNavigation.MenuItems
             .OfType<NavigationViewItem>()
-            .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), initialNavigationTag, StringComparison.Ordinal));
+            .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), initialNavigationTag, StringComparison.Ordinal))
+            ?? PrimaryNavigation.MenuItems
+                .OfType<NavigationViewItem>()
+                .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), "running", StringComparison.Ordinal));
         RestoreOpenTabs();
     }
 
     public MainWindowViewModel ViewModel { get; }
 
     public string SelectedNavigationTag =>
-        (PrimaryNavigation.SelectedItem as NavigationViewItem)?.Tag?.ToString() ?? "dashboard";
+        (PrimaryNavigation.SelectedItem as NavigationViewItem)?.Tag?.ToString() ?? "running";
 
     private async Task<bool> ConfirmProcessActionAsync(
         ProcessActionConfirmation request,
