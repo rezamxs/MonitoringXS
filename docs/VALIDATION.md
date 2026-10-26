@@ -1432,3 +1432,34 @@ Actual closeout results:
 
 Live History (Google Chrome, 1 hour) showed measured CPU and working-set series, percent and byte units, `Partial` state, lower-bound counts, and `2 unavailable samples` without fabricating zeros. Chart-point hover tooltips were not captured: WinUI `ToolTipService` needs a real `PointerMoved` on the sparkline, and synthetic cursor moves did not raise that event. Tooltip text, unavailable-is-not-zero, and irregular timestamp mapping remain covered by `ChartTooltipBuilder` and `ChartHoverMapper` tests. Visible History series summaries now go through localization resources (English and Persian).
 
+## 2026-09-03 CI test reporting checkpoint
+
+Environment: Windows 10 x64, .NET SDK 10.0.100 roll-forward, branch `chore/ci-test-coverage` from `main` (`5120d97`).
+
+```powershell
+dotnet restore MonitoringXS.sln
+dotnet restore tests/MonitoringXS.ProcessActionTestHelper/MonitoringXS.ProcessActionTestHelper.csproj
+dotnet build MonitoringXS.sln -c Release --no-restore -p:TreatWarningsAsErrors=true
+dotnet test MonitoringXS.sln -c Release --no-build
+dotnet test tests/MonitoringXS.Collectors.Tests/MonitoringXS.Collectors.Tests.csproj -c Release --no-build --collect "XPlat Code Coverage" --results-directory TestResults --logger trx --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+```
+
+Restore: all projects up to date.
+
+The first parallel Release build terminated the WinUI XAML compiler with `StackOverflowException`. A subsequent rebuild succeeded in 39 minutes 40 seconds with 0 errors and 17 existing `CS2002` duplicate generated-source warnings. CI now serializes that build with `-m:1` and `MSBUILDDISABLENODEREUSE=1`.
+
+`dotnet test MonitoringXS.sln -c Release --no-build`:
+
+| Project | Passed | Failed | Skipped | Total |
+| --- | ---: | ---: | ---: | ---: |
+| MonitoringXS.Core.Tests | 11 | 0 | 0 | 11 |
+| MonitoringXS.Application.Tests | 50 | 0 | 0 | 50 |
+| MonitoringXS.Collectors.Tests | 86 | 0 | 0 | 86 |
+| MonitoringXS.App.Tests | 212 | 0 | 0 | 212 |
+| MonitoringXS.ArchitectureTests | 26 | 0 | 0 | 26 |
+| MonitoringXS.Storage.Tests | 40 | 0 | 0 | 40 |
+| MonitoringXS.IntegrationTests | 151 | 0 | 0 | 151 |
+| **All** | **576** | **0** | **0** | **576** |
+
+Focused Coverlet proof on `MonitoringXS.Collectors.Tests` produced TRX output and `coverage.cobertura.xml`. Blame hang generated no sequence file. Parsed package rates from that single-project run: Collectors 90.4% line / 75.7% branch; Core 47.0% line / 8.3% branch (Core is only exercised through collector tests in this proof, not the full suite). Packaged WinUI x64 profile was not rebuilt in this pass.
+

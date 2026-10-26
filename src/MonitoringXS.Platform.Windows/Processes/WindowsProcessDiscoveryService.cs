@@ -181,11 +181,21 @@ public sealed class WindowsProcessDiscoveryService : IProcessDiscoveryService
 
         lock (_cacheGate)
         {
-            foreach (string stalePath in _metadataByPath.Keys
-                .Where(path => !liveMetadataPaths.Contains(path))
-                .ToArray())
+            foreach (string stalePath in _metadataByPath.Keys.ToArray())
             {
-                _metadataByPath.Remove(stalePath);
+                if (_metadataByPath.TryGetValue(stalePath, out MetadataCacheEntry? entry)
+                    && now >= entry.RevalidateAt
+                    && !liveMetadataPaths.Contains(stalePath))
+                {
+                    _metadataByPath.Remove(stalePath);
+                }
+            }
+
+            while (_metadataByPath.Count > MetadataCacheCapacity)
+            {
+                string? first = _metadataByPath.Keys.FirstOrDefault();
+                if (first is null) break;
+                _metadataByPath.Remove(first);
             }
         }
 
