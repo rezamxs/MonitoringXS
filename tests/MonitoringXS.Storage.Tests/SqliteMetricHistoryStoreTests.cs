@@ -242,6 +242,31 @@ public sealed class SqliteMetricHistoryStoreTests
     }
 
     [Fact]
+    public async Task CleanupPrunesApplicationsWithNoRemainingSamples()
+    {
+        using TestDatabase database = new();
+        DateTimeOffset expired = DateTimeOffset.UtcNow.AddSeconds(-2);
+        await using SqliteMetricHistoryStore store = new(new(database.Path)
+        {
+            Retention = TimeSpan.FromSeconds(1),
+            RawSampleRetention = TimeSpan.FromMilliseconds(1),
+            DownsampleBucket = TimeSpan.FromSeconds(1),
+            CleanupInterval = TimeSpan.FromMilliseconds(1)
+        });
+        await Task.Delay(10, TestCancellation);
+
+        await store.EnqueueAsync([Snapshot(expired, 10)], TestCancellation);
+        await store.FlushAsync(TestCancellation);
+        MetricHistoryApplicationsResult pruned = await store.ListApplicationsAsync(TestCancellation);
+        Assert.Empty(pruned.Applications);
+
+        await store.EnqueueAsync([Snapshot(DateTimeOffset.UtcNow, 20)], TestCancellation);
+        await store.FlushAsync(TestCancellation);
+        MetricHistoryApplicationsResult kept = await store.ListApplicationsAsync(TestCancellation);
+        Assert.Single(kept.Applications);
+    }
+
+    [Fact]
     public async Task RetentionChangeAppliesToFutureMaintenanceWithoutMigration()
     {
         using TestDatabase database = new();
