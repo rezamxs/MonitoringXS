@@ -32,7 +32,7 @@ public sealed class SqliteHistoryV3Tests
         }
 
         await using SqliteConnection connection = await OpenAsync(database.Path);
-        Assert.Equal(3L, await ScalarInt64Async(connection, "PRAGMA user_version;"));
+        Assert.Equal(4L, await ScalarInt64Async(connection, "PRAGMA user_version;"));
         Assert.Equal(0L, await ScalarInt64Async(connection, "SELECT COUNT(*) FROM application_sessions;"));
         Assert.Equal(0L, await ScalarInt64Async(connection, "SELECT COUNT(*) FROM process_sessions;"));
         await using SqliteCommand values = connection.CreateCommand();
@@ -97,7 +97,7 @@ public sealed class SqliteHistoryV3Tests
         using TestDatabase newer = new();
         await using (SqliteConnection connection = await OpenAsync(newer.Path))
         {
-            await ExecuteAsync(connection, "PRAGMA user_version = 4;");
+            await ExecuteAsync(connection, "PRAGMA user_version = 5;");
         }
         await using SqliteMetricHistoryStore newerStore = newer.Store();
         MetricHistoryApplicationsResult newerResult = await newerStore.ListApplicationsAsync(TestCancellation);
