@@ -727,6 +727,22 @@ public sealed class SqliteMetricHistoryStore :
                   WHERE metric_samples.application_session_id = application_sessions.id);
             """;
         await pruneSessions.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+        // Root cause of stale History entries: applications were never
+        // removed, even after retention deleted all of their samples, so
+        // old build folders stayed in the selector forever. Remove only
+        // applications with no remaining samples; a running application
+        // always has samples, and a pruned application is recreated by
+        // the next write if it runs again.
+        await using SqliteCommand pruneApplications = connection.CreateCommand();
+        pruneApplications.Transaction = transaction;
+        pruneApplications.CommandText = """
+            DELETE FROM applications
+            WHERE NOT EXISTS (
+                SELECT 1 FROM metric_samples
+                WHERE metric_samples.logical_application_id = applications.logical_application_id);
+            """;
+        await pruneApplications.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
         // Best effort: shrink the WAL file after retention cleanup. A failed
