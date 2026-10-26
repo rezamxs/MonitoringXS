@@ -734,6 +734,29 @@ public sealed class SqliteMetricHistoryStore :
         // applications with no remaining samples; a running application
         // always has samples, and a pruned application is recreated by
         // the next write if it runs again.
+        // Collect the ids first: deleting the application cascades to
+        // its session rows, and the session reconciler must forget
+        // those ids, or it would reuse a deleted session id on the
+        // next write, fail the foreign key, and roll back the batch.
+        List<string> prunedApplicationIds = [];
+        await using (SqliteCommand collectPruned = connection.CreateCommand())
+        {
+            collectPruned.Transaction = transaction;
+            collectPruned.CommandText = """
+                SELECT logical_application_id FROM applications
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM metric_samples
+                    WHERE metric_samples.logical_application_id = applications.logical_application_id);
+                """;
+            await using SqliteDataReader prunedReader = await collectPruned
+                .ExecuteReaderAsync(cancellationToken)
+                .ConfigureAwait(false);
+            while (await prunedReader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                prunedApplicationIds.Add(prunedReader.GetString(0));
+            }
+        }
+
         await using SqliteCommand pruneApplications = connection.CreateCommand();
         pruneApplications.Transaction = transaction;
         pruneApplications.CommandText = """
@@ -744,6 +767,7 @@ public sealed class SqliteMetricHistoryStore :
             """;
         await pruneApplications.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        _sessionReconciler.Forget(prunedApplicationIds);
 
         // Best effort: shrink the WAL file after retention cleanup. A failed
         // checkpoint must not fail cleanup itself.
