@@ -317,7 +317,10 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             return;
         }
 
+        // Prefer a visible-window process: helpers first in the snapshot
+        // often have no usable icon, which left the fallback glyph showing.
         string? executablePath = snapshot.Processes
+            .OrderByDescending(process => process.HasVisibleWindow)
             .Select(process => process.ExecutablePath)
             .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path))
             ?? snapshot.Application.InstallationPath;
