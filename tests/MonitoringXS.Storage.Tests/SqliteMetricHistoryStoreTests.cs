@@ -43,7 +43,7 @@ public sealed class SqliteMetricHistoryStoreTests
         await connection.OpenAsync(TestCancellation);
         await using SqliteCommand version = connection.CreateCommand();
         version.CommandText = "PRAGMA user_version;";
-        Assert.Equal(3L, (long)(await version.ExecuteScalarAsync(TestCancellation))!);
+        Assert.Equal(4L, (long)(await version.ExecuteScalarAsync(TestCancellation))!);
     }
 
     [Fact]
