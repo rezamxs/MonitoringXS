@@ -109,7 +109,15 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
             // ids with the same display name (dev builds, version folders) look
             // like indistinguishable duplicates. Keep only the latest per name.
             // Older rows stay in the database; they are not deleted.
+            // History is for apps that are running now, not a graveyard
+            // of every app that ran in the last 24 hours. An app that is
+            // running is sampled every second, so its UpdatedUtc is always
+            // within minutes of now; an app closed longer ago is hidden,
+            // not deleted. If it runs again, its full history reappears,
+            // because the query uses the same stable logical id.
+            DateTimeOffset recentCutoff = _utcNow() - TimeSpan.FromMinutes(5);
             foreach (MetricHistoryApplication application in result.Applications
+                .Where(item => item.UpdatedUtc >= recentCutoff)
                 .OrderByDescending(item => item.UpdatedUtc)
                 .DistinctBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
             {
