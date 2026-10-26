@@ -896,7 +896,6 @@
                 <x:Double x:Key="NavigationViewSelectionIndicatorWidth">4</x:Double>
             </NavigationView.Resources>
             <NavigationView.MenuItems>
-                <NavigationViewItem x:Uid="NavDashboard" Icon="Home" IsEnabled="False" Tag="dashboard" />
                 <NavigationViewItem x:Uid="NavRunning"
                     x:Name="RunningNavigationItem"
                     Icon="AllApps"
@@ -908,7 +907,6 @@
                     Icon="ViewAll"
                     Tag="system-overview"
                     UseSystemFocusVisuals="True" />
-                <NavigationViewItem x:Uid="NavPortable" Icon="OpenFile" IsEnabled="False" Tag="portable" />
                 <NavigationViewItem x:Uid="NavHistory"
                     x:Name="HistoryNavigationItem"
                     Icon="Clock"
