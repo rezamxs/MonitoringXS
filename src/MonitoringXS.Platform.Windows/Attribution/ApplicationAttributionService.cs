@@ -138,7 +138,8 @@ public sealed class ApplicationAttributionService : IApplicationAttributionServi
         CancellationToken cancellationToken)
     {
         string name = process.NormalizedProcessName;
-        if (InfrastructureNames.Contains(name))
+        if (InfrastructureNames.Contains(name)
+            && (process.IsServiceSession || IsWindowsSystemPath(process.ExecutablePath) || string.IsNullOrWhiteSpace(process.ExecutablePath)))
         {
             return Candidate.Final(AttributionResult.Hidden(process, "Known Windows infrastructure process."));
         }

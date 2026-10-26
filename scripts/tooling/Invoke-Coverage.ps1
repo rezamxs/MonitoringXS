@@ -9,14 +9,21 @@
     Build configuration (default: Debug).
 .PARAMETER OutputDirectory
     Directory for coverage output (default: TestResults/Coverage).
+.PARAMETER SkipRestore
+    Skip dotnet restore when the solution is already restored.
+.PARAMETER SkipBuild
+    Skip dotnet build when the requested configuration is already built.
 .EXAMPLE
     .\scripts\tooling\Invoke-Coverage.ps1
     .\scripts\tooling\Invoke-Coverage.ps1 -Configuration Release
+    .\scripts\tooling\Invoke-Coverage.ps1 -Configuration Release -SkipRestore -SkipBuild
 #>
 [CmdletBinding()]
 param(
     [string]$Configuration = 'Debug',
-    [string]$OutputDirectory = ''
+    [string]$OutputDirectory = '',
+    [switch]$SkipRestore,
+    [switch]$SkipBuild
 )
 
 Set-StrictMode -Version Latest
@@ -37,20 +44,22 @@ Write-Host "Output: $OutputDirectory`n"
 # Ensure output directory exists
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 
-# Restore first
-Write-Host "Restoring packages..." -ForegroundColor Yellow
-dotnet restore $solutionPath --verbosity quiet
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Restore failed." -ForegroundColor Red
-    exit $LASTEXITCODE
+if (-not $SkipRestore) {
+    Write-Host "Restoring packages..." -ForegroundColor Yellow
+    dotnet restore $solutionPath --verbosity quiet
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Restore failed." -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
 }
 
-# Build
-Write-Host "Building solution..." -ForegroundColor Yellow
-dotnet build $solutionPath -c $Configuration --no-restore --verbosity quiet
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Build failed." -ForegroundColor Red
-    exit $LASTEXITCODE
+if (-not $SkipBuild) {
+    Write-Host "Building solution..." -ForegroundColor Yellow
+    dotnet build $solutionPath -c $Configuration --no-restore --verbosity quiet
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Build failed." -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
 }
 
 # Test with coverage

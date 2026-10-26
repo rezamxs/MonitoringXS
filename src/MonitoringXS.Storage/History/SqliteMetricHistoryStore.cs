@@ -365,7 +365,7 @@ public sealed class SqliteMetricHistoryStore :
     }
 
     public void Dispose() =>
-        DisposeAsync().AsTask().GetAwaiter().GetResult();
+        Task.Run(async () => await DisposeAsync().ConfigureAwait(false)).GetAwaiter().GetResult();
 
     public async ValueTask DisposeAsync()
     {

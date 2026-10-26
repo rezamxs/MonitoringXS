@@ -37,3 +37,5 @@ TestResults/Coverage/
 /skills/
 /skills-lock.json
 /docs/SKILLS_USAGE.md
+.zcode/
+.zcodeignore
