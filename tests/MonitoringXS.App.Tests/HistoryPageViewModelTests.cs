@@ -113,6 +113,34 @@ public sealed class HistoryPageViewModelTests
     }
 
     [Fact]
+    public async Task InitializeDeduplicatesSameDisplayNameKeepingLatest()
+    {
+        DateTimeOffset now = new(2026, 7, 29, 9, 0, 0, TimeSpan.Zero);
+        FakeHistoryStore store = new(
+            [
+                new("app-old", "Monitoring XS", ApplicationDisposition.Portable, now.AddHours(-1)),
+                new("app-new", "Monitoring XS", ApplicationDisposition.Portable, now),
+                new("other", "Other", ApplicationDisposition.Installed, now.AddHours(-2))
+            ],
+            metric => new MetricHistoryQueryResult(
+            [
+                new("app-new", "lifetime", now.AddMinutes(-1), metric, 5, MetricAvailability.Available, null, false)
+            ],
+            true));
+        using HistoryPageViewModel viewModel = new(
+            store,
+            () => now,
+            TimeSpan.Zero,
+            20);
+
+        await viewModel.InitializeAsync(CancellationToken.None);
+
+        Assert.Equal(2, viewModel.Applications.Count);
+        Assert.Equal("app-new", viewModel.Applications[0].LogicalApplicationId);
+        Assert.Equal("app-new", viewModel.SelectedApplication!.LogicalApplicationId);
+    }
+
+    [Fact]
     public async Task ViewModelSurfacesDatabaseUnavailable()
     {
         FakeHistoryStore store = new(
