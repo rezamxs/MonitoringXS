@@ -16,7 +16,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
     private readonly MetricExplanationService _metricExplanations;
     private readonly IApplicationIconProvider? _iconProvider;
     private string[]? _triedIconCandidates;
-    private bool _iconLoading;
+    private string? _currentIconPath;
 
     public ApplicationCardViewModel(
         LocalizationService? localization = null,
@@ -313,7 +313,7 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
 
     private void TryLoadIcon(ApplicationMetricSnapshot snapshot)
     {
-        if (_iconProvider is null || _iconLoading)
+        if (_iconProvider is null)
         {
             return;
         }
@@ -350,34 +350,30 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
         }
 
         _triedIconCandidates = candidates;
-        _iconLoading = true;
         _ = LoadIconAsync(candidates);
     }
 
     private async Task LoadIconAsync(string[] candidates)
     {
-        try
+        foreach (string executablePath in candidates)
         {
-            foreach (string executablePath in candidates)
+            ApplicationIconData? iconData = await _iconProvider!.GetIconAsync(
+                executablePath,
+                32,
+                CancellationToken.None);
+            if (iconData is null)
             {
-                ApplicationIconData? iconData = await _iconProvider!.GetIconAsync(
-                    executablePath,
-                    32,
-                    CancellationToken.None);
-                if (iconData is null)
-                {
-                    continue;
-                }
-
-                if (await LoadIconBitmapAsync(executablePath, iconData))
-                {
-                    return;
-                }
+                continue;
             }
-        }
-        finally
-        {
-            _iconLoading = false;
+
+            // Mark the path being loaded, so the late-result guard in
+            // LoadIconBitmapAsync can discard a bitmap that finishes
+            // after a newer snapshot started loading a different path.
+            _currentIconPath = executablePath;
+            if (await LoadIconBitmapAsync(executablePath, iconData))
+            {
+                return;
+            }
         }
     }
 
@@ -397,7 +393,8 @@ public sealed partial class ApplicationCardViewModel : ObservableObject, IApplic
             BitmapImage bitmap = new();
             await bitmap.SetSourceAsync(stream);
             if (_triedIconCandidates is null
-                || !_triedIconCandidates.Contains(executablePath, StringComparer.OrdinalIgnoreCase))
+                || !_triedIconCandidates.Contains(executablePath, StringComparer.OrdinalIgnoreCase)
+                || !string.Equals(executablePath, _currentIconPath, StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
