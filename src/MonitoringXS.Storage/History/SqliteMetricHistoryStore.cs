@@ -30,6 +30,7 @@ public sealed class SqliteMetricHistoryStore :
     private bool _writing;
     private long _batchesEnqueued;
     private long _batchesWritten;
+    private long _lastWriteMicroseconds = -1;
     private long _samplesWritten;
     private long _queueDrops;
     private long _writeFailures;
@@ -66,6 +67,7 @@ public sealed class SqliteMetricHistoryStore :
         {
             lock (_queueGate)
             {
+                long lastWriteMicroseconds = Volatile.Read(ref _lastWriteMicroseconds);
                 return new(
                     Interlocked.Read(ref _batchesEnqueued),
                     Interlocked.Read(ref _batchesWritten),
@@ -76,7 +78,8 @@ public sealed class SqliteMetricHistoryStore :
                     Interlocked.Read(ref _databaseBytes),
                     Interlocked.Read(ref _cleanupRuns),
                     Interlocked.Read(ref _lastCleanupMicroseconds),
-                    _lastError);
+                    _lastError,
+                    lastWriteMicroseconds < 0 ? null : lastWriteMicroseconds);
             }
         }
     }
@@ -441,9 +444,13 @@ public sealed class SqliteMetricHistoryStore :
             }
 
             Exception? terminalFailure = null;
+            long writeStart = Stopwatch.GetTimestamp();
             try
             {
                 int written = await _writeBatchAsync(capture, _shutdown.Token).ConfigureAwait(false);
+                Volatile.Write(
+                    ref _lastWriteMicroseconds,
+                    (long)Stopwatch.GetElapsedTime(writeStart).TotalMicroseconds);
                 Interlocked.Increment(ref _batchesWritten);
                 Interlocked.Add(ref _samplesWritten, written);
             }
@@ -453,11 +460,17 @@ public sealed class SqliteMetricHistoryStore :
             }
             catch (Exception exception) when (IsStorageException(exception))
             {
+                Volatile.Write(
+                    ref _lastWriteMicroseconds,
+                    (long)Stopwatch.GetElapsedTime(writeStart).TotalMicroseconds);
                 Interlocked.Increment(ref _writeFailures);
                 SetError(Describe(exception));
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
+                Volatile.Write(
+                    ref _lastWriteMicroseconds,
+                    (long)Stopwatch.GetElapsedTime(writeStart).TotalMicroseconds);
                 terminalFailure = exception;
                 Interlocked.Increment(ref _writeFailures);
                 SetError(Describe(exception));

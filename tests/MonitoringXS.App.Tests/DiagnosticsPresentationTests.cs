@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml;
+using MonitoringXS.App.Localization;
 using MonitoringXS.App.ViewModels;
 using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
@@ -107,6 +108,46 @@ public sealed class DiagnosticsPresentationTests
         Assert.DoesNotContain("Process.Start", code, StringComparison.Ordinal);
         Assert.DoesNotContain("restart", code, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("delete", code, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TickRowsRenderMeasuredDurationsAndUnavailableForUnmeasuredStages()
+    {
+        LocalizationService localization = new();
+        CaptureTickTimings partial = new()
+        {
+            Total = TimeSpan.FromMilliseconds(12.5),
+            Discovery = TimeSpan.FromMilliseconds(3),
+            Aggregation = null
+        };
+
+        IReadOnlyList<DiagnosticItem> rows = DiagnosticsPageViewModel.BuildTickRows(partial, localization);
+
+        Assert.Equal(13, rows.Count);
+        Assert.All(rows, row => Assert.True(row.IsTechnicalValue));
+        Assert.Equal(FlowDirection.LeftToRight, rows[0].ValueFlowDirection);
+        Assert.Equal("12.5 ms", rows[0].Value);
+        Assert.Equal("3 ms", rows[2].Value);
+        Assert.Equal(localization.Get(LocalizationKeys.Unavailable), rows[6].Value);
+
+        IReadOnlyList<DiagnosticItem> unmeasured = DiagnosticsPageViewModel.BuildTickRows(null, localization);
+        Assert.Equal(13, unmeasured.Count);
+        Assert.All(unmeasured, row =>
+            Assert.Equal(localization.Get(LocalizationKeys.Unavailable), row.Value));
+    }
+
+    [Fact]
+    public void HistoryWriteRowRendersMicrosecondsAndUnavailableWithoutMeasurements()
+    {
+        LocalizationService localization = new();
+
+        DiagnosticItem measured = DiagnosticsPageViewModel.BuildHistoryWriteRow(1500, localization);
+        DiagnosticItem unmeasured = DiagnosticsPageViewModel.BuildHistoryWriteRow(null, localization);
+
+        Assert.Equal(localization.Get("DiagnosticsTickHistoryWrite"), measured.Label);
+        Assert.Equal("1.5 ms", measured.Value);
+        Assert.True(measured.IsTechnicalValue);
+        Assert.Equal(localization.Get(LocalizationKeys.Unavailable), unmeasured.Value);
     }
 
     private static string FindRepositoryRoot()
