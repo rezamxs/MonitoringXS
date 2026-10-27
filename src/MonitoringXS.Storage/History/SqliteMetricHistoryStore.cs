@@ -444,9 +444,9 @@ public sealed class SqliteMetricHistoryStore :
             }
 
             Exception? terminalFailure = null;
+            long writeStart = Stopwatch.GetTimestamp();
             try
             {
-                long writeStart = Stopwatch.GetTimestamp();
                 int written = await _writeBatchAsync(capture, _shutdown.Token).ConfigureAwait(false);
                 Volatile.Write(
                     ref _lastWriteMicroseconds,
@@ -460,11 +460,17 @@ public sealed class SqliteMetricHistoryStore :
             }
             catch (Exception exception) when (IsStorageException(exception))
             {
+                Volatile.Write(
+                    ref _lastWriteMicroseconds,
+                    (long)Stopwatch.GetElapsedTime(writeStart).TotalMicroseconds);
                 Interlocked.Increment(ref _writeFailures);
                 SetError(Describe(exception));
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
+                Volatile.Write(
+                    ref _lastWriteMicroseconds,
+                    (long)Stopwatch.GetElapsedTime(writeStart).TotalMicroseconds);
                 terminalFailure = exception;
                 Interlocked.Increment(ref _writeFailures);
                 SetError(Describe(exception));

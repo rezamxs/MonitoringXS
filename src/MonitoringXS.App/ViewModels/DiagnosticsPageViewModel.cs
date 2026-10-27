@@ -339,11 +339,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
             Item("DiagnosticsRetention", _localization.Format("DiagnosticsHours", _history.Retention.TotalHours)),
             Item("DiagnosticsStorageQueue", $"{history.QueueDepth}/{_history.QueueCapacity}", technical: true),
             Item("DiagnosticsStorageWrites", $"{history.BatchesWritten} / {history.SamplesWritten}", technical: true),
-            Item("DiagnosticsTickHistoryWrite", FormatMilliseconds(
-                history.LastWriteMicroseconds is long lastWriteMicros
-                    ? TimeSpan.FromMicroseconds(lastWriteMicros)
-                    : null), technical: true),
-            Item("DiagnosticsStorageDrops", history.QueueDrops.ToString(CultureInfo.InvariantCulture), technical: true),
+            BuildHistoryWriteRow(history.LastWriteMicroseconds, _localization),            Item("DiagnosticsStorageDrops", history.QueueDrops.ToString(CultureInfo.InvariantCulture), technical: true),
             Item("DiagnosticsStorageFailures", history.WriteFailures.ToString(CultureInfo.InvariantCulture), technical: true),
             Item("DiagnosticsStorageRecovery", history.LastError?.Contains("corrupt", StringComparison.OrdinalIgnoreCase) == true
                 ? _localization.Get("DiagnosticsRecoveredCorruption")
@@ -381,19 +377,7 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
             Item("DiagnosticsGpuPartial", gpuDiagnostics.CollectorStatus == MetricAvailability.Partial
                 ? _localization.Get(LocalizationKeys.PartialLowerBound)
                 : AvailabilityText(gpuDiagnostics.CollectorStatus)),
-            Item("DiagnosticsTickTotal", FormatMilliseconds(tick?.Total), technical: true),
-            Item("DiagnosticsTickCapture", FormatMilliseconds(tick?.Capture), technical: true),
-            Item("DiagnosticsTickDiscovery", FormatMilliseconds(tick?.Discovery), technical: true),
-            Item("DiagnosticsTickAttribution", FormatMilliseconds(tick?.Attribution), technical: true),
-            Item("DiagnosticsTickProcessCollection", FormatMilliseconds(tick?.ProcessCollection), technical: true),
-            Item("DiagnosticsTickAggregation", FormatMilliseconds(tick?.Aggregation), technical: true),
-            Item("DiagnosticsTickPipeline", FormatMilliseconds(tick?.MetricPipeline), technical: true),
-            Item("DiagnosticsTickDiskStage", FormatMilliseconds(tick?.PhysicalDiskStage), technical: true),
-            Item("DiagnosticsTickNetworkStage", FormatMilliseconds(tick?.NetworkStage), technical: true),
-            Item("DiagnosticsTickGpuStage", FormatMilliseconds(tick?.GpuStage), technical: true),
-            Item("DiagnosticsTickSystemOverview", FormatMilliseconds(tick?.SystemOverview), technical: true),
-            Item("DiagnosticsTickPublish", FormatMilliseconds(tick?.SnapshotPublish), technical: true),
-            Item("DiagnosticsTickHistoryEnqueue", FormatMilliseconds(tick?.HistoryEnqueue), technical: true)
+            .. BuildTickRows(tick, _localization)
         ]);
 
         CopyStatusText = string.Empty;
@@ -423,6 +407,47 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
                 ? FlowDirection.LeftToRight
                 : FlowDirection.RightToLeft
         };
+
+    private string FormatMilliseconds(TimeSpan? value) => FormatMilliseconds(value, _localization);
+
+    internal static string FormatMilliseconds(TimeSpan? value, LocalizationService localization) => value is null
+        ? localization.Get(LocalizationKeys.Unavailable)
+        : $"{value.Value.TotalMilliseconds.ToString("0.###", CultureInfo.InvariantCulture)} ms";
+
+    internal static IReadOnlyList<DiagnosticItem> BuildTickRows(CaptureTickTimings? tick, LocalizationService localization) =>
+    [
+        Row("DiagnosticsTickTotal", FormatMilliseconds(tick?.Total, localization), localization),
+        Row("DiagnosticsTickCapture", FormatMilliseconds(tick?.Capture, localization), localization),
+        Row("DiagnosticsTickDiscovery", FormatMilliseconds(tick?.Discovery, localization), localization),
+        Row("DiagnosticsTickAttribution", FormatMilliseconds(tick?.Attribution, localization), localization),
+        Row("DiagnosticsTickProcessCollection", FormatMilliseconds(tick?.ProcessCollection, localization), localization),
+        Row("DiagnosticsTickAggregation", FormatMilliseconds(tick?.Aggregation, localization), localization),
+        Row("DiagnosticsTickPipeline", FormatMilliseconds(tick?.MetricPipeline, localization), localization),
+        Row("DiagnosticsTickDiskStage", FormatMilliseconds(tick?.PhysicalDiskStage, localization), localization),
+        Row("DiagnosticsTickNetworkStage", FormatMilliseconds(tick?.NetworkStage, localization), localization),
+        Row("DiagnosticsTickGpuStage", FormatMilliseconds(tick?.GpuStage, localization), localization),
+        Row("DiagnosticsTickSystemOverview", FormatMilliseconds(tick?.SystemOverview, localization), localization),
+        Row("DiagnosticsTickPublish", FormatMilliseconds(tick?.SnapshotPublish, localization), localization),
+        Row("DiagnosticsTickHistoryEnqueue", FormatMilliseconds(tick?.HistoryEnqueue, localization), localization)
+    ];
+
+    internal static DiagnosticItem BuildHistoryWriteRow(long? lastWriteMicroseconds, LocalizationService localization) =>
+        Row(
+            "DiagnosticsTickHistoryWrite",
+            FormatMilliseconds(
+                lastWriteMicroseconds is long lastWriteMicros ? TimeSpan.FromMicroseconds(lastWriteMicros) : null,
+                localization),
+            localization);
+
+    private static DiagnosticItem Row(string labelKey, string value, LocalizationService localization) => new(
+        localization.Get(labelKey),
+        value,
+        null,
+        IsTechnicalValue: true,
+        IncludeInSafeSummary: true)
+    {
+        ValueFlowDirection = FlowDirection.LeftToRight
+    };
 
     private string AvailabilityText(MetricAvailability availability) => availability switch
     {
@@ -476,10 +501,6 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
 
     private string FormatDuration(TimeSpan value) =>
         _localization.Format("DiagnosticsDuration", (int)value.TotalHours, value.Minutes, value.Seconds);
-
-    private string FormatMilliseconds(TimeSpan? value) => value is null
-        ? _localization.Get(LocalizationKeys.Unavailable)
-        : $"{value.Value.TotalMilliseconds.ToString("0.###", CultureInfo.InvariantCulture)} ms";
 
     private string FormatSelfCpu()
     {
