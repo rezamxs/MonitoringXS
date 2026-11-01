@@ -356,6 +356,20 @@
   <data name="DiagnosticsSafeSummaryTitle" xml:space="preserve"><value>Monitoring XS safe diagnostics</value></data>
   <data name="DiagnosticsEnabled" xml:space="preserve"><value>Enabled</value></data>
   <data name="DiagnosticsSeconds" xml:space="preserve"><value>{0:0.##} seconds</value></data>
+  <data name="DiagnosticsTickTotal" xml:space="preserve"><value>Capture tick total</value></data>
+  <data name="DiagnosticsTickCapture" xml:space="preserve"><value>Capture stage total</value></data>
+  <data name="DiagnosticsTickDiscovery" xml:space="preserve"><value>Process discovery duration</value></data>
+  <data name="DiagnosticsTickAttribution" xml:space="preserve"><value>Application attribution duration</value></data>
+  <data name="DiagnosticsTickProcessCollection" xml:space="preserve"><value>Process metrics collection duration</value></data>
+  <data name="DiagnosticsTickAggregation" xml:space="preserve"><value>Metric aggregation duration</value></data>
+  <data name="DiagnosticsTickPipeline" xml:space="preserve"><value>Advanced metric pipeline duration</value></data>
+  <data name="DiagnosticsTickDiskStage" xml:space="preserve"><value>Physical disk collector stage duration</value></data>
+  <data name="DiagnosticsTickNetworkStage" xml:space="preserve"><value>Network collector stage duration</value></data>
+  <data name="DiagnosticsTickGpuStage" xml:space="preserve"><value>GPU collector stage duration</value></data>
+  <data name="DiagnosticsTickSystemOverview" xml:space="preserve"><value>System overview capture duration</value></data>
+  <data name="DiagnosticsTickPublish" xml:space="preserve"><value>Snapshot publish duration</value></data>
+  <data name="DiagnosticsTickHistoryEnqueue" xml:space="preserve"><value>History enqueue duration</value></data>
+  <data name="DiagnosticsTickHistoryWrite" xml:space="preserve"><value>History batch write duration</value></data>
   <data name="DiagnosticsHours" xml:space="preserve"><value>{0:0.##} hours</value></data>
   <data name="DiagnosticsDuration" xml:space="preserve"><value>{0} h {1} min {2} s</value></data>
   <data name="DiagnosticsVersion" xml:space="preserve"><value>Display version</value></data>

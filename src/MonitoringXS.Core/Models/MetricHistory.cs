@@ -94,4 +94,5 @@ public sealed record MetricHistoryStoreDiagnostics(
     long DatabaseBytes,
     long CleanupRuns,
     long LastCleanupMicroseconds,
-    string? LastError);
+    string? LastError,
+    long? LastWriteMicroseconds = null);

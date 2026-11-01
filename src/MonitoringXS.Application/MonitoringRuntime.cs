@@ -10,8 +10,10 @@ public sealed class MonitoringRuntime : IAsyncDisposable
     private readonly IMetricHistoryStore? _historyStore;
     private readonly MonitoringSnapshotHub _hub;
     private readonly LiveRefreshCadence _cadence;
+    private readonly MonitoringCoordinator? _coordinator;
     private readonly CancellationTokenSource _shutdown = new();
     private readonly object _gate = new();
+    private CaptureTickTimings? _lastTickTimings;
     private Task? _loop;
     private TaskCompletionSource? _requestedCapture;
     private TaskCompletionSource? _activeRequest;
@@ -25,6 +27,7 @@ public sealed class MonitoringRuntime : IAsyncDisposable
         IMetricHistoryStore? historyStore = null)
         : this(coordinator.CaptureAsync, hub, cadence, historyStore)
     {
+        _coordinator = coordinator;
     }
 
     internal MonitoringRuntime(
@@ -91,6 +94,9 @@ public sealed class MonitoringRuntime : IAsyncDisposable
             }
         }
     }
+
+    /// <summary>Timings of the last completed capture tick, or null before the first tick.</summary>
+    public CaptureTickTimings? LastTickTimings => Volatile.Read(ref _lastTickTimings);
 
     public Task RequestCaptureAsync(CancellationToken cancellationToken)
     {
@@ -164,11 +170,16 @@ public sealed class MonitoringRuntime : IAsyncDisposable
                 _activeRequest = cycleRequest;
             }
 
+            long tickStart = Stopwatch.GetTimestamp();
+            long captureStart = Stopwatch.GetTimestamp();
             try
             {
                 MonitoringSnapshot snapshot = await _captureAsync(cancellationToken);
+                TimeSpan captureDuration = Stopwatch.GetElapsedTime(captureStart);
+                TimeSpan? historyDuration = null;
                 if (_historyStore is not null)
                 {
+                    long historyStart = Stopwatch.GetTimestamp();
                     try
                     {
                         await _historyStore.EnqueueAsync(
@@ -178,6 +189,7 @@ public sealed class MonitoringRuntime : IAsyncDisposable
                                 snapshot.Applications),
                             cancellationToken)
                             .ConfigureAwait(false);
+                        historyDuration = Stopwatch.GetElapsedTime(historyStart);
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                     {
@@ -185,14 +197,34 @@ public sealed class MonitoringRuntime : IAsyncDisposable
                     }
                     catch (Exception exception) when (exception is not OutOfMemoryException)
                     {
+                        historyDuration = Stopwatch.GetElapsedTime(historyStart);
                         Trace.TraceError(
                             "History enqueue failed ({0}).",
                             exception.GetType().Name);
                     }
                 }
 
+                long publishStart = Stopwatch.GetTimestamp();
                 _hub.Publish(snapshot);
+                TimeSpan publishDuration = Stopwatch.GetElapsedTime(publishStart);
                 cycleRequest?.TrySetResult();
+                CaptureTickTimings? inner = _coordinator?.LastCaptureTimings;
+                Volatile.Write(ref _lastTickTimings, new CaptureTickTimings
+                {
+                    Total = Stopwatch.GetElapsedTime(tickStart),
+                    Capture = captureDuration,
+                    Discovery = inner?.Discovery,
+                    Attribution = inner?.Attribution,
+                    ProcessCollection = inner?.ProcessCollection,
+                    Aggregation = inner?.Aggregation,
+                    MetricPipeline = inner?.MetricPipeline,
+                    PhysicalDiskStage = inner?.PhysicalDiskStage,
+                    NetworkStage = inner?.NetworkStage,
+                    GpuStage = inner?.GpuStage,
+                    SystemOverview = inner?.SystemOverview,
+                    HistoryEnqueue = historyDuration,
+                    SnapshotPublish = publishDuration
+                });
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {

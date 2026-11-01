@@ -223,6 +223,36 @@ public sealed class MonitoringRuntimeTests
         Assert.False(runtime.IsRunning);
     }
 
+    [Fact]
+    public async Task TickTimingsAreRecordedWithoutFabricatingUnmeasuredStages()
+    {
+        RecordingHistoryStore history = new();
+        TaskCompletionSource captured = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using MonitoringRuntime runtime = new(
+            cancellationToken =>
+            {
+                captured.TrySetResult();
+                return ValueTask.FromResult(Snapshot(1));
+            },
+            new MonitoringSnapshotHub(),
+            new LiveRefreshCadence(TimeSpan.FromHours(1)),
+            history);
+
+        _ = runtime.Start();
+        await captured.Task.WaitAsync(TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => runtime.LastTickTimings is not null);
+        await runtime.StopAsync();
+
+        CaptureTickTimings? timings = runtime.LastTickTimings;
+        Assert.NotNull(timings);
+        Assert.NotNull(timings.Total);
+        Assert.NotNull(timings.Capture);
+        Assert.NotNull(timings.HistoryEnqueue);
+        Assert.NotNull(timings.SnapshotPublish);
+        Assert.Null(timings.Discovery);
+        Assert.Null(timings.Aggregation);
+    }
+
     private static MonitoringSnapshot Snapshot(int sequence)
     {
         DateTimeOffset capturedAt = DateTimeOffset.UtcNow.AddTicks(sequence);

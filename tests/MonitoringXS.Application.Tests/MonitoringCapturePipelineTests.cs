@@ -126,6 +126,24 @@ public sealed class MonitoringCapturePipelineTests
                 cancellation.Token));
     }
 
+    [Fact]
+    public async Task StageDurationsAreRecordedPerFamily()
+    {
+        MonitoringCapturePipeline pipeline = new([
+            new RecordingStage(MetricFamily.Network, [])
+        ]);
+
+        MonitoringMetricCaptureResult result = await pipeline.CaptureAsync(
+            new(DateTimeOffset.UtcNow, [], []),
+            [],
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result.StageDurations);
+        Assert.True(result.StageDurations.TryGetValue(MetricFamily.Network, out TimeSpan duration));
+        Assert.True(duration >= TimeSpan.Zero);
+        Assert.False(result.StageDurations.ContainsKey(MetricFamily.PhysicalDisk));
+    }
+
     private sealed class RecordingStage(
         MetricFamily family,
         List<MetricFamily> started) : IMetricCaptureStage

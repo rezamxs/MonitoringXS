@@ -117,6 +117,38 @@ public sealed class SqliteMetricHistoryStoreTests
     }
 
     [Fact]
+    public async Task LastWriteMicrosecondsRecordsFailedAttempts()
+    {
+        using TestDatabase database = new();
+        await using SqliteMetricHistoryStore store = new(
+            new SqliteMetricHistoryOptions(database.Path),
+            (_, _) => Task.FromException<int>(new SqliteException("injected write failure", 11)));
+        await store.EnqueueAsync([Snapshot(DateTimeOffset.UtcNow, 25)], TestCancellation);
+        await store.FlushAsync(TestCancellation);
+
+        Assert.Equal(1, store.Diagnostics.WriteFailures);
+        Assert.Equal(0, store.Diagnostics.BatchesWritten);
+        Assert.NotNull(store.Diagnostics.LastWriteMicroseconds);
+        Assert.True(store.Diagnostics.LastWriteMicroseconds!.Value >= 0);
+    }
+
+    [Fact]
+    public async Task LastWriteMicrosecondsRecordsSuccessfulWrites()
+    {
+        using TestDatabase database = new();
+        await using SqliteMetricHistoryStore store = new(
+            new SqliteMetricHistoryOptions(database.Path),
+            (_, _) => Task.FromResult(1));
+        await store.EnqueueAsync([Snapshot(DateTimeOffset.UtcNow, 25)], TestCancellation);
+        await store.FlushAsync(TestCancellation);
+
+        Assert.Equal(1, store.Diagnostics.BatchesWritten);
+        Assert.Equal(0, store.Diagnostics.WriteFailures);
+        Assert.NotNull(store.Diagnostics.LastWriteMicroseconds);
+        Assert.True(store.Diagnostics.LastWriteMicroseconds!.Value >= 0);
+    }
+
+    [Fact]
     public async Task HelperReplacementKeepsApplicationSessionContinuity()
     {
         using TestDatabase database = new();
