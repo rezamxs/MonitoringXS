@@ -61,6 +61,24 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
         int pixelSize,
         CancellationToken cancellationToken)
     {
+        // Root cause of blurry icons: the old paths returned a small
+        // bitmap and the UI upscaled it. SHGetFileInfo with a 32px
+        // request returned the 16px small icon (see ExtractShellIconAsync),
+        // and a 32px bitmap shown at 32 logical pixels is upscaled again
+        // on any display scale above 100%. Downscaling is sharp, upscaling
+        // is not, so always fetch a larger bitmap than the display size
+        // (at least 96px for a 32px display) and let the UI downscale it.
+        // The image factory is tried first because it asks the Shell for
+        // the icon at that larger size, straight from the largest icon
+        // resource in the exe. Any failure here falls through to the old
+        // paths, so a COM failure can only degrade to the previous
+        // quality, never to a missing icon or a crash.
+        ApplicationIconData? factoryIcon = await ExtractImageFactoryIconAsync(sourcePath, pixelSize);
+        if (factoryIcon is not null)
+        {
+            return factoryIcon;
+        }
+
         ApplicationIconData? thumbnail = await ExtractThumbnailAsync(sourcePath, pixelSize, cancellationToken);
         if (thumbnail is not null)
         {
@@ -73,6 +91,55 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
         // way to get an exe icon. Any failure here returns null, so the
         // caller still shows the fallback glyph instead of crashing.
         return await ExtractShellIconAsync(sourcePath, pixelSize);
+    }
+
+    private static async ValueTask<ApplicationIconData?> ExtractImageFactoryIconAsync(
+        string sourcePath,
+        int pixelSize)
+    {
+        IShellItemImageFactory? factory = null;
+        IntPtr bitmap = IntPtr.Zero;
+        try
+        {
+            Guid iid = new("bcc18b79-ba16-442f-80c4-8a59c30c1b64");
+            int hr = SHCreateItemFromParsingName(
+                Path.GetFullPath(sourcePath),
+                IntPtr.Zero,
+                ref iid,
+                out factory);
+            if (hr != 0 || factory is null)
+            {
+                return null;
+            }
+
+            int targetSize = Math.Min(256, Math.Max(96, pixelSize * 2));
+            hr = factory.GetImage(
+                new ShellImageSize(targetSize, targetSize),
+                ShellImageFlags.IconOnly,
+                out bitmap);
+            if (hr != 0 || bitmap == IntPtr.Zero)
+            {
+                return null;
+            }
+
+            return await ConvertBitmapToPngAsync(bitmap);
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            if (bitmap != IntPtr.Zero)
+            {
+                DeleteObject(bitmap);
+            }
+
+            if (factory is not null)
+            {
+                _ = Marshal.ReleaseComObject(factory);
+            }
+        }
     }
 
     private static async ValueTask<ApplicationIconData?> ExtractThumbnailAsync(
@@ -128,10 +195,15 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
         IntPtr icon = IntPtr.Zero;
         IntPtr colorBitmap = IntPtr.Zero;
         IntPtr maskBitmap = IntPtr.Zero;
-        IntPtr deviceContext = IntPtr.Zero;
         try
         {
-            uint flags = ShellIconFlags.Icon | (pixelSize <= 32 ? ShellIconFlags.SmallIcon : ShellIconFlags.LargeIcon);
+            // Bug that made Shell-fallback icons blurry: a 32px request
+            // used to ask for the small icon, which is 16px, and the UI
+            // then upscaled it 2x. The small icon is only correct for
+            // a request of 16px or less; anything larger gets the large
+            // (32px) icon, and the image-factory path above supplies
+            // larger sizes when the exe has them.
+            uint flags = ShellIconFlags.Icon | (pixelSize <= 16 ? ShellIconFlags.SmallIcon : ShellIconFlags.LargeIcon);
             ShellFileInfo info = new();
             IntPtr result = SHGetFileInfo(
                 Path.GetFullPath(sourcePath),
@@ -157,15 +229,49 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
                 return null;
             }
 
-            if (GetObject(colorBitmap, Marshal.SizeOf<BitmapStruct>(), out BitmapStruct bitmap) == 0
-                || bitmap.Width <= 0 || bitmap.Height <= 0
-                || bitmap.Width > 512 || bitmap.Height > 512)
+            return await ConvertBitmapToPngAsync(colorBitmap);
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            if (maskBitmap != IntPtr.Zero)
+            {
+                DeleteObject(maskBitmap);
+            }
+
+            if (colorBitmap != IntPtr.Zero)
+            {
+                DeleteObject(colorBitmap);
+            }
+
+            if (icon != IntPtr.Zero)
+            {
+                DestroyIcon(icon);
+            }
+        }
+    }
+
+    // Shared by the Shell icon and the image-factory paths: read the
+    // bitmap pixels with GetDIBits and encode them as PNG. The returned
+    // pixel size is the bitmap's real width, not the requested size, so
+    // callers can tell a genuinely small icon from a high-res one.
+    private static async ValueTask<ApplicationIconData?> ConvertBitmapToPngAsync(IntPtr bitmap)
+    {
+        IntPtr deviceContext = IntPtr.Zero;
+        try
+        {
+            if (GetObject(bitmap, Marshal.SizeOf<BitmapStruct>(), out BitmapStruct info) == 0
+                || info.Width <= 0 || info.Height <= 0
+                || info.Width > 512 || info.Height > 512)
             {
                 return null;
             }
 
-            int width = bitmap.Width;
-            int height = bitmap.Height;
+            int width = info.Width;
+            int height = info.Height;
             BitmapInfoHeader header = new()
             {
                 Size = (uint)Marshal.SizeOf<BitmapInfoHeader>(),
@@ -183,7 +289,7 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
                 return null;
             }
 
-            int lines = GetDIBits(deviceContext, colorBitmap, 0, (uint)height, pixels, ref dibInfo, 0);
+            int lines = GetDIBits(deviceContext, bitmap, 0, (uint)height, pixels, ref dibInfo, 0);
             if (lines != height)
             {
                 return null;
@@ -238,7 +344,7 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
 
             byte[] bytes = new byte[length];
             reader.ReadBytes(bytes);
-            return new ApplicationIconData(bytes, "image/png", pixelSize);
+            return new ApplicationIconData(bytes, "image/png", width);
         }
         catch
         {
@@ -252,21 +358,6 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
                 // Best-effort cleanup: a failed ReleaseDC does not fail
                 // icon extraction, which already produced its result or null.
             }
-
-            if (colorBitmap != IntPtr.Zero)
-            {
-                DeleteObject(colorBitmap);
-            }
-
-            if (maskBitmap != IntPtr.Zero)
-            {
-                DeleteObject(maskBitmap);
-            }
-
-            if (icon != IntPtr.Zero)
-            {
-                DestroyIcon(icon);
-            }
         }
     }
 
@@ -275,6 +366,40 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
         public const uint SmallIcon = 0x1;
         public const uint LargeIcon = 0x0;
         public const uint Icon = 0x100;
+    }
+
+    private static class ShellImageFlags
+    {
+        // SIIGBF_ICONONLY: return only the icon, never a thumbnail.
+        // SIIGBF_RESIZETOFIT is 0, so a smaller source icon is returned
+        // at its real size instead of being upscaled by the Shell.
+        public const uint IconOnly = 0x4;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ShellImageSize
+    {
+        public int Width;
+        public int Height;
+
+        public ShellImageSize(int width, int height)
+        {
+            Width = width;
+            Height = height;
+        }
+    }
+
+    // IShellItemImageFactory (shobjidl_core.h): inherits IUnknown and has
+    // a single method, GetImage(SIZE, SIIGBF, out HBITMAP), returning an
+    // HRESULT. PreserveSig keeps that HRESULT as the return value so
+    // failure is checked explicitly instead of throwing.
+    [ComImport]
+    [Guid("bcc18b79-ba16-442f-80c4-8a59c30c1b64")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IShellItemImageFactory
+    {
+        [PreserveSig]
+        int GetImage(ShellImageSize size, uint flags, out IntPtr bitmap);
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -332,6 +457,13 @@ public sealed class WindowsApplicationIconProvider : IApplicationIconProvider
         public uint ColorsUsed;
         public uint ColorsImportant;
     }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int SHCreateItemFromParsingName(
+        string path,
+        IntPtr bindContext,
+        ref Guid riid,
+        out IShellItemImageFactory factory);
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr SHGetFileInfo(
