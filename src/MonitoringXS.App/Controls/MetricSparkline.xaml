@@ -105,7 +105,9 @@
             Margin="10,2,10,8"
             Foreground="{StaticResource SecondaryTextBrush}"
             x:Uid="SparklineSummary"
+            MaxLines="2"
             Text="CPU history is warming up."
+            TextTrimming="CharacterEllipsis"
             TextWrapping="Wrap" />
     </Grid>
 </UserControl>

@@ -246,7 +246,7 @@ public sealed class HistoryChartLayoutTests
         const double pageHorizontalPadding = 48;
         const double pageVerticalPadding = 40;
         const double cardMinimumWidth = 400;
-        const double cardHeight = 208;
+        const double cardHeight = 260;
         const double spacing = 12;
         const double refreshWidth = 80;
         string xaml = File.ReadAllText(Path.Combine(
@@ -260,8 +260,8 @@ public sealed class HistoryChartLayoutTests
         Assert.Contains("MinWidth=\"160\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AdaptiveTrigger MinWindowWidth=\"760\"", xaml, StringComparison.Ordinal);
         Assert.Contains("MinItemWidth=\"400\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("MinItemHeight=\"208\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Height=\"156\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinItemHeight=\"260\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Height=\"184\"", xaml, StringComparison.Ordinal);
         Assert.Contains("VerticalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
         Assert.Contains(
             "AutomationProperties.Name=\"{Binding AccessibilityText, Mode=OneWay}\"",
@@ -306,14 +306,14 @@ public sealed class HistoryChartLayoutTests
         MetricSparklineLayout plot = MetricSparklineLayout.Create(
             [new(Start, 10), new(Start.AddMinutes(15), 20)],
             plotWidth,
-            156,
+            184,
             MetricSparklineScale.Dynamic,
             Start,
             Start.AddMinutes(15));
         Assert.True(plot.PlotLeft >= 0);
         Assert.True(plot.PlotRight <= plotWidth);
         Assert.True(plot.PlotTop >= 0);
-        Assert.True(plot.PlotBottom <= 156);
+        Assert.True(plot.PlotBottom <= 184);
 
         double chartViewportHeight = contentHeight - (56 + 60 + 40 + (3 * spacing));
         double rowStride = cardHeight + spacing;
@@ -344,6 +344,30 @@ public sealed class HistoryChartLayoutTests
         Assert.Equal(11, accessibleSummaries.Length);
         Assert.Equal(11, accessibleSummaries.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal("Shared GPU memory", accessibleSummaries[^1]);
+    }
+
+    [Fact]
+    public void BoundRangeBoundariesSurviveTheWinRtProjectionAndDriveTheAxis()
+    {
+        DateTimeOffset end = new(2026, 11, 27, 11, 54, 0, TimeSpan.FromHours(3.5));
+        DateTimeOffset start = end - TimeSpan.FromHours(12);
+
+        Assert.Equal(start.ToUniversalTime(), ChartRangeValue.ToTimestamp(start));
+        Assert.Equal(end.ToUniversalTime(), ChartRangeValue.ToTimestamp((object)end));
+        Assert.Equal(end.ToUniversalTime(), ChartRangeValue.ToTimestamp(end.UtcDateTime));
+        Assert.Null(ChartRangeValue.ToTimestamp(null));
+        Assert.Null(ChartRangeValue.ToTimestamp("not a timestamp"));
+
+        MetricSparklineLayout layout = MetricSparklineLayout.Create(
+            [new(end.AddMinutes(-1), 10), new(end, 20)],
+            600,
+            184,
+            MetricSparklineScale.Dynamic,
+            ChartRangeValue.ToTimestamp(start),
+            ChartRangeValue.ToTimestamp(end));
+
+        Assert.Equal(start.ToUniversalTime(), layout.RangeStartUtc);
+        Assert.Equal(end.ToUniversalTime(), layout.RangeEndUtc);
     }
 
     private static MetricSparklineLayout Layout(

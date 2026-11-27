@@ -140,6 +140,19 @@ internal static class MetricAxisFormatter
     }
 }
 
+/// <summary>Normalizes a bound chart range boundary to a UTC timestamp.</summary>
+internal static class ChartRangeValue
+{
+    public static DateTimeOffset? ToTimestamp(object? value) => value switch
+    {
+        DateTimeOffset timestamp => timestamp.ToUniversalTime(),
+        DateTime { Kind: DateTimeKind.Unspecified } dateTime =>
+            new DateTimeOffset(DateTime.SpecifyKind(dateTime, DateTimeKind.Utc)),
+        DateTime dateTime => new DateTimeOffset(dateTime).ToUniversalTime(),
+        _ => null
+    };
+}
+
 public enum MetricSparklineScale
 {
     Dynamic,

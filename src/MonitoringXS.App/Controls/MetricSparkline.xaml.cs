@@ -45,15 +45,18 @@ public sealed partial class MetricSparkline : UserControl
         typeof(MetricSparkline),
         new PropertyMetadata(MetricSparklineScale.Percent, OnLayoutChanged));
 
+    // Registered as object: a {Binding} of a nullable DateTimeOffset crosses the
+    // WinRT boundary as IReference<DateTime>, and a DateTimeOffset? typed
+    // property can drop it, leaving the chart on the sample-span fallback.
     public static readonly DependencyProperty RangeStartUtcProperty = DependencyProperty.Register(
         nameof(RangeStartUtc),
-        typeof(DateTimeOffset?),
+        typeof(object),
         typeof(MetricSparkline),
         new PropertyMetadata(null, OnLayoutChanged));
 
     public static readonly DependencyProperty RangeEndUtcProperty = DependencyProperty.Register(
         nameof(RangeEndUtc),
-        typeof(DateTimeOffset?),
+        typeof(object),
         typeof(MetricSparkline),
         new PropertyMetadata(null, OnLayoutChanged));
 
@@ -137,13 +140,13 @@ public sealed partial class MetricSparkline : UserControl
 
     public DateTimeOffset? RangeStartUtc
     {
-        get => (DateTimeOffset?)GetValue(RangeStartUtcProperty);
+        get => ChartRangeValue.ToTimestamp(GetValue(RangeStartUtcProperty));
         set => SetValue(RangeStartUtcProperty, value);
     }
 
     public DateTimeOffset? RangeEndUtc
     {
-        get => (DateTimeOffset?)GetValue(RangeEndUtcProperty);
+        get => ChartRangeValue.ToTimestamp(GetValue(RangeEndUtcProperty));
         set => SetValue(RangeEndUtcProperty, value);
     }
 
@@ -344,6 +347,7 @@ public sealed partial class MetricSparkline : UserControl
             EndAxisLabel.Text = MetricAxisFormatter.Time(layout.RangeEndUtc, culture);
 
             Summary.Text = string.IsNullOrWhiteSpace(SummaryText) ? layout.Summary : SummaryText;
+            WToolTipService.SetToolTip(Summary, Summary.Text);
             Summary.Visibility = ShowSummary ? Visibility.Visible : Visibility.Collapsed;
         }
     }
