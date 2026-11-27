@@ -41,6 +41,10 @@ Physical disk and network monitoring use a restricted LocalSystem service (`Priv
 
 GPU values come from Windows `GPU Engine` and `GPU Process Memory` counters on WDDM-capable drivers. Missing counter objects, protected processes, and software-rendered workloads stay unavailable or partial. That is not a claim of universal GPU coverage.
 
+## Download
+
+Grab the latest beta MSI from [Releases](https://github.com/rezamxs/MonitoringXS/releases). Builds are not code-signed yet, so Windows SmartScreen may warn on first run.
+
 ## Requirements
 
 - Windows 10 build 17763+ or Windows 11
@@ -95,7 +99,7 @@ Architecture details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Current status
 
-The integration branch through Phase E1 (History UX and chart foundation) is the current product line. Public `main` may lag until that branch is reviewed and merged.
+`main` is the current product line (through Phase E1: History UX and chart foundation). Beta installers are published as unsigned pre-releases on the [Releases](https://github.com/rezamxs/MonitoringXS/releases) page.
 
 Some data is unavailable for protected or higher-integrity processes. The app reports that honestly instead of requesting permanent elevation.
 
