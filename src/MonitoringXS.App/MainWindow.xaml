@@ -762,7 +762,12 @@
                                     Style="{StaticResource CardMetricValueStyle}"
                                     Text="{x:Bind IoText, Mode=OneWay}"
                                     TextWrapping="Wrap" />
-                                <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind IoStatusText, Mode=OneWay}" />
+                                <TextBlock
+                                        MaxLines="2"
+                                        Style="{StaticResource CardSupportingTextStyle}"
+                                        Text="{x:Bind IoStatusText, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis"
+                                        TextWrapping="Wrap" />
                             </StackPanel>
                             <Border
                                 Grid.Column="1"
@@ -777,7 +782,12 @@
                                         Style="{StaticResource CardMetricValueStyle}"
                                         Text="{x:Bind PhysicalDiskText, Mode=OneWay}"
                                         TextWrapping="Wrap" />
-                                    <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind PhysicalDiskStatusText, Mode=OneWay}" />
+                                    <TextBlock
+                                        MaxLines="2"
+                                        Style="{StaticResource CardSupportingTextStyle}"
+                                        Text="{x:Bind PhysicalDiskStatusText, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis"
+                                        TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <Border
@@ -794,7 +804,12 @@
                                         Style="{StaticResource CardMetricValueStyle}"
                                         Text="{x:Bind NetworkText, Mode=OneWay}"
                                         TextWrapping="Wrap" />
-                                    <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind NetworkStatusText, Mode=OneWay}" />
+                                    <TextBlock
+                                        MaxLines="2"
+                                        Style="{StaticResource CardSupportingTextStyle}"
+                                        Text="{x:Bind NetworkStatusText, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis"
+                                        TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <Border
@@ -812,8 +827,10 @@
                                         Text="{x:Bind GpuText, Mode=OneWay}"
                                         TextWrapping="Wrap" />
                                     <TextBlock
+                                        MaxLines="2"
                                         Style="{StaticResource CardSupportingTextStyle}"
                                         Text="{x:Bind GpuStatusText, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis"
                                         TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>

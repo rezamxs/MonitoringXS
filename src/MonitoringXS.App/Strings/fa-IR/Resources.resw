@@ -320,7 +320,7 @@
   <data name="ReasonPartial" xml:space="preserve"><value>همهٔ داده‌های قابل انتساب در دسترس نیستند؛ مقدار نمایش‌داده‌شده حد پایین معتبر است.</value></data>
   <data name="ReasonWarmingUp" xml:space="preserve"><value>در حال آماده‌سازی؛ برای محاسبه یک نمونهٔ معتبر دیگر لازم است.</value></data>
   <data name="ReasonPermissionRequired" xml:space="preserve"><value>این ارائه‌دهنده یا پردازش به دسترسی بیشتری نیاز دارد.</value></data>
-  <data name="ReasonProviderUnsupported" xml:space="preserve"><value>این ارائه‌دهندهٔ پایش ویندوز در سیستم فعلی پشتیبانی نمی‌شود.</value></data>
+  <data name="ReasonProviderUnsupported" xml:space="preserve"><value>در این سیستم پشتیبانی نمی‌شود.</value></data>
   <data name="ReasonServiceNotInstalled" xml:space="preserve"><value>سرویس پایش پیشرفته نصب نشده است.</value></data>
   <data name="ReasonServiceStopped" xml:space="preserve"><value>سرویس پایش پیشرفته متوقف است.</value></data>
   <data name="ReasonServiceConnection" xml:space="preserve"><value>اتصال محلی سرویس پایش پیشرفته در دسترس نیست.</value></data>

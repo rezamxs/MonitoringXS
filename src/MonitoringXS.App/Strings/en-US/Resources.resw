@@ -320,7 +320,7 @@
   <data name="ReasonPartial" xml:space="preserve"><value>Partial: measured value is a lower bound because some attributable data is missing.</value></data>
   <data name="ReasonWarmingUp" xml:space="preserve"><value>Warming up: another valid sample is required.</value></data>
   <data name="ReasonPermissionRequired" xml:space="preserve"><value>Permission required for this provider or process.</value></data>
-  <data name="ReasonProviderUnsupported" xml:space="preserve"><value>This Windows monitoring provider is unsupported on the current system.</value></data>
+  <data name="ReasonProviderUnsupported" xml:space="preserve"><value>Not supported on this system.</value></data>
   <data name="ReasonServiceNotInstalled" xml:space="preserve"><value>The Privileged Metrics Service is not installed.</value></data>
   <data name="ReasonServiceStopped" xml:space="preserve"><value>The Privileged Metrics Service is stopped.</value></data>
   <data name="ReasonServiceConnection" xml:space="preserve"><value>The Privileged Metrics Service connection is unavailable.</value></data>
