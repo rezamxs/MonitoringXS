@@ -4,7 +4,7 @@ Release targets are idle CPU below 1% on a typical modern system, normal working
 
 Implementation rules:
 
-- one-second sampling with cancellation and drift-aware timing;
+- two-second default sampling (1/2/5 s selectable) with cancellation and drift-aware timing; 5-second background cadence while the window is minimized or hidden;
 - runtime-selectable 1/2/5-second cadence wakes one single-execution loop; rapid changes are coalesced and never create parallel capture loops;
 - metadata/signature/icon/package caches with bounded eviction;
 - no per-refresh signature verification or full metadata reload;
@@ -26,6 +26,31 @@ Implementation rules:
 - the read-only process-parent snapshot used only to detect unassignable GPU descendants is cached for five seconds; it never authorizes attribution without PID/start-time validation.
 
 Measurements must record hardware, OS build, build configuration, duration, sample interval, app count, CPU, working set, and database state.
+
+## 2026-11-27 Resource-usage pass (PR #17)
+
+User report on the installed app: about 400 MB on disk, steady 3-4% CPU and
+about 250 MB RAM at 1-second sampling on Running Apps. Changes:
+
+- Minimized or hidden window: snapshots are not presented, sampling drops to
+  a 5-second background cadence (history keeps recording; a slower user choice
+  wins), and the heap is compacted and the working set trimmed once. Restoring
+  applies the latest snapshot and captures immediately.
+- Visible window: only the page on screen (Running Apps or System Overview) is
+  updated each tick; the other catches up when shown.
+- Default sampling is 2 seconds (1 and 5 remain); saved choices are kept.
+- One-minute series are bounded by a 60-second window as well as 60 points.
+- App and service use non-concurrent workstation GC.
+- The service is published with partial trimming and the x64 MSI drops
+  TraceEvent's x86/arm64 helpers.
+
+Measured by the release workflow on windows-latest (not on user hardware):
+MSI 111,019,004 bytes before (run 46001022093) and 83,964,016 bytes after
+(run 46009974445); installed payload after: app 238,439,600 bytes, service
+32,507,937 bytes. The installed trimmed service started and stayed running
+with a 33,595,392-byte working set. CPU and RAM effects of the app changes
+are estimates until measured on Windows with the window open and minimized
+at 1 s and 2 s.
 
 ## 2026-07-29 History chart and broker runtime pass
 
