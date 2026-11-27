@@ -1,5 +1,14 @@
 # Monitoring XS
 
+**English** | [فارسی](README.fa.md)
+
+[![CI](https://github.com/rezamxs/MonitoringXS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rezamxs/MonitoringXS/actions/workflows/ci.yml?query=branch%3Amain)
+[![CodeQL](https://github.com/rezamxs/MonitoringXS/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/rezamxs/MonitoringXS/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/rezamxs/MonitoringXS?include_prereleases&sort=semver)](https://github.com/rezamxs/MonitoringXS/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+> See which **applications** — not which of their dozens of helper processes — are using your CPU, memory, disk, network, and GPU on Windows.
+
 Monitoring XS is a native Windows desktop monitor organized around **logical applications**, not raw process lists. Related processes (for example multiple Chrome or Visual Studio Code helpers) are grouped so you see combined CPU, memory, disk, network, and GPU use for the application the user actually launched.
 
 The project is under active development. Core monitoring, History, Process Intelligence, Diagnostics, installer packaging, and English/Persian UI are implemented. Remaining work includes placeholder pages, broader GPU hardware validation, and release signing.
