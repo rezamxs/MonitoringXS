@@ -100,6 +100,46 @@ public static class ChartHoverMapper
     }
 }
 
+/// <summary>
+/// Chart axis text. Metric numbers always use the invariant decimal point so a
+/// Windows regional format (for example fa-IR, whose decimal separator is '/')
+/// can never leak into values such as "4.3 GB"; times follow the app's UI
+/// culture so they match every other timestamp on the page.
+/// </summary>
+internal static class MetricAxisFormatter
+{
+    private static readonly string[] ByteUnits = ["B", "KB", "MB", "GB", "TB"];
+
+    public static string Value(double value, MetricSparklineScale scale, string? unitText) =>
+        scale == MetricSparklineScale.Percent
+            ? string.Create(CultureInfo.InvariantCulture, $"{value:0}%")
+            : unitText switch
+            {
+                "bytes/s" => $"{Bytes(value)}/s",
+                "bytes" => Bytes(value),
+                _ => $"{Bytes(value)} {unitText}".Trim()
+            };
+
+    public static string Bytes(double value)
+    {
+        int unit = 0;
+        value = double.IsFinite(value) ? Math.Max(0, value) : 0;
+        while (value >= 1024 && unit < ByteUnits.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return string.Create(CultureInfo.InvariantCulture, $"{value:0.#} {ByteUnits[unit]}");
+    }
+
+    public static string Time(DateTimeOffset timestamp, CultureInfo culture)
+    {
+        ArgumentNullException.ThrowIfNull(culture);
+        return timestamp.ToLocalTime().ToString("t", culture);
+    }
+}
+
 public enum MetricSparklineScale
 {
     Dynamic,

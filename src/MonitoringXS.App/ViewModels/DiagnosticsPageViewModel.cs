@@ -513,8 +513,8 @@ public sealed partial class DiagnosticsPageViewModel : ObservableObject, IDispos
     private static string FormatSelfMemory(long bytes) => FormatBytes(bytes);
 
     private static string FormatBytes(long bytes) => bytes >= 1024 * 1024
-        ? $"{bytes / (1024d * 1024d):0.0} MB"
-        : $"{bytes / 1024d:0.0} KB";
+        ? string.Create(CultureInfo.InvariantCulture, $"{bytes / (1024d * 1024d):0.0} MB")
+        : string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024d:0.0} KB");
 
     private string FormatTimestamp(DateTimeOffset? timestamp) =>
         timestamp?.ToString("O", CultureInfo.InvariantCulture)

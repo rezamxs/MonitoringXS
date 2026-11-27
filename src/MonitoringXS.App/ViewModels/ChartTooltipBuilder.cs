@@ -21,7 +21,8 @@ internal static class ChartTooltipBuilder
         string unavailableText,
         string reasonText,
         string valueLabel,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        CultureInfo? culture = null)
     {
         if (samples is null || index < 0 || index >= samples.Count)
         {
@@ -30,7 +31,7 @@ internal static class ChartTooltipBuilder
 
         cancellationToken.ThrowIfCancellationRequested();
         CpuHistorySample sample = samples[index];
-        string time = sample.Timestamp.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+        string time = sample.Timestamp.ToLocalTime().ToString("g", culture ?? CultureInfo.InvariantCulture);
         string nameLine = $"{metricName} · {time}";
         string health = sample.Availability switch
         {

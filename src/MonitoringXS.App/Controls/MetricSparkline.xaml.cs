@@ -337,39 +337,20 @@ public sealed partial class MetricSparkline : UserControl
 
         if (!IsEmbedded)
         {
-            TopAxisLabel.Text = FormatAxis(layout.DomainMaximum);
-            BottomAxisLabel.Text = FormatAxis(layout.DomainMinimum);
-            StartAxisLabel.Text = layout.RangeStartUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
-            EndAxisLabel.Text = layout.RangeEndUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
+            CultureInfo culture = CurrentLocalization.Culture;
+            TopAxisLabel.Text = MetricAxisFormatter.Value(layout.DomainMaximum, ChartScale, UnitText);
+            BottomAxisLabel.Text = MetricAxisFormatter.Value(layout.DomainMinimum, ChartScale, UnitText);
+            StartAxisLabel.Text = MetricAxisFormatter.Time(layout.RangeStartUtc, culture);
+            EndAxisLabel.Text = MetricAxisFormatter.Time(layout.RangeEndUtc, culture);
 
             Summary.Text = string.IsNullOrWhiteSpace(SummaryText) ? layout.Summary : SummaryText;
             Summary.Visibility = ShowSummary ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 
-    private string FormatAxis(double value) =>
-        ChartScale == MetricSparklineScale.Percent
-            ? $"{value:0}%"
-            : UnitText switch
-            {
-                "bytes/s" => $"{FormatBytes(value)}/s",
-                "bytes" => FormatBytes(value),
-                _ => $"{FormatBytes(value)} {UnitText}".Trim()
-            };
-
-    private static string FormatBytes(double value)
-    {
-        string[] units = ["B", "KB", "MB", "GB", "TB"];
-        int unit = 0;
-        value = Math.Max(0, value);
-        while (value >= 1024 && unit < units.Length - 1)
-        {
-            value /= 1024;
-            unit++;
-        }
-
-        return $"{value:0.#} {units[unit]}";
-    }
+    private LocalizationService CurrentLocalization =>
+        (Microsoft.UI.Xaml.Application.Current as global::MonitoringXS.App.App)?.Localization
+        ?? _localization;
 
     private void OnUnloaded(object sender, RoutedEventArgs args) => Unsubscribe();
 
@@ -408,9 +389,7 @@ public sealed partial class MetricSparkline : UserControl
         }
 
         _hoverIndex = index;
-        LocalizationService localization =
-            (Microsoft.UI.Xaml.Application.Current as global::MonitoringXS.App.App)?.Localization
-            ?? _localization;
+        LocalizationService localization = CurrentLocalization;
         IReadOnlyList<CpuHistorySample> displayed = samples as IReadOnlyList<CpuHistorySample>
             ?? samples.ToArray();
         HistoryValueKind valueKind = TooltipUsesPercentUnit
@@ -427,7 +406,8 @@ public sealed partial class MetricSparkline : UserControl
             localization.Get(LocalizationKeys.PartialLowerBound),
             localization.Get(LocalizationKeys.Unavailable),
             localization.Get(LocalizationKeys.TooltipReason),
-            localization.Get(LocalizationKeys.TooltipValue));
+            localization.Get(LocalizationKeys.TooltipValue),
+            culture: localization.Culture);
         if (string.IsNullOrEmpty(tooltip))
         {
             _hoverIndex = -1;
