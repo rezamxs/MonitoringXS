@@ -184,6 +184,37 @@ public sealed class WindowsProcessActionServiceTests
     }
 
     [Fact]
+    public async Task TreeIgnoresProtectedProcessWithReusedParentPid()
+    {
+        FakeNative native = ReadyNative();
+        // Started (5) before the root (10): a PID-reuse leftover, not a real child.
+        native.Processes[121] = Info(121, 5, "csrss", protectedProcess: true);
+        native.Tree = [new(121, 120, "csrss")];
+        using WindowsProcessActionService service = Service(native);
+
+        ProcessActionResult result =
+            await service.EndProcessTreeAsync(Target(120, 10, "sample"), TestCancellation);
+
+        Assert.Equal(ProcessActionStatus.Success, result.Status);
+        Assert.Equal([120], native.Terminated);
+    }
+
+    [Fact]
+    public async Task TreeStillRefusesGenuineProtectedDescendant()
+    {
+        FakeNative native = ReadyNative();
+        native.Processes[121] = Info(121, 11, "child", protectedProcess: true);
+        native.Tree = [new(121, 120, "child")];
+        using WindowsProcessActionService service = Service(native);
+
+        ProcessActionResult result =
+            await service.EndProcessTreeAsync(Target(120, 10, "sample"), TestCancellation);
+
+        Assert.Equal(ProcessActionStatus.ProtectedProcess, result.Status);
+        Assert.Empty(native.Terminated);
+    }
+
+    [Fact]
     public async Task TreeHandlesDisappearingAndNewChildrenWithinBoundedPasses()
     {
         FakeNative native = ReadyNative();
