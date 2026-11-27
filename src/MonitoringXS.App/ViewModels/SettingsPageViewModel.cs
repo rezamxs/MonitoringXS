@@ -28,7 +28,8 @@ public enum BrokerOperationalState
     BinaryMissing,
     ProtocolMismatch,
     ConnectionUnavailable,
-    Healthy
+    Healthy,
+    ClientRejected
 }
 
 public sealed record BrokerOperationalStatus(
@@ -71,16 +72,40 @@ internal sealed class BrokerSettingsStatusProvider(
         }
 
         NetworkEventBatch network = await client.ReadNetworkBatchAsync([], cancellationToken);
-        if (network.Availability == MetricAvailability.Unsupported)
+        return BrokerStatusPresentation.Create(
+            BrokerConnectionClassifier.Classify(network.Availability, network.Detail),
+            localization);
+    }
+}
+
+/// <summary>
+/// Maps a live broker read onto the Settings status. Only an explicit protocol
+/// version incompatibility is reported as a mismatch; a service that rejects
+/// this client (for example an unsigned build failing the publisher check) and
+/// a service whose kernel provider is unsupported are reported as what they are.
+/// </summary>
+internal static class BrokerConnectionClassifier
+{
+    public static BrokerOperationalState Classify(MetricAvailability availability, string? detail)
+    {
+        string text = detail ?? string.Empty;
+        if (text.Contains("protocol", StringComparison.OrdinalIgnoreCase)
+            && text.Contains("incompatible", StringComparison.OrdinalIgnoreCase))
         {
-            return BrokerStatusPresentation.Create(BrokerOperationalState.ProtocolMismatch, localization);
+            return BrokerOperationalState.ProtocolMismatch;
         }
 
-        return network.Availability is MetricAvailability.Available
+        if (availability == MetricAvailability.AccessDenied
+            && text.Contains("denied this local client", StringComparison.OrdinalIgnoreCase))
+        {
+            return BrokerOperationalState.ClientRejected;
+        }
+
+        return availability is MetricAvailability.Available
             or MetricAvailability.Partial
             or MetricAvailability.WarmingUp
-            ? BrokerStatusPresentation.Create(BrokerOperationalState.Healthy, localization)
-            : BrokerStatusPresentation.Create(BrokerOperationalState.ConnectionUnavailable, localization);
+            ? BrokerOperationalState.Healthy
+            : BrokerOperationalState.ConnectionUnavailable;
     }
 }
 
@@ -113,6 +138,10 @@ internal static class BrokerStatusPresentation
             state,
             localization.Get(LocalizationKeys.BrokerProtocolMismatchLabel),
             localization.Get(LocalizationKeys.BrokerProtocolMismatchDetail)),
+        BrokerOperationalState.ClientRejected => new(
+            state,
+            localization.Get(LocalizationKeys.BrokerClientRejectedLabel),
+            localization.Get(LocalizationKeys.BrokerClientRejectedDetail)),
         BrokerOperationalState.ConnectionUnavailable => new(
             state,
             localization.Get(LocalizationKeys.BrokerConnectionUnavailableLabel),

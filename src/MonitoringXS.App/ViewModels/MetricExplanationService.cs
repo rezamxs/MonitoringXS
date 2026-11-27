@@ -201,6 +201,11 @@ public sealed class MetricExplanationService
             return LocalizationKeys.ReasonProtocolMismatch;
         }
 
+        if (normalized.Contains("denied this local client", StringComparison.OrdinalIgnoreCase))
+        {
+            return LocalizationKeys.ReasonServiceRejectedClient;
+        }
+
         if (normalized.Contains("connection failed", StringComparison.OrdinalIgnoreCase))
         {
             return LocalizationKeys.ReasonServiceConnection;

@@ -467,6 +467,67 @@ public sealed class PrivilegedEtwBrokerTests
     }
 
     [Fact]
+    public void RejectedHandshakeKeepsTheServiceErrorCodeInsteadOfProtocolMismatch()
+    {
+        BrokerProtocolException exception = NamedPipeEtwBrokerTransport.HandshakeRejected(
+            BrokerJson.Serialize(new BrokerErrorResponse(BrokerErrorCode.Unauthorized)));
+
+        Assert.Equal(BrokerErrorCode.Unauthorized, exception.Code);
+        Assert.Contains("denied this local client", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("incompatible", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UnauthorizedHelloIsReportedAsAccessDeniedNotUnsupported()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
+        BrokerPipeEndpoint endpoint = BrokerPipeEndpoint.Create(
+            identity.User!.Value,
+            sessionId: 9998);
+        SecurityIdentifier serviceSid = new("S-1-5-80-123456789-123456789-123456789-123456789-1234");
+        await using NamedPipeServerStream server = NamedPipeServerStreamAcl.Create(
+            endpoint.PipeName,
+            PipeDirection.InOut,
+            1,
+            PipeTransmissionMode.Byte,
+            PipeOptions.Asynchronous,
+            64 * 1024,
+            64 * 1024,
+            BrokerPipeSecurity.Create(endpoint, serviceSid, setOwner: false),
+            HandleInheritability.None);
+        Task serverTask = Task.Run(async () =>
+        {
+            await server.WaitForConnectionAsync(TestContext.Current.CancellationToken);
+            BrokerFrame hello = await BrokerFrameCodec.ReadAsync(
+                server,
+                PrivilegedEtwBrokerProtocol.MaximumRequestBytes,
+                TestContext.Current.CancellationToken);
+            await BrokerFrameCodec.WriteAsync(
+                server,
+                BrokerCommand.ErrorResponse,
+                hello.RequestId,
+                BrokerJson.Serialize(new BrokerErrorResponse(BrokerErrorCode.Unauthorized)),
+                PrivilegedEtwBrokerProtocol.MaximumResponseBytes,
+                TestContext.Current.CancellationToken);
+        }, TestContext.Current.CancellationToken);
+
+        await using PrivilegedEtwBrokerClient client = new(
+            new NamedPipeEtwBrokerTransport(endpoint.PipeName));
+        NetworkEventBatch batch = await client.ReadNetworkBatchAsync(
+            [],
+            TestContext.Current.CancellationToken);
+        await serverTask;
+
+        Assert.Equal(MetricAvailability.AccessDenied, batch.Availability);
+        Assert.Contains("denied this local client", batch.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task BrokerUnavailableReturnsUnavailableWithoutFakeZero()
     {
         await using PrivilegedEtwBrokerClient client =

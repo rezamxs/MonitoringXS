@@ -65,6 +65,8 @@
   <data name="BrokerBinaryMissingDetail" xml:space="preserve"><value>سرویس ثبت شده است، اما فایل اجرایی آن در دسترس نیست.</value></data>
   <data name="BrokerProtocolMismatchLabel" xml:space="preserve"><value>ناسازگاری پروتکل</value></data>
   <data name="BrokerProtocolMismatchDetail" xml:space="preserve"><value>نسخهٔ پروتکل برنامه و سرویس یکسان نیست.</value></data>
+  <data name="BrokerClientRejectedLabel" xml:space="preserve"><value>برنامه رد شد</value></data>
+  <data name="BrokerClientRejectedDetail" xml:space="preserve"><value>سرویس در حال اجراست اما این برنامه را نپذیرفت. نسخه‌های انتشار نیاز دارند برنامه و سرویس با امضای یک ناشر امضا شده باشند.</value></data>
   <data name="BrokerConnectionUnavailableLabel" xml:space="preserve"><value>اتصال در دسترس نیست</value></data>
   <data name="BrokerConnectionUnavailableDetail" xml:space="preserve"><value>برنامه نتوانست یک اتصال محلی سالم با سرویس برقرار کند.</value></data>
   <data name="BrokerHealthyLabel" xml:space="preserve"><value>سالم</value></data>
@@ -323,6 +325,7 @@
   <data name="ReasonServiceStopped" xml:space="preserve"><value>سرویس پایش پیشرفته متوقف است.</value></data>
   <data name="ReasonServiceConnection" xml:space="preserve"><value>اتصال محلی سرویس پایش پیشرفته در دسترس نیست.</value></data>
   <data name="ReasonProtocolMismatch" xml:space="preserve"><value>نسخهٔ پروتکل برنامه و سرویس پایش پیشرفته یکسان نیست.</value></data>
+  <data name="ReasonServiceRejectedClient" xml:space="preserve"><value>سرویس پایش پیشرفته این برنامه را نپذیرفت.</value></data>
   <data name="ReasonSessionConflict" xml:space="preserve"><value>یک نشست پایش دیگر با این ارائه‌دهنده تداخل دارد.</value></data>
   <data name="ReasonEventLoss" xml:space="preserve"><value>برخی نمونه‌های ارائه‌دهنده یا صف از دست رفته‌اند؛ مقدارهای نمایش‌داده‌شده حد پایین معتبرند.</value></data>
   <data name="ReasonProcessExited" xml:space="preserve"><value>پردازش پیش از خواندن شمارنده‌ها بسته شد.</value></data>

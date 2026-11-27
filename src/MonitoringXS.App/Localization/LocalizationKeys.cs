@@ -64,6 +64,8 @@ internal static class LocalizationKeys
     public const string BrokerBinaryMissingDetail = nameof(BrokerBinaryMissingDetail);
     public const string BrokerProtocolMismatchLabel = nameof(BrokerProtocolMismatchLabel);
     public const string BrokerProtocolMismatchDetail = nameof(BrokerProtocolMismatchDetail);
+    public const string BrokerClientRejectedLabel = nameof(BrokerClientRejectedLabel);
+    public const string BrokerClientRejectedDetail = nameof(BrokerClientRejectedDetail);
     public const string BrokerConnectionUnavailableLabel = nameof(BrokerConnectionUnavailableLabel);
     public const string BrokerConnectionUnavailableDetail = nameof(BrokerConnectionUnavailableDetail);
     public const string BrokerHealthyLabel = nameof(BrokerHealthyLabel);
@@ -208,6 +210,7 @@ internal static class LocalizationKeys
     public const string ReasonServiceStopped = nameof(ReasonServiceStopped);
     public const string ReasonServiceConnection = nameof(ReasonServiceConnection);
     public const string ReasonProtocolMismatch = nameof(ReasonProtocolMismatch);
+    public const string ReasonServiceRejectedClient = nameof(ReasonServiceRejectedClient);
     public const string ReasonSessionConflict = nameof(ReasonSessionConflict);
     public const string ReasonEventLoss = nameof(ReasonEventLoss);
     public const string ReasonProcessExited = nameof(ReasonProcessExited);

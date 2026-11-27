@@ -235,6 +235,21 @@ public sealed class SettingsPageViewModelTests
         Assert.DoesNotContain("private detail", failedViewModel.BrokerDetailText);
     }
 
+    [Theory]
+    [InlineData(MetricAvailability.AccessDenied, "The privileged ETW broker denied this local client.", BrokerOperationalState.ClientRejected)]
+    [InlineData(MetricAvailability.Unsupported, "The privileged ETW broker protocol version is incompatible. Client version 1; server version 2.", BrokerOperationalState.ProtocolMismatch)]
+    [InlineData(MetricAvailability.Unsupported, "Kernel network ETW is not supported on this platform.", BrokerOperationalState.ConnectionUnavailable)]
+    [InlineData(MetricAvailability.Unavailable, "Broker connection failed.", BrokerOperationalState.ConnectionUnavailable)]
+    [InlineData(MetricAvailability.WarmingUp, null, BrokerOperationalState.Healthy)]
+    [InlineData(MetricAvailability.Available, null, BrokerOperationalState.Healthy)]
+    public void BrokerConnectionClassifierOnlyReportsRealProtocolMismatches(
+        MetricAvailability availability,
+        string? detail,
+        BrokerOperationalState expected)
+    {
+        Assert.Equal(expected, BrokerConnectionClassifier.Classify(availability, detail));
+    }
+
     [Fact]
     public async Task BrokerRefreshCommandIsPublicNonOverlappingAndReusable()
     {

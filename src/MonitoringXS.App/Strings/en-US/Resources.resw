@@ -65,6 +65,8 @@
   <data name="BrokerBinaryMissingDetail" xml:space="preserve"><value>The service is registered, but its executable is unavailable.</value></data>
   <data name="BrokerProtocolMismatchLabel" xml:space="preserve"><value>Protocol mismatch</value></data>
   <data name="BrokerProtocolMismatchDetail" xml:space="preserve"><value>The app and service protocol versions do not match.</value></data>
+  <data name="BrokerClientRejectedLabel" xml:space="preserve"><value>Client rejected</value></data>
+  <data name="BrokerClientRejectedDetail" xml:space="preserve"><value>The service is running but rejected this app. Release builds require the app and service to be signed by the same publisher.</value></data>
   <data name="BrokerConnectionUnavailableLabel" xml:space="preserve"><value>Connection unavailable</value></data>
   <data name="BrokerConnectionUnavailableDetail" xml:space="preserve"><value>The app could not establish a healthy local service connection.</value></data>
   <data name="BrokerHealthyLabel" xml:space="preserve"><value>Healthy</value></data>
@@ -323,6 +325,7 @@
   <data name="ReasonServiceStopped" xml:space="preserve"><value>The Privileged Metrics Service is stopped.</value></data>
   <data name="ReasonServiceConnection" xml:space="preserve"><value>The Privileged Metrics Service connection is unavailable.</value></data>
   <data name="ReasonProtocolMismatch" xml:space="preserve"><value>The app and Privileged Metrics Service protocol versions do not match.</value></data>
+  <data name="ReasonServiceRejectedClient" xml:space="preserve"><value>The Privileged Metrics Service rejected this app.</value></data>
   <data name="ReasonSessionConflict" xml:space="preserve"><value>Another monitoring session conflicts with this provider.</value></data>
   <data name="ReasonEventLoss" xml:space="preserve"><value>Some provider or queue samples were lost; values are lower bounds.</value></data>
   <data name="ReasonProcessExited" xml:space="preserve"><value>The process exited before its counters could be read.</value></data>
