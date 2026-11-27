@@ -337,6 +337,10 @@ public sealed class SettingsPageViewModelTests
         Assert.Contains("VerticalScrollBarVisibility=\"Auto\"", xaml, StringComparison.Ordinal);
         Assert.Contains("HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
         Assert.Contains("MaxWidth=\"1600\"", xaml, StringComparison.Ordinal);
+        // Cards keep a right gutter inside the ScrollViewer so the vertical
+        // scrollbar never overlaps the right column.
+        Assert.Contains("Padding=\"24,16,8,24\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Padding=\"0,0,16,0\"", xaml, StringComparison.Ordinal);
         Assert.Contains("AdaptiveTrigger MinWindowWidth=\"940\"", xaml, StringComparison.Ordinal);
         Assert.Equal(4, Count(xaml, "<ComboBox"));
         Assert.True(Count(xaml, "UseSystemFocusVisuals=\"True\"") >= 4);

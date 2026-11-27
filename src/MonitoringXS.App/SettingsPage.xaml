@@ -6,7 +6,7 @@
     AutomationProperties.Name="Application settings page"
     IsTabStop="False">
     <Grid x:Name="SettingsRoot"
-        Padding="24,16,24,24"
+        Padding="24,16,8,24"
         Background="{StaticResource PageBrush}">
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup>
@@ -34,6 +34,7 @@
             VerticalScrollBarVisibility="Auto">
             <StackPanel
                 MaxWidth="1600"
+                Padding="0,0,16,0"
                 HorizontalAlignment="Stretch"
                 Spacing="14">
                 <Grid ColumnSpacing="12">
