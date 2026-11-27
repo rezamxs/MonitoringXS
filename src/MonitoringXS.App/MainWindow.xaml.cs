@@ -10,6 +10,7 @@ using MonitoringXS.App.ViewModels;
 using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
 using MonitoringXS.Platform.Windows.Accessibility;
+using MonitoringXS.Platform.Windows.Broker;
 using Windows.Graphics;
 using SettingsTheme = MonitoringXS.Core.Models.ApplicationTheme;
 
@@ -22,7 +23,9 @@ public sealed partial class MainWindow : Window, IDisposable
         new("ms-appx:///Assets/Branding/MonitoringXS.Logo.24.png");
     private static readonly Uri DarkTitleBarLogoUri =
         new("ms-appx:///Assets/Branding/MonitoringXS.Logo.Dark.24.png");
+    private static readonly TimeSpan PrivilegedMetricsConsentOfferDelay = TimeSpan.FromSeconds(2);
     private readonly CancellationTokenSource _shutdown = new();
+    private readonly CancellationToken _lifetime;
     private readonly Dictionary<string, TabViewItem> _applicationTabs = new(StringComparer.Ordinal);
     private readonly IMonitoringSnapshotSource _snapshots;
     private readonly MonitoringRuntime _runtime;
@@ -45,6 +48,7 @@ public sealed partial class MainWindow : Window, IDisposable
         _snapshots = snapshots;
         _runtime = runtime;
         _settingsViewModel = settingsViewModel;
+        _lifetime = _shutdown.Token;
         InitializeComponent();
         ViewModel.ConfigureApplicationSort(
             settings,
@@ -61,6 +65,7 @@ public sealed partial class MainWindow : Window, IDisposable
             ? FlowDirection.RightToLeft
             : FlowDirection.LeftToRight;
         settingsViewModel.ThemeRequested += ApplyAppearance;
+        settingsViewModel.PrivilegedMetricsAccessChanged += SettingsViewModel_PrivilegedMetricsAccessChanged;
         ConfigureTitleBar();
         Root.ActualThemeChanged += Root_ActualThemeChanged;
         ApplyAppearance(settings.Theme);
@@ -244,6 +249,8 @@ public sealed partial class MainWindow : Window, IDisposable
     private async void Root_Loaded(object sender, RoutedEventArgs args)
     {
         Root.Loaded -= Root_Loaded;
+        // Runs beside the snapshot loop so live CPU/memory/GPU monitoring never waits on it.
+        _ = OfferPrivilegedMetricsConsentAsync(_lifetime);
         try
         {
             await ConsumeSnapshotsAsync(_shutdown.Token);
@@ -254,6 +261,114 @@ public sealed partial class MainWindow : Window, IDisposable
         finally
         {
             _shutdown.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Once per app run: when the installed, unsigned Privileged Metrics Service
+    /// rejected this unsigned app and no administrator opt-in exists, explain why
+    /// the access is needed and ask before requesting elevation.
+    /// </summary>
+    private async Task OfferPrivilegedMetricsConsentAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(PrivilegedMetricsConsentOfferDelay, cancellationToken);
+            if (!await _settingsViewModel.ShouldOfferPrivilegedMetricsConsentAsync(cancellationToken))
+            {
+                return;
+            }
+
+            LocalizationService localization = ((App)Microsoft.UI.Xaml.Application.Current).Localization;
+            CheckBox dontAskAgain = new()
+            {
+                Content = localization.Get(LocalizationKeys.ConsentDialogDontAskAgain)
+            };
+            StackPanel content = new() { Spacing = 12, MaxWidth = 460 };
+            foreach (string key in new[]
+            {
+                LocalizationKeys.ConsentDialogWhy,
+                LocalizationKeys.ConsentDialogUnsigned,
+                LocalizationKeys.ConsentDialogScope
+            })
+            {
+                content.Children.Add(new TextBlock
+                {
+                    Text = localization.Get(key),
+                    TextWrapping = TextWrapping.Wrap
+                });
+            }
+
+            content.Children.Add(dontAskAgain);
+            ContentDialog dialog = new()
+            {
+                XamlRoot = Root.XamlRoot,
+                FlowDirection = Root.FlowDirection,
+                RequestedTheme = Root.ActualTheme,
+                Title = localization.Get(LocalizationKeys.ConsentDialogTitle),
+                Content = new ScrollViewer { Content = content },
+                PrimaryButtonText = localization.Get(LocalizationKeys.ConsentDialogAllow),
+                CloseButtonText = localization.Get(LocalizationKeys.ConsentDialogNotNow),
+                DefaultButton = ContentDialogButton.Primary
+            };
+            ContentDialogResult result = await dialog.ShowAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            if (dontAskAgain.IsChecked == true)
+            {
+                await _settingsViewModel.SuppressPrivilegedMetricsConsentPromptAsync(cancellationToken);
+            }
+
+            if (result != ContentDialogResult.Primary)
+            {
+                return;
+            }
+
+            PrivilegedMetricsConsentChangeResult change =
+                await _settingsViewModel.ChangeConsentAsync(grant: true, cancellationToken);
+            if (change != PrivilegedMetricsConsentChangeResult.Succeeded)
+            {
+                ContentDialog notice = new()
+                {
+                    XamlRoot = Root.XamlRoot,
+                    FlowDirection = Root.FlowDirection,
+                    RequestedTheme = Root.ActualTheme,
+                    Title = localization.Get(LocalizationKeys.ConsentNoticeTitle),
+                    Content = new TextBlock
+                    {
+                        Text = _settingsViewModel.ConsentResultMessage(grant: true, change),
+                        TextWrapping = TextWrapping.Wrap,
+                        MaxWidth = 460
+                    },
+                    CloseButtonText = localization.Get(LocalizationKeys.Ok),
+                    DefaultButton = ContentDialogButton.Close
+                };
+                await notice.ShowAsync();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception) when (exception is System.Runtime.InteropServices.COMException
+            or InvalidOperationException)
+        {
+            // Another dialog was open or the window closed; the offer stays
+            // available in Settings > Privileged metrics.
+        }
+    }
+
+    private void SettingsViewModel_PrivilegedMetricsAccessChanged() =>
+        _ = RequestCaptureAfterAccessChangeAsync();
+
+    private async Task RequestCaptureAfterAccessChangeAsync()
+    {
+        try
+        {
+            await _runtime.RequestCaptureAsync(_lifetime);
+        }
+        catch (Exception exception) when (exception is OperationCanceledException
+            or InvalidOperationException)
+        {
+            // The window or runtime is shutting down; the next scheduled tick reconnects anyway.
         }
     }
 
@@ -461,6 +576,7 @@ public sealed partial class MainWindow : Window, IDisposable
         AppWindow.Changed -= AppWindow_Changed;
         Root.ActualThemeChanged -= Root_ActualThemeChanged;
         _settingsViewModel.ThemeRequested -= ApplyAppearance;
+        _settingsViewModel.PrivilegedMetricsAccessChanged -= SettingsViewModel_PrivilegedMetricsAccessChanged;
         AboutWorkspace.Dispose();
         _shutdown.Cancel();
     }

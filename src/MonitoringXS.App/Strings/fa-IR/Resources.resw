@@ -66,7 +66,7 @@
   <data name="BrokerProtocolMismatchLabel" xml:space="preserve"><value>ناسازگاری پروتکل</value></data>
   <data name="BrokerProtocolMismatchDetail" xml:space="preserve"><value>نسخهٔ پروتکل برنامه و سرویس یکسان نیست.</value></data>
   <data name="BrokerClientRejectedLabel" xml:space="preserve"><value>برنامه رد شد</value></data>
-  <data name="BrokerClientRejectedDetail" xml:space="preserve"><value>سرویس در حال اجراست اما این برنامه را نپذیرفت. نسخه‌های انتشار نیاز دارند برنامه و سرویس با امضای یک ناشر امضا شده باشند.</value></data>
+  <data name="BrokerClientRejectedDetail" xml:space="preserve"><value>سرویس در حال اجراست اما این برنامه را نپذیرفت. نسخهٔ بدون امضا به اجازهٔ یک مدیر سیستم در بخش «دسترسی نسخهٔ بدون امضا» نیاز دارد؛ سرویس امضاشده فقط برنامه‌ای را می‌پذیرد که با امضای همان ناشر امضا شده باشد.</value></data>
   <data name="BrokerConnectionUnavailableLabel" xml:space="preserve"><value>اتصال در دسترس نیست</value></data>
   <data name="BrokerConnectionUnavailableDetail" xml:space="preserve"><value>برنامه نتوانست یک اتصال محلی سالم با سرویس برقرار کند.</value></data>
   <data name="BrokerHealthyLabel" xml:space="preserve"><value>سالم</value></data>
@@ -88,7 +88,7 @@
   <data name="SettingsAppearanceDescription.Text" xml:space="preserve"><value>تغییرات پوسته فوراً اعمال می‌شوند. حالت «سیستم» از پوسته و کنتراست بالای ویندوز پیروی می‌کند.</value></data>
   <data name="SettingsThemeSelector.AutomationProperties.Name" xml:space="preserve"><value>پوستهٔ برنامه</value></data>
   <data name="SettingsPrivilegedTitle.Text" xml:space="preserve"><value>پایش پیشرفته</value></data>
-  <data name="SettingsPrivilegedDescription.Text" xml:space="preserve"><value>سنجه‌های شبکه و دیسک فیزیکی به سرویس پایش پیشرفته نیاز دارند. این صفحه سرویس را نصب، حذف یا راه‌اندازی نمی‌کند و خطاهای آن را نیز برطرف نمی‌کند.</value></data>
+  <data name="SettingsPrivilegedDescription.Text" xml:space="preserve"><value>سنجه‌های شبکه و دیسک فیزیکی به سرویس پایش پیشرفته نیاز دارند. این صفحه سرویس را نصب، حذف یا راه‌اندازی مجدد نمی‌کند.</value></data>
   <data name="SettingsBrokerRefreshButton.Content" xml:space="preserve"><value>تازه‌سازی وضعیت</value></data>
   <data name="SettingsBrokerRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>تازه‌سازی وضعیت سرویس پایش پیشرفته</value></data>
   <data name="SettingsBrokerProgress.AutomationProperties.Name" xml:space="preserve"><value>در حال بررسی وضعیت سرویس پایش پیشرفته</value></data>
@@ -540,4 +540,27 @@
   <data name="SystemOverviewChartSummary" xml:space="preserve"><value>۶۰ ثانیهٔ گذشته؛ نمونه‌های ناموجود به‌صورت شکاف باقی می‌مانند.</value></data>
   <data name="SystemOverviewChartEmpty" xml:space="preserve"><value>در انتظار نمونه‌های واقعی…</value></data>
   <data name="SystemOverviewChartAutomationName" xml:space="preserve"><value>نمودار زندهٔ {0}، {1}</value></data>
+  <data name="ConsentDialogTitle" xml:space="preserve"><value>اجازهٔ پایش دیسک و شبکه داده شود؟</value></data>
+  <data name="ConsentDialogWhy" xml:space="preserve"><value>نمایش مصرف دیسک فیزیکی و شبکه برای هر برنامه به سرویس پایش پیشرفته نیاز دارد که با دسترسی مدیر سیستم اجرا می‌شود.</value></data>
+  <data name="ConsentDialogUnsigned" xml:space="preserve"><value>این نسخه امضای دیجیتال (Code Signing) ندارد؛ بنابراین ویندوز نمی‌تواند ناشر آن را خودکار تأیید کند و سرویس تا وقتی یک مدیر سیستم روی این رایانه اجازه ندهد، به این برنامه اعتماد نمی‌کند.</value></data>
+  <data name="ConsentDialogScope" xml:space="preserve"><value>با اجازه دادن، این برنامه فقط شمارنده‌های دیسک و شبکه را می‌خواند. هیچ داده‌ای به جایی ارسال نمی‌شود. هر زمان بخواهید می‌توانید این اجازه را از تنظیمات ← پایش پیشرفته لغو کنید.</value></data>
+  <data name="ConsentDialogAllow" xml:space="preserve"><value>اجازه دادن</value></data>
+  <data name="ConsentDialogNotNow" xml:space="preserve"><value>اکنون نه</value></data>
+  <data name="ConsentDialogDontAskAgain" xml:space="preserve"><value>دیگر نپرس</value></data>
+  <data name="ConsentNoticeTitle" xml:space="preserve"><value>پایش پیشرفته</value></data>
+  <data name="ConsentCancelledMessage" xml:space="preserve"><value>ویندوز دسترسی مدیر را صادر نکرد، بنابراین دیسک فیزیکی و شبکه همچنان در دسترس نیستند. بعداً می‌توانید از تنظیمات ← پایش پیشرفته اجازه دهید.</value></data>
+  <data name="ConsentFailedMessage" xml:space="preserve"><value>تغییر اجازه انجام نشد. وضعیت دیسک فیزیکی و شبکه تغییری نکرد.</value></data>
+  <data name="ConsentHelperMissingMessage" xml:space="preserve"><value>سرویس پایش پیشرفته در Program Files نصب نشده است، بنابراین اجازه از اینجا قابل تغییر نیست.</value></data>
+  <data name="ConsentAllowedMessage" xml:space="preserve"><value>اجازه داده شد. در حال اتصال دوباره به سرویس پایش پیشرفته…</value></data>
+  <data name="ConsentRevokedMessage" xml:space="preserve"><value>اجازه لغو شد. سرویس از اتصال بعدی، این نسخهٔ بدون امضا را نمی‌پذیرد.</value></data>
+  <data name="ConsentStateNotRequired" xml:space="preserve"><value>لازم نیست — سرویس امضای دیجیتال دارد</value></data>
+  <data name="ConsentStateAllowed" xml:space="preserve"><value>مجاز</value></data>
+  <data name="ConsentStateNotAllowed" xml:space="preserve"><value>مجاز نیست</value></data>
+  <data name="Ok" xml:space="preserve"><value>تأیید</value></data>
+  <data name="SettingsConsentTitle.Text" xml:space="preserve"><value>دسترسی نسخهٔ بدون امضا</value></data>
+  <data name="SettingsConsentDescription.Text" xml:space="preserve"><value>این نسخه امضای دیجیتال ندارد. سرویس فقط پس از اجازهٔ یک مدیر سیستم روی این رایانه آن را می‌پذیرد. «اجازه دادن» و «لغو اجازه» از ویندوز دسترسی مدیر می‌خواهند؛ خود برنامه بدون دسترسی مدیر می‌ماند.</value></data>
+  <data name="SettingsConsentAllowButton.Content" xml:space="preserve"><value>اجازه دادن…</value></data>
+  <data name="SettingsConsentAllowButton.AutomationProperties.Name" xml:space="preserve"><value>اجازه به این نسخهٔ بدون امضا برای استفاده از سرویس پایش پیشرفته</value></data>
+  <data name="SettingsConsentRevokeButton.Content" xml:space="preserve"><value>لغو اجازه…</value></data>
+  <data name="SettingsConsentRevokeButton.AutomationProperties.Name" xml:space="preserve"><value>لغو دسترسی به سرویس پایش پیشرفته</value></data>
 </root>

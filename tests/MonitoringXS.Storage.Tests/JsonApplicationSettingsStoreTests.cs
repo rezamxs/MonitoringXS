@@ -65,6 +65,25 @@ public sealed class JsonApplicationSettingsStoreTests
     }
 
     [Fact]
+    public async Task PrivilegedMetricsPromptChoicePersistsAndDefaultsToAsking()
+    {
+        using TestDirectory directory = new();
+        ApplicationSettings expected = ApplicationSettings.Default with
+        {
+            PrivilegedMetricsConsentPromptSuppressed = true
+        };
+        await using (JsonApplicationSettingsStore first = new(directory.SettingsPath))
+        {
+            Assert.True((await first.SaveAsync(expected, TestCancellation)).Succeeded);
+        }
+
+        await using JsonApplicationSettingsStore second = new(directory.SettingsPath);
+        ApplicationSettingsLoadResult restored = await second.LoadAsync(TestCancellation);
+        Assert.True(restored.Settings.PrivilegedMetricsConsentPromptSuppressed);
+        Assert.False(ApplicationSettings.Default.PrivilegedMetricsConsentPromptSuppressed);
+    }
+
+    [Fact]
     public async Task LanguagePersistsAndRestoresAcrossRestart()
     {
         using TestDirectory directory = new();

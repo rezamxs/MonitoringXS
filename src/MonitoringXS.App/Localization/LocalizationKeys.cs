@@ -332,4 +332,21 @@ internal static class LocalizationKeys
     public const string BetaLimitationChartGaps = nameof(BetaLimitationChartGaps);
     public const string BetaLimitationNoFakeData = nameof(BetaLimitationNoFakeData);
     public const string BetaLimitationDefects = nameof(BetaLimitationDefects);
+    public const string ConsentDialogTitle = nameof(ConsentDialogTitle);
+    public const string ConsentDialogWhy = nameof(ConsentDialogWhy);
+    public const string ConsentDialogUnsigned = nameof(ConsentDialogUnsigned);
+    public const string ConsentDialogScope = nameof(ConsentDialogScope);
+    public const string ConsentDialogAllow = nameof(ConsentDialogAllow);
+    public const string ConsentDialogNotNow = nameof(ConsentDialogNotNow);
+    public const string ConsentDialogDontAskAgain = nameof(ConsentDialogDontAskAgain);
+    public const string ConsentNoticeTitle = nameof(ConsentNoticeTitle);
+    public const string ConsentCancelledMessage = nameof(ConsentCancelledMessage);
+    public const string ConsentFailedMessage = nameof(ConsentFailedMessage);
+    public const string ConsentHelperMissingMessage = nameof(ConsentHelperMissingMessage);
+    public const string ConsentAllowedMessage = nameof(ConsentAllowedMessage);
+    public const string ConsentRevokedMessage = nameof(ConsentRevokedMessage);
+    public const string ConsentStateNotRequired = nameof(ConsentStateNotRequired);
+    public const string ConsentStateAllowed = nameof(ConsentStateAllowed);
+    public const string ConsentStateNotAllowed = nameof(ConsentStateNotAllowed);
+    public const string Ok = nameof(Ok);
 }

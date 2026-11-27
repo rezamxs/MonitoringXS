@@ -2,6 +2,7 @@ using MonitoringXS.App.ViewModels;
 using MonitoringXS.Application;
 using MonitoringXS.Core.Abstractions;
 using MonitoringXS.Core.Models;
+using MonitoringXS.Platform.Windows.Broker;
 
 namespace MonitoringXS.App.Tests;
 
@@ -401,6 +402,161 @@ public sealed class SettingsPageViewModelTests
                 "MonitoringXS repository root was not found.");
     }
 
+    [Fact]
+    public async Task ConsentOfferAppearsOnlyOncePerRunForARejectedUnsignedClient()
+    {
+        TestHarness context = new();
+        context.Broker.Result = BrokerStatusPresentation.Create(BrokerOperationalState.ClientRejected);
+        SettingsPageViewModel viewModel = context.InitializedViewModel();
+
+        Assert.True(await viewModel.ShouldOfferPrivilegedMetricsConsentAsync(TestCancellation));
+        Assert.False(await viewModel.ShouldOfferPrivilegedMetricsConsentAsync(TestCancellation));
+        Assert.Equal(PrivilegedMetricsConsentState.NotAllowed, viewModel.ConsentState);
+        Assert.Equal("Not allowed", viewModel.ConsentStateText);
+    }
+
+    [Fact]
+    public async Task ConsentOfferIsSkippedWhenSuppressedGrantedSignedOrNotRejected()
+    {
+        TestHarness suppressed = new();
+        suppressed.Broker.Result = BrokerStatusPresentation.Create(BrokerOperationalState.ClientRejected);
+        SettingsPageViewModel suppressedViewModel = suppressed.ViewModel;
+        suppressedViewModel.Initialize(new(
+            ApplicationSettings.Default with { PrivilegedMetricsConsentPromptSuppressed = true },
+            true,
+            false));
+        Assert.False(await suppressedViewModel.ShouldOfferPrivilegedMetricsConsentAsync(TestCancellation));
+        Assert.Equal(0, suppressed.Broker.CallCount);
+
+        TestHarness granted = new();
+        granted.Broker.Result = BrokerStatusPresentation.Create(BrokerOperationalState.ClientRejected);
+        granted.Consent.Granted = true;
+        Assert.False(await granted.InitializedViewModel().ShouldOfferPrivilegedMetricsConsentAsync(TestCancellation));
+
+        TestHarness signed = new();
+        signed.Broker.Result = BrokerStatusPresentation.Create(BrokerOperationalState.ClientRejected);
+        signed.Consent.Applies = false;
+        Assert.False(await signed.InitializedViewModel().ShouldOfferPrivilegedMetricsConsentAsync(TestCancellation));
+
+        TestHarness healthy = new();
+        healthy.Broker.Result = BrokerStatusPresentation.Create(BrokerOperationalState.Healthy);
+        Assert.False(await healthy.InitializedViewModel().ShouldOfferPrivilegedMetricsConsentAsync(TestCancellation));
+    }
+
+    [Fact]
+    public async Task DontAskAgainIsStoredInPerUserSettings()
+    {
+        TestHarness context = new();
+        SettingsPageViewModel viewModel = context.InitializedViewModel();
+
+        await viewModel.SuppressPrivilegedMetricsConsentPromptAsync(TestCancellation);
+
+        Assert.True(viewModel.CurrentSettings.PrivilegedMetricsConsentPromptSuppressed);
+        Assert.True(context.Store.Saved.Last().PrivilegedMetricsConsentPromptSuppressed);
+    }
+
+    [Fact]
+    public async Task CancelledElevationKeepsAccessDisabledAndDoesNotReconnect()
+    {
+        TestHarness context = new();
+        context.Consent.NextResult = PrivilegedMetricsConsentChangeResult.Cancelled;
+        SettingsPageViewModel viewModel = context.InitializedViewModel();
+        int changed = 0;
+        viewModel.PrivilegedMetricsAccessChanged += () => changed++;
+
+        PrivilegedMetricsConsentChangeResult result =
+            await viewModel.ChangeConsentAsync(grant: true, TestCancellation);
+
+        Assert.Equal(PrivilegedMetricsConsentChangeResult.Cancelled, result);
+        Assert.Equal(PrivilegedMetricsConsentState.NotAllowed, viewModel.ConsentState);
+        Assert.Contains("did not grant administrator permission", viewModel.ConsentMessageText);
+        Assert.Equal(0, context.Consent.Reconnects);
+        Assert.Equal(0, changed);
+        Assert.False(viewModel.IsConsentChanging);
+        Assert.True(viewModel.AllowUnsignedClientCommand.CanExecute(null));
+        Assert.False(viewModel.RevokeUnsignedClientCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task AllowAndRevokeReconnectRefreshStatusAndFlipTheCommands()
+    {
+        TestHarness context = new();
+        context.Broker.Result = BrokerStatusPresentation.Create(BrokerOperationalState.Healthy);
+        SettingsPageViewModel viewModel = context.InitializedViewModel();
+        int changed = 0;
+        viewModel.PrivilegedMetricsAccessChanged += () => changed++;
+
+        Assert.Equal(PrivilegedMetricsConsentChangeResult.Succeeded,
+            await viewModel.ChangeConsentAsync(grant: true, TestCancellation));
+        Assert.Equal(PrivilegedMetricsConsentState.Allowed, viewModel.ConsentState);
+        Assert.Equal("Allowed", viewModel.ConsentStateText);
+        Assert.Equal([true], context.Consent.Requests);
+        Assert.Equal(1, context.Consent.Reconnects);
+        Assert.Equal(1, changed);
+        Assert.Equal(1, context.Broker.CallCount);
+        Assert.False(viewModel.AllowUnsignedClientCommand.CanExecute(null));
+        Assert.True(viewModel.RevokeUnsignedClientCommand.CanExecute(null));
+
+        await viewModel.RevokeUnsignedClientCommand.ExecuteAsync(null);
+        Assert.Equal(PrivilegedMetricsConsentState.NotAllowed, viewModel.ConsentState);
+        Assert.Equal([true, false], context.Consent.Requests);
+        Assert.Equal(2, context.Consent.Reconnects);
+        Assert.True(viewModel.AllowUnsignedClientCommand.CanExecute(null));
+        Assert.False(viewModel.RevokeUnsignedClientCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void SignedServiceReportsTheOptInAsNotRequired()
+    {
+        TestHarness context = new();
+        context.Consent.Applies = false;
+        context.Consent.Granted = true;
+
+        SettingsPageViewModel viewModel = context.InitializedViewModel();
+
+        Assert.Equal(PrivilegedMetricsConsentState.NotRequired, viewModel.ConsentState);
+        Assert.False(viewModel.AllowUnsignedClientCommand.CanExecute(null));
+        Assert.False(viewModel.RevokeUnsignedClientCommand.CanExecute(null));
+    }
+
+    private sealed class FakeConsent : IPrivilegedMetricsConsentService
+    {
+        public bool Granted { get; set; }
+
+        public bool Applies { get; set; } = true;
+
+        public PrivilegedMetricsConsentChangeResult? NextResult { get; set; }
+
+        public List<bool> Requests { get; } = [];
+
+        public int Reconnects { get; private set; }
+
+        public bool IsGranted() => Granted;
+
+        public bool OptInApplies() => Applies;
+
+        public Task<PrivilegedMetricsConsentChangeResult> RequestChangeAsync(
+            bool grant,
+            CancellationToken cancellationToken)
+        {
+            Requests.Add(grant);
+            PrivilegedMetricsConsentChangeResult result =
+                NextResult ?? PrivilegedMetricsConsentChangeResult.Succeeded;
+            if (result == PrivilegedMetricsConsentChangeResult.Succeeded)
+            {
+                Granted = grant;
+            }
+
+            return Task.FromResult(result);
+        }
+
+        public Task ReconnectAsync(CancellationToken cancellationToken)
+        {
+            Reconnects++;
+            return Task.CompletedTask;
+        }
+    }
+
     private sealed class TestHarness
     {
         public FakeStore Store { get; } = new();
@@ -411,8 +567,10 @@ public sealed class SettingsPageViewModelTests
 
         public LiveRefreshCadence Cadence { get; } = new(TimeSpan.FromSeconds(1));
 
+        public FakeConsent Consent { get; } = new();
+
         public SettingsPageViewModel ViewModel =>
-            new(Store, Retention, Broker, Cadence);
+            new(Store, Retention, Broker, Cadence, localization: null, Consent);
 
         public SettingsPageViewModel InitializedViewModel()
         {

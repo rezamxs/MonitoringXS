@@ -33,7 +33,8 @@ public sealed record ApplicationSettings(
     ApplicationTheme Theme,
     ApplicationLanguage Language = ApplicationLanguage.System,
     ApplicationSortPreference ApplicationSort = ApplicationSortPreference.Name,
-    bool ApplicationSortDescending = false)
+    bool ApplicationSortDescending = false,
+    bool PrivilegedMetricsConsentPromptSuppressed = false)
 {
     public const int CurrentVersion = 1;
 
@@ -44,6 +45,7 @@ public sealed record ApplicationSettings(
         ApplicationTheme.System,
         ApplicationLanguage.System,
         ApplicationSortPreference.Name,
+        false,
         false);
 
     public TimeSpan LiveSamplingInterval => TimeSpan.FromSeconds(LiveSamplingSeconds);

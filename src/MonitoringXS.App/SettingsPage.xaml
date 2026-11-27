@@ -225,6 +225,37 @@
                             Foreground="{StaticResource SecondaryTextBrush}"
                             Text="{Binding BrokerDetailText, Mode=OneWay}"
                             TextWrapping="Wrap" />
+                        <TextBlock x:Uid="SettingsConsentTitle"
+                            Margin="0,6,0,0"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Text="Unsigned build access" />
+                        <TextBlock x:Uid="SettingsConsentDescription"
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="This build isn't code-signed. The service accepts it only after an administrator allows it on this PC."
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            AutomationProperties.LiveSetting="Polite"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Text="{Binding ConsentStateText, Mode=OneWay}" />
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button x:Uid="SettingsConsentAllowButton"
+                                AutomationProperties.Name="Allow this unsigned build to use the Privileged Metrics Service"
+                                Command="{Binding AllowUnsignedClientCommand}"
+                                Content="Allow…"
+                                UseSystemFocusVisuals="True" />
+                            <Button x:Uid="SettingsConsentRevokeButton"
+                                AutomationProperties.Name="Revoke access to the Privileged Metrics Service"
+                                Command="{Binding RevokeUnsignedClientCommand}"
+                                Content="Revoke…"
+                                UseSystemFocusVisuals="True" />
+                        </StackPanel>
+                        <TextBlock
+                            AutomationProperties.LiveSetting="Polite"
+                            Foreground="{StaticResource SecondaryTextBrush}"
+                            Text="{Binding ConsentMessageText, Mode=OneWay}"
+                            TextWrapping="Wrap" />
                         <TextBlock x:Uid="SettingsOperatorCommand"
                             Foreground="{StaticResource SecondaryTextBrush}"
                             Text="Operator command: scripts/privileged-broker/Manage-PrivilegedBroker.ps1"
