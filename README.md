@@ -75,10 +75,14 @@ To build from source, additionally:
 - Visual Studio 2026 with the **WinUI application development** workload and a current Windows SDK
 - Windows Developer Mode, if Visual Studio prompts for it during local deployment
 
-## Build and test
+## Build from source
 
 ```powershell
+git clone https://github.com/rezamxs/MonitoringXS.git
+cd MonitoringXS
 dotnet restore MonitoringXS.sln
+# The integration tests build this helper outside the solution, so restore it explicitly (CI does the same):
+dotnet restore tests/MonitoringXS.ProcessActionTestHelper/MonitoringXS.ProcessActionTestHelper.csproj
 dotnet build MonitoringXS.sln -c Release --no-restore
 dotnet test MonitoringXS.sln -c Release --no-build
 ```
@@ -91,7 +95,7 @@ dotnet run --project src/MonitoringXS.App/MonitoringXS.App.csproj -c Debug -p:Pl
 
 Current restore/build/test counts are recorded in [docs/VALIDATION.md](docs/VALIDATION.md) after each checkpoint. Do not treat an older numbered result in that log as the live suite size.
 
-To install the Privileged Broker for disk and network metrics, run from elevated PowerShell:
+When running from source (not from the MSI), install the Privileged Broker for disk and network metrics from an elevated PowerShell:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Install
@@ -102,6 +106,8 @@ Status (unelevated):
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Status
 ```
+
+Remove it with `-Mode Remove`. To build the MSI locally, run `scripts\installer\Build-Installer.ps1` (output goes to `.artifacts\validation\installer-packaging\package`).
 
 See [development setup](docs/DEVELOPMENT.md) and [installer documentation](docs/INSTALLER.md).
 
@@ -121,7 +127,7 @@ Architecture details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Current status
 
-`main` is the current product line (through Phase E1: History UX and chart foundation). Beta installers are published as unsigned pre-releases on the [Releases](https://github.com/rezamxs/MonitoringXS/releases) page.
+Beta. `main` is the current product line; the first installer, [v1.0.0](https://github.com/rezamxs/MonitoringXS/releases/tag/v1.0.0), is published as an unsigned pre-release. Tags matching `v*` build the MSI and publish a pre-release automatically ([release workflow](.github/workflows/release.yml)).
 
 Some data is unavailable for protected or higher-integrity processes. The app reports that honestly instead of requesting permanent elevation.
 
@@ -139,6 +145,7 @@ Some data is unavailable for protected or higher-integrity processes. The app re
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Engineering style](docs/ENGINEERING_STYLE.md)
 - [Windows installer](docs/INSTALLER.md)
+- [Changelog](CHANGELOG.md)
 
 ## Feedback and bug reports
 
@@ -150,4 +157,6 @@ Some data is unavailable for protected or higher-integrity processes. The app re
 
 Issues and focused pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) before submitting.
 
-Created and maintained by [rezamxs](https://github.com/rezamxs). Licensed under the [MIT License](LICENSE).
+## License
+
+Released under the [MIT License](LICENSE). Created and maintained by [rezamxs](https://github.com/rezamxs).
