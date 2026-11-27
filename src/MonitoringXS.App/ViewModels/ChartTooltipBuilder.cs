@@ -21,9 +21,38 @@ internal static class ChartTooltipBuilder
         string unavailableText,
         string reasonText,
         string valueLabel,
-        CancellationToken cancellationToken = default,
-        CultureInfo? culture = null)
+        CancellationToken cancellationToken = default) =>
+        Build(
+            samples,
+            index,
+            metricName,
+            valueKind,
+            availableText,
+            partialText,
+            unavailableText,
+            reasonText,
+            valueLabel,
+            CultureInfo.InvariantCulture,
+            cancellationToken);
+
+    /// <summary>
+    /// Same as the culture-less overload, with the timestamp formatted in the
+    /// app's UI culture (never the Windows regional thread culture).
+    /// </summary>
+    public static string Build(
+        IReadOnlyList<CpuHistorySample> samples,
+        int index,
+        string metricName,
+        HistoryValueKind valueKind,
+        string availableText,
+        string partialText,
+        string unavailableText,
+        string reasonText,
+        string valueLabel,
+        CultureInfo culture,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(culture);
         if (samples is null || index < 0 || index >= samples.Count)
         {
             return string.Empty;
@@ -31,7 +60,7 @@ internal static class ChartTooltipBuilder
 
         cancellationToken.ThrowIfCancellationRequested();
         CpuHistorySample sample = samples[index];
-        string time = sample.Timestamp.ToLocalTime().ToString("g", culture ?? CultureInfo.InvariantCulture);
+        string time = sample.Timestamp.ToLocalTime().ToString("g", culture);
         string nameLine = $"{metricName} · {time}";
         string health = sample.Availability switch
         {

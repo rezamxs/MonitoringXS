@@ -411,7 +411,7 @@ public sealed partial class MetricSparkline : UserControl
             localization.Get(LocalizationKeys.Unavailable),
             localization.Get(LocalizationKeys.TooltipReason),
             localization.Get(LocalizationKeys.TooltipValue),
-            culture: localization.Culture);
+            localization.Culture);
         if (string.IsNullOrEmpty(tooltip))
         {
             _hoverIndex = -1;

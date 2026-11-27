@@ -68,8 +68,8 @@ public sealed class MetricNumberFormattingTests
             "Unavailable",
             "Reason",
             "Value",
-            TestContext.Current.CancellationToken,
-            CultureInfo.GetCultureInfo("en-US"));
+            CultureInfo.GetCultureInfo("en-US"),
+            TestContext.Current.CancellationToken);
 
         Assert.Contains("Value: 4.3 GB", tooltip, StringComparison.Ordinal);
         Assert.Contains(
