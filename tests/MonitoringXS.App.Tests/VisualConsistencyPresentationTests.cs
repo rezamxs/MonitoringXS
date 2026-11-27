@@ -94,6 +94,36 @@ public sealed class VisualConsistencyPresentationTests
     }
 
     [Fact]
+    public void MetricIconsAreSemanticAndSharedAcrossOverviewAndRunningApps()
+    {
+        string root = FindRepositoryRoot();
+        string main = Read(root, "MainWindow.xaml");
+        string overview = File.ReadAllText(Path.Combine(
+            root, "src", "MonitoringXS.App", "ViewModels", "SystemOverviewPageViewModel.cs"));
+
+        Assert.Equal("\uE950", MetricGlyphs.Cpu);
+        Assert.Equal("\uE964", MetricGlyphs.Memory);
+        Assert.Equal("\uEDA2", MetricGlyphs.Disk);
+        Assert.Equal("\uE774", MetricGlyphs.Network);
+        Assert.Equal("\uE7F4", MetricGlyphs.Gpu);
+        Assert.Equal(5, new[] { MetricGlyphs.Cpu, MetricGlyphs.Memory, MetricGlyphs.Disk, MetricGlyphs.Network, MetricGlyphs.Gpu }.Distinct().Count());
+
+        // Settings gears (E9F5), code braces (E943) and the PC tower (E968)
+        // were used for CPU, GPU and Network; none of them may come back.
+        foreach (string wrong in new[] { "E9F5", "E943", "E968" })
+        {
+            Assert.DoesNotContain($"&#x{wrong};", main, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain($"\\u{wrong}", overview, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("MetricGlyphs.Cpu", overview, StringComparison.Ordinal);
+        Assert.Contains("MetricGlyphs.Gpu", overview, StringComparison.Ordinal);
+        Assert.Contains("Glyph=\"&#xE950;\"", main, StringComparison.Ordinal);
+        Assert.Contains("Glyph=\"&#xE7F4;\"", main, StringComparison.Ordinal);
+        Assert.Contains("Glyph=\"&#xE774;\"", main, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AsyncIconLoadersKeepTheLateResultPathGuard()
     {
         string root = FindRepositoryRoot();

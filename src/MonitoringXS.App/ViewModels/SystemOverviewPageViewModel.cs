@@ -84,15 +84,15 @@ public sealed partial class SystemOverviewPageViewModel : ObservableObject
     public SystemOverviewPageViewModel(LocalizationService localization)
     {
         _localization = localization;
-        _cpu = new() { ChartScale = MetricSparklineScale.Percent, IconGlyph = "\uE9F5" };
-        _memory = new() { ChartScale = MetricSparklineScale.Percent, HasSecondaryValue = true, IconGlyph = "\uE950" };
+        _cpu = new() { ChartScale = MetricSparklineScale.Percent, IconGlyph = MetricGlyphs.Cpu };
+        _memory = new() { ChartScale = MetricSparklineScale.Percent, HasSecondaryValue = true, IconGlyph = MetricGlyphs.Memory };
         _disk = new()
         {
             ChartScale = MetricSparklineScale.Dynamic,
             UnitText = "bytes/s",
             HasSecondaryValue = true,
             HasSecondarySeries = true,
-            IconGlyph = "\uEDA2"
+            IconGlyph = MetricGlyphs.Disk
         };
         _network = new()
         {
@@ -100,9 +100,9 @@ public sealed partial class SystemOverviewPageViewModel : ObservableObject
             UnitText = "bytes/s",
             HasSecondaryValue = true,
             HasSecondarySeries = true,
-            IconGlyph = "\uE968"
+            IconGlyph = MetricGlyphs.Network
         };
-        _gpu = new() { ChartScale = MetricSparklineScale.Percent, IconGlyph = "\uE943" };
+        _gpu = new() { ChartScale = MetricSparklineScale.Percent, IconGlyph = MetricGlyphs.Gpu };
         SummaryCards = [_cpu, _memory, _disk, _network, _gpu];
         PrimaryCards = [_cpu, _memory];
         SecondaryCards = [_disk, _network, _gpu];
