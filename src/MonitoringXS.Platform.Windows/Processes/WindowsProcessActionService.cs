@@ -642,7 +642,11 @@ internal sealed class WindowsProcessActionNative : IProcessActionNative
         NativeProcessRead read = Read(process, target.InstanceId.ProcessId);
         if (read.Status != ProcessActionStatus.Success || read.Process is null)
         {
-            return read.Status;
+            // A process that exits between the tree snapshot and this read
+            // (for example a conhost.exe whose console client just ended)
+            // makes the image-name and protection queries fail. That is not
+            // a refusal: the handle is signaled, so report it as exited.
+            return HasExited(process) ? ProcessActionStatus.AlreadyExited : read.Status;
         }
 
         NativeProcessInfo actual = read.Process;
@@ -663,6 +667,14 @@ internal sealed class WindowsProcessActionNative : IProcessActionNative
         if (!TerminateProcess(process, 1))
         {
             int error = Marshal.GetLastPInvokeError();
+            // TerminateProcess answers ERROR_ACCESS_DENIED for a process that is
+            // already exiting. Give it the remaining timeout to finish before
+            // treating the failure as real.
+            if (WaitForExit(process, timeout))
+            {
+                return ProcessActionStatus.AlreadyExited;
+            }
+
             return error == ErrorAccessDenied
                 ? ProcessActionStatus.AccessDenied
                 : ProcessActionStatus.Failed;
@@ -800,6 +812,30 @@ internal sealed class WindowsProcessActionNative : IProcessActionNative
         {
             ArrayPool<char>.Shared.Return(rented);
         }
+    }
+
+    private static bool HasExited(SafeProcessHandle process) =>
+        WaitForSingleObject(process, 0) == WaitObject0;
+
+    private static bool WaitForExit(SafeProcessHandle process, TimeSpan timeout)
+    {
+        Stopwatch elapsed = Stopwatch.StartNew();
+        do
+        {
+            uint wait = WaitForSingleObject(process, 50);
+            if (wait == WaitObject0)
+            {
+                return true;
+            }
+
+            if (wait != WaitTimeout)
+            {
+                return false;
+            }
+        }
+        while (elapsed.Elapsed < timeout);
+
+        return false;
     }
 
     private static string NormalizeName(string value) =>
