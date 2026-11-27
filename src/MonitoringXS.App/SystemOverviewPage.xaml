@@ -225,8 +225,8 @@
             <!--
                 One column per series: label, value and its chart together. The
                 earlier layout listed the values and then repeated the same
-                labels above the charts, which read as duplicated rows (its
-                AdaptiveTrigger never fired inside a DataTemplate).
+                labels above the charts, which read as duplicated rows (its window-width
+                trigger never fired inside a DataTemplate).
             -->
             <Border
                 Padding="16"
