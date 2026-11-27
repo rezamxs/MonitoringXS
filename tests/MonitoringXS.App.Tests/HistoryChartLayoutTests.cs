@@ -192,6 +192,34 @@ public sealed class HistoryChartLayoutTests
     }
 
     [Fact]
+    public void BackgroundCadenceSamplesBetweenOneSecondSamplesAreNotGaps()
+    {
+        HistoryMetricDefinition definition = new(
+            MetricHistoryMetric.WorkingSetBytes,
+            "Working Set",
+            HistoryValueKind.Bytes);
+        List<MetricHistoryPoint> points = [];
+        for (int second = 0; second < 60; second++)
+        {
+            points.Add(Point(Start.AddSeconds(second), 10 + second, MetricAvailability.Available));
+        }
+
+        for (int second = 65; second <= 120; second += 5)
+        {
+            points.Add(Point(Start.AddSeconds(second), 100 + second, MetricAvailability.Available));
+        }
+
+        var presentation = HistorySeriesPresentation.Create(
+            definition,
+            new MetricHistoryQueryResult(points, true),
+            new("15 minutes", TimeSpan.FromMinutes(15)),
+            360);
+
+        Assert.DoesNotContain(presentation.Samples, sample => !sample.Value.HasValue);
+        Assert.Equal(TimeSpan.FromSeconds(15), HistorySeriesPresentation.MinimumGapThreshold);
+    }
+
+    [Fact]
     public void PresentationSplitsLargeTimeAndPidLifetimeGaps()
     {
         HistoryMetricDefinition definition = new(

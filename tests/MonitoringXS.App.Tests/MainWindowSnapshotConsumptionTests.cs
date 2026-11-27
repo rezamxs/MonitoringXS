@@ -33,6 +33,60 @@ public sealed class MainWindowSnapshotConsumptionTests
         Assert.Equal(2, viewModel.InstalledApplications.Count);
     }
 
+    [Fact]
+    public void HiddenRunningApplicationsSkipUpdatesAndCatchUpFromLatestWhenShown()
+    {
+        using MainWindowViewModel viewModel = new(
+            NullLogger<MainWindowViewModel>.Instance,
+            new LocalizationService());
+        viewModel.ApplySnapshot(Snapshot(10, 20));
+        ApplicationCardViewModel first = viewModel.InstalledApplications
+            .Single(card => card.LogicalApplicationId == "one");
+
+        viewModel.SetLiveSurfaces(LiveSurfaces.None);
+        MonitoringSnapshot hidden = Snapshot(40, 50);
+        viewModel.ApplySnapshot(hidden);
+        viewModel.ApplySnapshot(Snapshot(70, 80));
+
+        Assert.Equal(10, first.LatestSnapshot!.CpuPercent.Value);
+        Assert.NotSame(hidden, viewModel.LatestDashboardSnapshot);
+
+        viewModel.SetLiveSurfaces(LiveSurfaces.RunningApplications);
+
+        Assert.Same(first, viewModel.InstalledApplications.Single(card => card.LogicalApplicationId == "one"));
+        Assert.Equal(70, first.LatestSnapshot!.CpuPercent.Value);
+        Assert.Equal(LiveSurfaces.RunningApplications, viewModel.LiveSurfaces);
+    }
+
+    [Fact]
+    public void LiveRunningApplicationsKeepUpdatingWhileOverviewIsSkipped()
+    {
+        using MainWindowViewModel viewModel = new(
+            NullLogger<MainWindowViewModel>.Instance,
+            new LocalizationService());
+        viewModel.SetLiveSurfaces(LiveSurfaces.RunningApplications);
+
+        viewModel.ApplySnapshot(Snapshot(10, 20));
+        viewModel.ApplySnapshot(Snapshot(30, 40));
+
+        Assert.Equal(30, viewModel.InstalledApplications
+            .Single(card => card.LogicalApplicationId == "one")
+            .LatestSnapshot!.CpuPercent.Value);
+    }
+
+    [Fact]
+    public void ShowingASurfaceWithNothingStaleDoesNotReapplyAnything()
+    {
+        using MainWindowViewModel viewModel = new(
+            NullLogger<MainWindowViewModel>.Instance,
+            new LocalizationService());
+
+        viewModel.SetLiveSurfaces(LiveSurfaces.SystemOverview);
+
+        Assert.Null(viewModel.LatestDashboardSnapshot);
+        Assert.Empty(viewModel.InstalledApplications);
+    }
+
     private static MonitoringSnapshot Snapshot(double firstCpu, double secondCpu)
     {
         DateTimeOffset capturedAt = DateTimeOffset.UtcNow;

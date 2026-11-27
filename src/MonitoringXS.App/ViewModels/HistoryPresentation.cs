@@ -261,8 +261,15 @@ internal static class HistorySeriesPresentation
             ? TimeSpan.FromMinutes(5)
             : TimeSpan.FromTicks(range.Duration.Ticks / Math.Max(1, maximumPoints));
         TimeSpan cadence = median > TimeSpan.Zero && median < expected ? median : expected;
-        return TimeSpan.FromTicks(Math.Max(TimeSpan.TicksPerSecond, cadence.Ticks * 3));
+        return TimeSpan.FromTicks(Math.Max(MinimumGapThreshold.Ticks, cadence.Ticks * 3));
     }
+
+    /// <summary>
+    /// History keeps recording at the slower background cadence while the window
+    /// is minimized; spacing up to three background ticks is continuous data, not a gap.
+    /// </summary>
+    internal static readonly TimeSpan MinimumGapThreshold =
+        global::MonitoringXS.Application.LiveRefreshCadence.BackgroundInterval * 3;
 
     internal static string Format(double value, HistoryValueKind kind) => kind switch
     {

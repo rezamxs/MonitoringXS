@@ -11,6 +11,7 @@ using MonitoringXS.Application;
 using MonitoringXS.Core.Models;
 using MonitoringXS.Platform.Windows.Accessibility;
 using MonitoringXS.Platform.Windows.Broker;
+using MonitoringXS.Platform.Windows.Processes;
 using Windows.Graphics;
 using SettingsTheme = MonitoringXS.Core.Models.ApplicationTheme;
 
@@ -30,6 +31,9 @@ public sealed partial class MainWindow : Window, IDisposable
     private readonly IMonitoringSnapshotSource _snapshots;
     private readonly MonitoringRuntime _runtime;
     private readonly SettingsPageViewModel _settingsViewModel;
+    private readonly LiveRefreshCadence _cadence;
+    private WindowPresence _presence = WindowPresence.Visible;
+    private string? _navigationTag = "running";
     private bool _disposed;
     private bool? _toolbarUsesSingleRow;
 
@@ -41,10 +45,12 @@ public sealed partial class MainWindow : Window, IDisposable
         SettingsPageViewModel settingsViewModel,
         IMonitoringSnapshotSource snapshots,
         MonitoringRuntime runtime,
+        LiveRefreshCadence cadence,
         LocalizationService localization,
         string initialNavigationTag = "running")
     {
         ViewModel = viewModel;
+        _cadence = cadence;
         _snapshots = snapshots;
         _runtime = runtime;
         _settingsViewModel = settingsViewModel;
@@ -72,6 +78,8 @@ public sealed partial class MainWindow : Window, IDisposable
         AppWindow.Resize(new SizeInt32(1180, 760));
         Root.Loaded += Root_Loaded;
         Closed += MainWindow_Closed;
+        VisibilityChanged += MainWindow_VisibilityChanged;
+        Activated += MainWindow_Activated;
         PrimaryNavigation.SelectedItem = PrimaryNavigation.MenuItems
             .OfType<NavigationViewItem>()
             .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), initialNavigationTag, StringComparison.Ordinal))
@@ -110,6 +118,7 @@ public sealed partial class MainWindow : Window, IDisposable
     {
         AppWindow.Changed += AppWindow_Changed;
         UpdateToolbarLayout(AppWindow.Size.Width);
+        UpdatePresence();
     }
 
     private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
@@ -118,7 +127,68 @@ public sealed partial class MainWindow : Window, IDisposable
         {
             UpdateToolbarLayout(sender.Size.Width);
         }
+
+        if (args.DidPresenterChange || args.DidVisibilityChange || args.DidSizeChange)
+        {
+            UpdatePresence();
+        }
     }
+
+    private void MainWindow_VisibilityChanged(object sender, WindowVisibilityChangedEventArgs args) =>
+        UpdatePresence(args.Visible);
+
+    private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
+    {
+        if (args.WindowActivationState != WindowActivationState.Deactivated)
+        {
+            UpdatePresence(windowVisible: true);
+        }
+    }
+
+    /// <summary>
+    /// Minimized or hidden: stop presenting snapshots, sample at the slower
+    /// background cadence (history keeps recording) and give memory back once.
+    /// Shown again: catch up from the latest snapshot and capture right away.
+    /// </summary>
+    private void UpdatePresence(bool? windowVisible = null)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        // A shown or activated window is trusted as visible even if the presenter
+        // state has not caught up yet, so live updates can never stay paused.
+        bool minimized = AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized };
+        WindowPresence presence = windowVisible switch
+        {
+            true => WindowPresence.Visible,
+            false => minimized ? WindowPresence.Minimized : WindowPresence.Hidden,
+            null => minimized
+                ? WindowPresence.Minimized
+                : AppWindow.IsVisible ? WindowPresence.Visible : WindowPresence.Hidden
+        };
+        WindowPresence previous = _presence;
+        if (presence == previous)
+        {
+            return;
+        }
+
+        _presence = presence;
+        _cadence.SetBackground(LiveSurfacePolicy.UsesBackgroundCadence(presence));
+        ApplyLiveSurfaces();
+        if (LiveSurfacePolicy.ShouldReleaseMemory(previous, presence))
+        {
+            _ = Task.Run(CurrentProcessMemory.Release, CancellationToken.None);
+        }
+        else if (presence == WindowPresence.Visible)
+        {
+            _ = RequestFreshCaptureAsync();
+        }
+    }
+
+    private void ApplyLiveSurfaces() =>
+        ViewModel.SetLiveSurfaces(LiveSurfacePolicy.Visible(_navigationTag, _presence));
 
     private void UpdateToolbarLayout(double physicalWindowWidth)
     {
@@ -357,9 +427,9 @@ public sealed partial class MainWindow : Window, IDisposable
     }
 
     private void SettingsViewModel_PrivilegedMetricsAccessChanged() =>
-        _ = RequestCaptureAfterAccessChangeAsync();
+        _ = RequestFreshCaptureAsync();
 
-    private async Task RequestCaptureAfterAccessChangeAsync()
+    private async Task RequestFreshCaptureAsync()
     {
         try
         {
@@ -519,6 +589,7 @@ public sealed partial class MainWindow : Window, IDisposable
         NavigationViewSelectionChangedEventArgs args)
     {
         string? selected = args.SelectedItemContainer?.Tag?.ToString();
+        _navigationTag = selected;
         bool systemOverviewSelected = selected == "system-overview";
         bool historySelected = selected == "history";
         bool diagnosticsSelected = selected == "diagnostics";
@@ -533,6 +604,7 @@ public sealed partial class MainWindow : Window, IDisposable
         DiagnosticsWorkspace.Visibility = diagnosticsSelected ? Visibility.Visible : Visibility.Collapsed;
         SettingsWorkspace.Visibility = settingsSelected ? Visibility.Visible : Visibility.Collapsed;
         AboutWorkspace.Visibility = aboutSelected ? Visibility.Visible : Visibility.Collapsed;
+        ApplyLiveSurfaces();
         if (historySelected)
         {
             await HistoryWorkspace.ActivateAsync();
@@ -574,6 +646,8 @@ public sealed partial class MainWindow : Window, IDisposable
 
         _disposed = true;
         AppWindow.Changed -= AppWindow_Changed;
+        VisibilityChanged -= MainWindow_VisibilityChanged;
+        Activated -= MainWindow_Activated;
         Root.ActualThemeChanged -= Root_ActualThemeChanged;
         _settingsViewModel.ThemeRequested -= ApplyAppearance;
         _settingsViewModel.PrivilegedMetricsAccessChanged -= SettingsViewModel_PrivilegedMetricsAccessChanged;
