@@ -16,7 +16,9 @@ public sealed partial class SystemOverviewMetricCardViewModel : ObservableObject
     [ObservableProperty] public partial string SecondaryLabel { get; set; } = string.Empty;
     [ObservableProperty] public partial string SecondaryValue { get; set; } = string.Empty;
     [ObservableProperty] public partial bool HasSecondaryValue { get; set; }
-    [ObservableProperty] public partial bool HasSecondarySeries { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SeriesColumnSpan))]
+    public partial bool HasSecondarySeries { get; set; }
     [ObservableProperty] public partial bool HasStatus { get; set; }
     [ObservableProperty] public partial string StatusLabel { get; set; } = string.Empty;
     [ObservableProperty] public partial string StatusText { get; set; } = string.Empty;
@@ -27,6 +29,9 @@ public sealed partial class SystemOverviewMetricCardViewModel : ObservableObject
     [ObservableProperty] public partial string Explanation { get; set; } = string.Empty;
 
     public string IconGlyph { get; init; } = string.Empty;
+
+    /// <summary>A single-series activity row lets its chart span both columns.</summary>
+    public int SeriesColumnSpan => HasSecondarySeries ? 1 : 2;
 
     public ObservableCollection<CpuHistorySample> PrimarySamples { get; } = [];
 
@@ -273,7 +278,10 @@ public sealed partial class SystemOverviewPageViewModel : ObservableObject
         bool invalidCpu = snapshot.TotalCpuPercent.IsAvailable
             && !CanDisplayPercent(snapshot.TotalCpuPercent);
         _cpu.PrimaryValue = FormatPercent(snapshot.TotalCpuPercent);
-        SetStatus(_cpu, invalidCpu ? MetricAvailability.Error : snapshot.Diagnostics.CpuAvailability);
+        SetStatus(
+            _cpu,
+            invalidCpu ? MetricAvailability.Error : snapshot.Diagnostics.CpuAvailability,
+            IsZeroLowerBound(snapshot.TotalCpuPercent));
 
         bool invalidMemory = !IsValidMemory(snapshot);
         _memory.PrimaryValue = _localization.Format(
@@ -289,7 +297,10 @@ public sealed partial class SystemOverviewPageViewModel : ObservableObject
                 && !CanDisplayRate(snapshot.DiskWriteBytesPerSecond);
         _disk.PrimaryValue = FormatRate(snapshot.DiskReadBytesPerSecond);
         _disk.SecondaryValue = FormatRate(snapshot.DiskWriteBytesPerSecond);
-        SetStatus(_disk, invalidDisk ? MetricAvailability.Error : snapshot.Diagnostics.DiskAvailability);
+        SetStatus(
+            _disk,
+            invalidDisk ? MetricAvailability.Error : snapshot.Diagnostics.DiskAvailability,
+            IsZeroLowerBound(snapshot.DiskReadBytesPerSecond) || IsZeroLowerBound(snapshot.DiskWriteBytesPerSecond));
 
         bool invalidNetwork = snapshot.NetworkReceiveBytesPerSecond.IsAvailable
                 && !CanDisplayRate(snapshot.NetworkReceiveBytesPerSecond)
@@ -297,22 +308,35 @@ public sealed partial class SystemOverviewPageViewModel : ObservableObject
                 && !CanDisplayRate(snapshot.NetworkSendBytesPerSecond);
         _network.PrimaryValue = FormatRate(snapshot.NetworkReceiveBytesPerSecond);
         _network.SecondaryValue = FormatRate(snapshot.NetworkSendBytesPerSecond);
-        SetStatus(_network, invalidNetwork ? MetricAvailability.Error : snapshot.Diagnostics.NetworkAvailability);
+        SetStatus(
+            _network,
+            invalidNetwork ? MetricAvailability.Error : snapshot.Diagnostics.NetworkAvailability,
+            IsZeroLowerBound(snapshot.NetworkReceiveBytesPerSecond) || IsZeroLowerBound(snapshot.NetworkSendBytesPerSecond));
 
         bool invalidGpu = snapshot.GpuUtilizationPercent.IsAvailable
             && !CanDisplayPercent(snapshot.GpuUtilizationPercent);
         _gpu.PrimaryValue = FormatPercent(snapshot.GpuUtilizationPercent);
-        SetStatus(_gpu, invalidGpu ? MetricAvailability.Error : snapshot.Diagnostics.GpuAvailability);
+        SetStatus(
+            _gpu,
+            invalidGpu ? MetricAvailability.Error : snapshot.Diagnostics.GpuAvailability,
+            IsZeroLowerBound(snapshot.GpuUtilizationPercent));
     }
 
-    private void SetStatus(SystemOverviewMetricCardViewModel card, MetricAvailability availability)
+    private void SetStatus(
+        SystemOverviewMetricCardViewModel card,
+        MetricAvailability availability,
+        bool zeroLowerBound = false)
     {
         // Partial status hides the visible badge but keeps the ≥ prefix in the value
-        // and the technical explanation in the tooltip for accessibility.
-        card.HasStatus = availability != MetricAvailability.Available
-            && availability != MetricAvailability.Partial;
+        // and the technical explanation in the tooltip for accessibility. A lower
+        // bound of zero carries no information ("≥ 0.0%"), so that value is shown
+        // plainly and the compact Partial badge says it is incomplete instead.
+        bool partialBadge = availability == MetricAvailability.Partial && zeroLowerBound;
+        card.HasStatus = partialBadge
+            || availability != MetricAvailability.Available
+                && availability != MetricAvailability.Partial;
         card.StatusLabel = availability == MetricAvailability.Partial
-            ? string.Empty
+            ? partialBadge ? _partialLabel : string.Empty
             : AvailabilityText(availability);
         card.StatusText = availability switch
         {
@@ -393,7 +417,14 @@ public sealed partial class SystemOverviewPageViewModel : ObservableObject
     }
 
     private static string PartialPrefix<T>(MetricValue<T> metric) where T : struct =>
-        metric.Availability == MetricAvailability.Partial ? "≥ " : string.Empty;
+        metric.Availability == MetricAvailability.Partial && !IsZeroLowerBound(metric)
+            ? "≥ "
+            : string.Empty;
+
+    private static bool IsZeroLowerBound<T>(MetricValue<T> metric) where T : struct =>
+        metric.Availability == MetricAvailability.Partial
+        && metric.Value is { } value
+        && EqualityComparer<T>.Default.Equals(value, default);
 
     private static void SyncSeries(
         ObservableCollection<CpuHistorySample> samples,

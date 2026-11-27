@@ -144,7 +144,10 @@ public sealed class VisualConsistencyPresentationTests
         string overview = Read(root, "SystemOverviewPage.xaml");
         string chart = File.ReadAllText(Path.Combine(root, "src", "MonitoringXS.App", "Controls", "MetricSparkline.xaml.cs"));
 
-        Assert.Equal(5, Count(overview, "IsEmbedded=\"True\""));
+        // Summary, primary, and one chart per activity series (read/write or receive/send).
+        Assert.Equal(4, Count(overview, "IsEmbedded=\"True\""));
+        Assert.DoesNotContain("AdaptiveTrigger", overview, StringComparison.Ordinal);
+        Assert.Contains("StretchDirection=\"DownOnly\"", overview, StringComparison.Ordinal);
         Assert.DoesNotContain("Height=\"120\"", overview, StringComparison.Ordinal);
         Assert.Contains("leftInset = isEmbedded ? 2 : LeftInset", File.ReadAllText(Path.Combine(root, "src", "MonitoringXS.App", "Controls", "CpuHistorySeries.cs")), StringComparison.Ordinal);
         Assert.Contains("TopAxisLabel.Visibility = Visibility.Collapsed", chart, StringComparison.Ordinal);

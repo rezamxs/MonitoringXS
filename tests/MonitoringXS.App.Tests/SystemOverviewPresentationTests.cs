@@ -66,6 +66,35 @@ public sealed class SystemOverviewPresentationTests
     }
 
     [Fact]
+    public void ZeroLowerBoundShowsAPartialBadgeInsteadOfGreaterThanOrEqualZero()
+    {
+        SystemOverviewPageViewModel viewModel = CreateViewModel();
+        SystemOverviewSnapshot snapshot = Snapshot() with
+        {
+            GpuUtilizationPercent = MetricValue<double>.Partial(0, "lower bound"),
+            Diagnostics = Snapshot().Diagnostics with { GpuAvailability = MetricAvailability.Partial }
+        };
+
+        viewModel.Update(snapshot, []);
+
+        SystemOverviewMetricCardViewModel gpu = viewModel.SecondaryCards[2];
+        Assert.Equal("0.0%", gpu.PrimaryValue);
+        Assert.True(gpu.HasStatus);
+        Assert.Equal("Partial", gpu.StatusLabel);
+        Assert.False(string.IsNullOrWhiteSpace(gpu.StatusText));
+    }
+
+    [Fact]
+    public void SingleSeriesActivityChartsSpanBothColumns()
+    {
+        SystemOverviewPageViewModel viewModel = CreateViewModel();
+
+        Assert.Equal(1, viewModel.SecondaryCards[0].SeriesColumnSpan);
+        Assert.Equal(1, viewModel.SecondaryCards[1].SeriesColumnSpan);
+        Assert.Equal(2, viewModel.SecondaryCards[2].SeriesColumnSpan);
+    }
+
+    [Fact]
     public void PartialAndGpuUnsupportedArePresentedCalmly()
     {
         SystemOverviewPageViewModel viewModel = CreateViewModel();
@@ -164,7 +193,8 @@ public sealed class SystemOverviewPresentationTests
         Assert.Contains("ItemsSource=\"{Binding SummaryCards}\"", page, StringComparison.Ordinal);
         Assert.Contains("MaximumRowsOrColumns=\"5\"", page, StringComparison.Ordinal);
         Assert.Contains("x:Key=\"ActivityMetricTemplate\"", page, StringComparison.Ordinal);
-        Assert.Contains("AdaptiveTrigger MinWindowWidth=\"760\"", page, StringComparison.Ordinal);
+        // Summary titles and values shrink to fit instead of wrapping or clipping.
+        Assert.Contains("StretchDirection=\"DownOnly\"", page, StringComparison.Ordinal);
         Assert.Contains("ShowSummary=\"False\"", page, StringComparison.Ordinal);
         Assert.Contains("IsEmbedded=\"True\"", page, StringComparison.Ordinal);
     }
