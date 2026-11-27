@@ -59,6 +59,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             settingsViewModel,
             _services.GetRequiredService<IMonitoringSnapshotSource>(),
             runtime,
+            cadence,
             Localization);
         _window = mainWindow;
         _window.Closed += Window_Closed;
@@ -97,6 +98,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             _services.GetRequiredService<SettingsPageViewModel>(),
             _services.GetRequiredService<IMonitoringSnapshotSource>(),
             _services.GetRequiredService<MonitoringRuntime>(),
+            _services.GetRequiredService<LiveRefreshCadence>(),
             Localization,
             selectedNavigation);
         _window = replacement;

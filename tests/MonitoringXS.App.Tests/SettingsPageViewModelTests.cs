@@ -23,12 +23,13 @@ public sealed class SettingsPageViewModelTests
             true,
             "Recovered."));
 
-        Assert.Equal(1, viewModel.SelectedSampling?.Value);
+        Assert.Equal(2, viewModel.SelectedSampling?.Value);
+        Assert.Equal(TimeSpan.FromSeconds(2), context.Cadence.Interval);
         Assert.Equal(24, viewModel.SelectedRetention?.Value);
         Assert.Equal(ApplicationTheme.System, viewModel.SelectedTheme?.Value);
         Assert.Equal(SettingsPageState.Ready, viewModel.State);
         Assert.Equal("Recovered.", viewModel.StatusText);
-        Assert.Contains("Sampling 1 second", viewModel.AccessibilitySummary);
+        Assert.Contains("Sampling 2 seconds", viewModel.AccessibilitySummary);
         Assert.Empty(context.Store.Saved);
     }
 
@@ -574,8 +575,9 @@ public sealed class SettingsPageViewModelTests
 
         public SettingsPageViewModel InitializedViewModel()
         {
+            // Start from one second so the tests below exercise a real change to two.
             SettingsPageViewModel viewModel = ViewModel;
-            viewModel.Initialize(new(ApplicationSettings.Default, true, false));
+            viewModel.Initialize(new(ApplicationSettings.Default with { LiveSamplingSeconds = 1 }, true, false));
             return viewModel;
         }
     }

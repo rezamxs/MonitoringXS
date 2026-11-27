@@ -38,9 +38,11 @@ public sealed record ApplicationSettings(
 {
     public const int CurrentVersion = 1;
 
+    // Two-second sampling is the default: it halves steady sampling and redraw
+    // work compared with one second; one second remains available in Settings.
     public static ApplicationSettings Default { get; } = new(
         CurrentVersion,
-        1,
+        2,
         24,
         ApplicationTheme.System,
         ApplicationLanguage.System,

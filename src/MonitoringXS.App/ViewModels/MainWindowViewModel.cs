@@ -35,6 +35,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private ApplicationSectionViewModel _installedSection = null!;
     private ApplicationSectionViewModel _portableSection = null!;
     private DateTimeOffset _lastLiveSortAt = DateTimeOffset.MinValue;
+    private LiveSurfaces _liveSurfaces = LiveSurfaces.All;
+    private LiveSurfaces _staleSurfaces;
     private Func<ProcessActionConfirmation, CancellationToken, Task<bool>>? _confirmProcessAction;
     private Func<CancellationToken, Task>? _refreshAfterProcessAction;
     private Func<ApplicationSortPreference, bool, CancellationToken, Task>? _persistSort;
@@ -148,11 +150,44 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool HasNoSearchResults =>
         !string.IsNullOrWhiteSpace(SearchText) && !VisibleCards().Any();
 
+    /// <summary>The surfaces currently updated on every snapshot; the rest catch up when shown.</summary>
+    public LiveSurfaces LiveSurfaces => _liveSurfaces;
+
     public void ApplySnapshot(MonitoringSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         LatestDashboardSnapshot = snapshot;
-        SystemOverview.Update(snapshot.SystemOverview, snapshot.SystemOverviewHistory ?? []);
+        _staleSurfaces = LiveSurfacePolicy.MarkSkipped(_staleSurfaces, _liveSurfaces);
+        Present(snapshot, _liveSurfaces);
+    }
+
+    /// <summary>
+    /// Limits per-tick UI work to what is on screen. Surfaces that missed snapshots
+    /// while hidden are brought up to date from the latest snapshot right away.
+    /// </summary>
+    public void SetLiveSurfaces(LiveSurfaces surfaces)
+    {
+        LiveSurfaces resumed = LiveSurfacePolicy.Resumed(_staleSurfaces, surfaces);
+        _liveSurfaces = surfaces;
+        _staleSurfaces &= ~resumed;
+        if (resumed != LiveSurfaces.None && LatestDashboardSnapshot is { } latest)
+        {
+            Present(latest, resumed);
+        }
+    }
+
+    private void Present(MonitoringSnapshot snapshot, LiveSurfaces surfaces)
+    {
+        if ((surfaces & LiveSurfaces.SystemOverview) != 0)
+        {
+            SystemOverview.Update(snapshot.SystemOverview, snapshot.SystemOverviewHistory ?? []);
+        }
+
+        if ((surfaces & LiveSurfaces.RunningApplications) == 0)
+        {
+            return;
+        }
+
         ApplicationMetricSnapshot[] installed = snapshot.Applications
             .Where(item => item.Application.Disposition is ApplicationDisposition.Installed or ApplicationDisposition.Packaged)
             .ToArray();

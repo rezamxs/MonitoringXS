@@ -62,7 +62,8 @@ public sealed class SystemOverviewService
 
     private const int OneMinuteCapacity = 60;
     private readonly ISystemOverviewProvider _provider;
-    private readonly BoundedTimeSeries<SystemOverviewHistoryPoint> _history = new(OneMinuteCapacity);
+    private readonly BoundedTimeSeries<SystemOverviewHistoryPoint> _history =
+        new(OneMinuteCapacity, TimeSpan.FromMinutes(1));
     private readonly object _gate = new();
 
     // Track previous session totals for rate computation.

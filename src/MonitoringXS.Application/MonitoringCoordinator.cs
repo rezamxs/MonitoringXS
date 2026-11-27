@@ -8,6 +8,7 @@ namespace MonitoringXS.Application;
 public sealed class MonitoringCoordinator
 {
     private const int OneMinuteCapacity = 60;
+    private static readonly TimeSpan OneMinute = TimeSpan.FromMinutes(1);
     private const int MaximumApplicationHistorySeries = 512;
     private readonly IProcessDiscoveryService _discovery;
     private readonly IApplicationAttributionService _attribution;
@@ -155,7 +156,7 @@ public sealed class MonitoringCoordinator
                     continue;
                 }
 
-                series = new BoundedTimeSeries<ApplicationHistoryPoint>(OneMinuteCapacity);
+                series = new BoundedTimeSeries<ApplicationHistoryPoint>(OneMinuteCapacity, OneMinute);
                 _history.Add(application.Application.LogicalApplicationId, series);
             }
 
