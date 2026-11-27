@@ -50,17 +50,30 @@ Physical disk and network monitoring use a restricted LocalSystem service (`Priv
 
 GPU values come from Windows `GPU Engine` and `GPU Process Memory` counters on WDDM-capable drivers. Missing counter objects, protected processes, and software-rendered workloads stay unavailable or partial. That is not a claim of universal GPU coverage.
 
-## Download
+## Download and install
 
-Grab the latest beta MSI from [Releases](https://github.com/rezamxs/MonitoringXS/releases). Builds are not code-signed yet, so Windows SmartScreen may warn on first run.
+The current build is **v1.0.0**, a beta **pre-release**: [MonitoringXS-1.0.0-x64.msi](https://github.com/rezamxs/MonitoringXS/releases/tag/v1.0.0) (all builds: [Releases](https://github.com/rezamxs/MonitoringXS/releases)).
+
+1. Download `MonitoringXS-1.0.0-x64.msi` and run it. Setup asks for administrator approval once (UAC), because it installs per-machine.
+2. The MSI is **not code-signed yet**, so Windows SmartScreen will likely show *"Windows protected your PC"*. Click **More info** → **Run anyway**. Only do this for a file you downloaded from this repository's Releases page.
+3. Launch **Monitoring XS** from the Start Menu (a Desktop shortcut is optional during setup).
+
+The installer is self-contained (no separate .NET or Windows App SDK runtime needed). It installs the app and the Privileged Broker service under `%ProgramFiles%\Monitoring XS`, so disk and network metrics work without extra steps. The app itself always runs unelevated.
+
+Uninstall from **Settings → Apps**. Your settings and History database in `%LOCALAPPDATA%\MonitoringXS` are intentionally kept; delete that folder yourself for a full removal. Details: [installer documentation](docs/INSTALLER.md).
 
 ## Requirements
 
-- Windows 10 build 17763+ or Windows 11
-- x64 (ARM64 is an architectural target, not yet tested)
-- .NET 10 SDK
+To run:
+
+- Windows 10 version 1809 (build 17763) or later, or Windows 11
+- x64 (ARM64 is an architectural target, not yet tested or packaged)
+
+To build from source, additionally:
+
+- .NET 10 SDK (`10.0.100` or a later feature band, see [`global.json`](global.json))
 - Visual Studio 2026 with the **WinUI application development** workload and a current Windows SDK
-- Developer Mode enabled for local debug deployment
+- Windows Developer Mode, if Visual Studio prompts for it during local deployment
 
 ## Build and test
 
