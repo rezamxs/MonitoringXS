@@ -36,22 +36,6 @@ jobs:
             throw "Tag $($env:GITHUB_REF_NAME) does not match InstallerProductVersion $version."
           }
           ./scripts/installer/Build-Installer.ps1 -Configuration Release
-      - name: Smoke-test the trimmed broker
-        shell: pwsh
-        run: |
-          # The broker is published trimmed; prove the trimmed runtime starts,
-          # parses arguments and keeps its console server (pipe + ETW setup)
-          # alive instead of failing on a trimmed-away framework member.
-          [xml]$props = Get-Content -LiteralPath installer/InstallerVersion.props -Raw
-          $version = [string]$props.Project.PropertyGroup.InstallerProductVersion
-          $broker = Join-Path $PWD ".artifacts/validation/installer-packaging/publish/$version/broker/MonitoringXS.PrivilegedBroker.exe"
-          $usage = Start-Process -FilePath $broker -NoNewWindow -Wait -PassThru
-          if ($usage.ExitCode -ne 64) { throw "Broker without arguments exited $($usage.ExitCode), expected 64." }
-          $console = Start-Process -FilePath $broker -ArgumentList '--console' -NoNewWindow -PassThru
-          Start-Sleep -Seconds 8
-          if ($console.HasExited) { throw "Broker --console exited early with $($console.ExitCode)." }
-          Stop-Process -Id $console.Id -Force
-          Write-Output 'Trimmed broker started and stayed up.'
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
         with:
@@ -59,6 +43,49 @@ jobs:
           path: .artifacts/validation/installer-packaging/package/*.msi
           if-no-files-found: error
           retention-days: 14
+      - name: Smoke-test the trimmed broker service
+        if: github.ref_type != 'tag'
+        shell: pwsh
+        run: |
+          # The broker is published trimmed. Install the MSI on the runner, prove
+          # the service starts and stays running (service host, service-SID pipe
+          # security, broker server), then uninstall. Release tags skip this.
+          $ErrorActionPreference = 'Stop'
+          [xml]$props = Get-Content -LiteralPath installer/InstallerVersion.props -Raw
+          $version = [string]$props.Project.PropertyGroup.InstallerProductVersion
+          $root = Join-Path $PWD '.artifacts/validation/installer-packaging'
+          $msi = Join-Path $root "package/MonitoringXS-$version-x64.msi"
+          $broker = Join-Path $root "publish/$version/broker/MonitoringXS.PrivilegedBroker.exe"
+          $usage = Start-Process -FilePath $broker -NoNewWindow -Wait -PassThru
+          if ($usage.ExitCode -ne 64) { throw "Broker without arguments exited $($usage.ExitCode), expected 64." }
+          $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+          $sessionId = [Diagnostics.Process]::GetCurrentProcess().SessionId
+          $log = Join-Path $root 'smoke-install.log'
+          $install = Start-Process msiexec.exe -Wait -PassThru -ArgumentList @(
+            '/i', "`"$msi`"", '/qn', '/norestart',
+            "BROKER_USER_SID=$($identity.User.Value)", "BROKER_SESSION_ID=$sessionId",
+            '/L*v', "`"$log`"")
+          Write-Output "Install exit code: $($install.ExitCode) (session $sessionId)"
+          try {
+            if ($install.ExitCode -notin 0, 3010) { throw "MSI install failed with $($install.ExitCode); see smoke-install.log." }
+            Start-Sleep -Seconds 10
+            $service = Get-Service -Name 'MonitoringXS.PrivilegedEtwBroker'
+            if ($service.Status -ne 'Running') { throw "Broker service is $($service.Status) 10 s after install." }
+            $process = Get-CimInstance Win32_Service -Filter "Name='MonitoringXS.PrivilegedEtwBroker'"
+            $workingSet = (Get-Process -Id $process.ProcessId).WorkingSet64
+            Write-Output "Trimmed broker service is running (PID $($process.ProcessId), working set $workingSet bytes)."
+          } finally {
+            $uninstall = Start-Process msiexec.exe -Wait -PassThru -ArgumentList @('/x', "`"$msi`"", '/qn', '/norestart')
+            Write-Output "Uninstall exit code: $($uninstall.ExitCode)"
+          }
+      - name: Upload smoke-install log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-install-log
+          path: .artifacts/validation/installer-packaging/smoke-install.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Publish GitHub Release
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
