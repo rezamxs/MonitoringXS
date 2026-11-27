@@ -33,7 +33,28 @@ internal static class BrokerClientExecutableValidator
             return false;
         }
 
-        return !RequiresTrustedPublisher || HasTrustedBrokerPublisher(executablePath);
+        return !RequiresTrustedPublisher
+            || IsPublisherRequirementMet(
+                brokerIsSigned: ReadPublisher(Path.Combine(AppContext.BaseDirectory, BrokerExecutable)) is not null,
+                () => HasTrustedBrokerPublisher(executablePath));
+    }
+
+    /// <summary>
+    /// Publisher authentication is anchored on the broker's own signature. A
+    /// signed broker accepts only a client with a trusted signature from the
+    /// same publisher. An unsigned broker (the current unsigned MSI) has no
+    /// publisher to compare against, so authorization rests on the remaining
+    /// checks: the fixed Program Files path, a protected ACL that only
+    /// SYSTEM/Administrators/TrustedInstaller can write, and the per-user,
+    /// per-session pipe endpoint. Without this, every unsigned Release install
+    /// rejected its own app at the hello handshake.
+    /// </summary>
+    internal static bool IsPublisherRequirementMet(
+        bool brokerIsSigned,
+        Func<bool> clientMatchesTrustedBrokerPublisher)
+    {
+        ArgumentNullException.ThrowIfNull(clientMatchesTrustedBrokerPublisher);
+        return !brokerIsSigned || clientMatchesTrustedBrokerPublisher();
     }
 
     private static bool HasProtectedAcl(string executablePath)

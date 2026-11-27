@@ -294,6 +294,27 @@ public sealed class PrivilegedEtwBrokerTests
     }
 
     [Fact]
+    public void SignedBrokerStillRequiresAMatchingTrustedClientPublisher()
+    {
+        bool evaluated = false;
+
+        Assert.False(BrokerClientExecutableValidator.IsPublisherRequirementMet(
+            brokerIsSigned: true,
+            () => false));
+        Assert.True(BrokerClientExecutableValidator.IsPublisherRequirementMet(
+            brokerIsSigned: true,
+            () => true));
+        Assert.True(BrokerClientExecutableValidator.IsPublisherRequirementMet(
+            brokerIsSigned: false,
+            () =>
+            {
+                evaluated = true;
+                return false;
+            }));
+        Assert.False(evaluated);
+    }
+
+    [Fact]
     public async Task MatchingEndpointCompletesVersionOneHandshakeWithoutElevation()
     {
         if (!OperatingSystem.IsWindows())
