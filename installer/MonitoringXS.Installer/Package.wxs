@@ -134,6 +134,11 @@
       <RegistryValue Root="HKLM" Key="Software\MonitoringXS\Installer" Name="BrokerUserSid" Type="string" Value="[BROKER_USER_SID]" />
       <RegistryValue Root="HKLM" Key="Software\MonitoringXS\Installer" Name="BrokerLogonArgument" Type="string" Value="[BROKER_LOGON_ARGUMENT]" />
       <RegistryValue Root="HKLM" Key="Software\MonitoringXS\Installer" Name="BrokerSessionId" Type="string" Value="[BROKER_SESSION_ID]" />
+      <!-- The administrator's opt-in for an unsigned build (AllowUnsignedClient) is
+           written by the service executable through UAC, never by setup. Removing
+           the product removes it; a major upgrade also removes it, so a new
+           unsigned build is asked about again. -->
+      <RemoveRegistryKey Id="RemovePrivilegedMetricsConsent" Root="HKLM" Key="Software\MonitoringXS\PrivilegedMetrics" Action="removeOnUninstall" />
     </Component>
 
     <Component Id="StartMenuShortcutComponent" Directory="ProgramMenuDirectory" Guid="6119F754-AD03-41B7-8380-D93EFC38E02D" Bitness="always64">

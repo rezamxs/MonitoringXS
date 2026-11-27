@@ -7,6 +7,7 @@ namespace MonitoringXS.PrivilegedBroker;
 internal static class Program
 {
     internal const string RequiredServiceAccount = "LocalSystem";
+    private const int Failed = 1;
     private const int AccessDenied = 5;
     private const int UnsupportedRequest = 64;
 
@@ -15,6 +16,11 @@ internal static class Program
         if (!OperatingSystem.IsWindows())
         {
             return UnsupportedRequest;
+        }
+
+        if (TryReadConsentChange(args, out bool grant))
+        {
+            return ChangeUnsignedClientConsent(grant);
         }
 
         if (TryReadServiceEndpoint(args, out BrokerPipeEndpoint? endpoint, out bool diagnostics))
@@ -46,6 +52,49 @@ internal static class Program
         }
 
         return UnsupportedRequest;
+    }
+
+    /// <summary>
+    /// The only writer of the unsigned-client opt-in. The app launches this
+    /// executable through UAC ("runas"); without an elevated administrator token
+    /// it refuses and changes nothing.
+    /// </summary>
+    internal static bool TryReadConsentChange(IReadOnlyList<string> args, out bool grant)
+    {
+        grant = args is [PrivilegedMetricsConsent.GrantArgument];
+        return grant || args is [PrivilegedMetricsConsent.RevokeArgument];
+    }
+
+    private static int ChangeUnsignedClientConsent(bool grant)
+    {
+        if (!PrivilegedMetricsConsent.IsElevatedAdministrator())
+        {
+            return AccessDenied;
+        }
+
+        try
+        {
+            if (grant)
+            {
+                PrivilegedMetricsConsent.Grant();
+            }
+            else
+            {
+                PrivilegedMetricsConsent.Revoke();
+            }
+
+            return PrivilegedMetricsConsent.IsGranted() == grant ? 0 : Failed;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return AccessDenied;
+        }
+        catch (Exception exception) when (exception is IOException
+            or System.Security.SecurityException
+            or SystemException)
+        {
+            return Failed;
+        }
     }
 
     private static bool IsLocalSystem()

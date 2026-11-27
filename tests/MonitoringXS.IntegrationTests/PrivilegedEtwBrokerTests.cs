@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using Microsoft.Win32;
 using MonitoringXS.Core.Models;
 using MonitoringXS.Platform.Windows.Broker;
 using MonitoringXS.Platform.Windows.Metrics;
@@ -293,25 +294,112 @@ public sealed class PrivilegedEtwBrokerTests
 #endif
     }
 
-    [Fact]
-    public void SignedBrokerStillRequiresAMatchingTrustedClientPublisher()
+    [Theory]
+    // brokerSigned, consentGranted, clientMatchesPublisher, expected
+    [InlineData(true, false, true, true)]
+    [InlineData(true, false, false, false)]
+    [InlineData(true, true, true, true)]
+    [InlineData(true, true, false, false)]
+    [InlineData(false, true, false, true)]
+    [InlineData(false, true, true, true)]
+    [InlineData(false, false, false, false)]
+    [InlineData(false, false, true, false)]
+    public void PublisherRequirementMatrixAnchorsOnBrokerSignatureAndAdminOptIn(
+        bool brokerSigned,
+        bool consentGranted,
+        bool clientMatchesPublisher,
+        bool expected)
     {
-        bool evaluated = false;
+        bool consentRead = false;
+        bool publisherRead = false;
 
-        Assert.False(BrokerClientExecutableValidator.IsPublisherRequirementMet(
-            brokerIsSigned: true,
-            () => false));
-        Assert.True(BrokerClientExecutableValidator.IsPublisherRequirementMet(
-            brokerIsSigned: true,
-            () => true));
-        Assert.True(BrokerClientExecutableValidator.IsPublisherRequirementMet(
-            brokerIsSigned: false,
+        bool allowed = BrokerClientExecutableValidator.IsPublisherRequirementMet(
+            brokerSigned,
             () =>
             {
-                evaluated = true;
-                return false;
-            }));
-        Assert.False(evaluated);
+                consentRead = true;
+                return consentGranted;
+            },
+            () =>
+            {
+                publisherRead = true;
+                return clientMatchesPublisher;
+            });
+
+        Assert.Equal(expected, allowed);
+        // A signed service never consults the opt-in; an unsigned one never
+        // pretends to verify a publisher it does not have.
+        Assert.Equal(!brokerSigned, consentRead);
+        Assert.Equal(brokerSigned, publisherRead);
+    }
+
+    [Theory]
+    [InlineData(1, RegistryValueKind.DWord, true, true)]
+    [InlineData(1, RegistryValueKind.DWord, false, false)]
+    [InlineData(0, RegistryValueKind.DWord, true, false)]
+    [InlineData(2, RegistryValueKind.DWord, true, false)]
+    [InlineData("1", RegistryValueKind.String, true, false)]
+    [InlineData(null, RegistryValueKind.Unknown, true, false)]
+    public void UnsignedClientOptInRequiresProtectedDwordOne(
+        object? value,
+        RegistryValueKind kind,
+        bool keyIsProtected,
+        bool expected)
+    {
+        Assert.Equal(expected, PrivilegedMetricsConsent.IsGranted(value, kind, keyIsProtected));
+    }
+
+    [Fact]
+    public void OptInKeySecurityIsAdminOnlyAndUserWritableKeysAreRejected()
+    {
+        RegistrySecurity written = PrivilegedMetricsConsent.CreateProtectedSecurity();
+        Assert.True(PrivilegedMetricsConsent.IsProtected(written));
+        Assert.True(written.AreAccessRulesProtected);
+
+        SecurityIdentifier users = new(WellKnownSidType.BuiltinUsersSid, null);
+        RegistrySecurity userWritable = PrivilegedMetricsConsent.CreateProtectedSecurity();
+        userWritable.AddAccessRule(new RegistryAccessRule(
+            users,
+            RegistryRights.SetValue,
+            AccessControlType.Allow));
+        Assert.False(PrivilegedMetricsConsent.IsProtected(userWritable));
+
+        RegistrySecurity userOwned = PrivilegedMetricsConsent.CreateProtectedSecurity();
+        userOwned.SetOwner(users);
+        Assert.False(PrivilegedMetricsConsent.IsProtected(userOwned));
+
+        RegistrySecurity everyoneFull = PrivilegedMetricsConsent.CreateProtectedSecurity();
+        everyoneFull.AddAccessRule(new RegistryAccessRule(
+            new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+            RegistryRights.FullControl,
+            AccessControlType.Allow));
+        Assert.False(PrivilegedMetricsConsent.IsProtected(everyoneFull));
+    }
+
+    [Fact]
+    public void OptInLocationAndHelperArgumentsAreStable()
+    {
+        Assert.Equal(@"SOFTWARE\MonitoringXS\PrivilegedMetrics", PrivilegedMetricsConsent.RegistryKeyPath);
+        Assert.Equal("AllowUnsignedClient", PrivilegedMetricsConsent.ValueName);
+        Assert.True(Program.TryReadConsentChange([PrivilegedMetricsConsent.GrantArgument], out bool grant));
+        Assert.True(grant);
+        Assert.True(Program.TryReadConsentChange([PrivilegedMetricsConsent.RevokeArgument], out grant));
+        Assert.False(grant);
+        Assert.False(Program.TryReadConsentChange([], out _));
+        Assert.False(Program.TryReadConsentChange([PrivilegedMetricsConsent.GrantArgument, "extra"], out _));
+        Assert.False(Program.TryReadConsentChange(["--console"], out _));
+    }
+
+    [Fact]
+    public void ConsentHelperRefusesToChangeTheOptInWithoutElevation()
+    {
+        if (!OperatingSystem.IsWindows() || PrivilegedMetricsConsent.IsElevatedAdministrator())
+        {
+            return;
+        }
+
+        Assert.Throws<UnauthorizedAccessException>(PrivilegedMetricsConsent.Grant);
+        Assert.Throws<UnauthorizedAccessException>(PrivilegedMetricsConsent.Revoke);
     }
 
     [Fact]

@@ -87,6 +87,25 @@ public sealed class PrivilegedEtwBrokerClient :
         }
     }
 
+    /// <summary>
+    /// Closes the current service connection so the next read repeats the hello
+    /// handshake. Used after the unsigned-client opt-in changes, because the
+    /// service authorizes a client once per connection.
+    /// </summary>
+    public async Task ResetConnectionAsync(CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            _transport.Reset();
+        }
+        finally
+        {
+            _requestGate.Release();
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -234,6 +253,11 @@ internal interface IPrivilegedEtwBrokerTransport : IDisposable, IAsyncDisposable
         BrokerCommand command,
         byte[] payload,
         CancellationToken cancellationToken);
+
+    /// <summary>Drops the current connection so the next request performs a fresh handshake.</summary>
+    void Reset()
+    {
+    }
 }
 
 internal sealed class NamedPipeEtwBrokerTransport : IPrivilegedEtwBrokerTransport
@@ -322,6 +346,8 @@ internal sealed class NamedPipeEtwBrokerTransport : IPrivilegedEtwBrokerTranspor
         Dispose();
         return ValueTask.CompletedTask;
     }
+
+    public void Reset() => Disconnect();
 
     private async ValueTask<bool> EnsureConnectedAsync(CancellationToken cancellationToken)
     {
