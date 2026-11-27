@@ -1,5 +1,14 @@
 # Monitoring XS
 
+**English** | [فارسی](README.fa.md)
+
+[![CI](https://github.com/rezamxs/MonitoringXS/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rezamxs/MonitoringXS/actions/workflows/ci.yml?query=branch%3Amain)
+[![CodeQL](https://github.com/rezamxs/MonitoringXS/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/rezamxs/MonitoringXS/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/rezamxs/MonitoringXS?include_prereleases&sort=semver)](https://github.com/rezamxs/MonitoringXS/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+> See which **applications** — not which of their dozens of helper processes — are using your CPU, memory, disk, network, and GPU on Windows.
+
 Monitoring XS is a native Windows desktop monitor organized around **logical applications**, not raw process lists. Related processes (for example multiple Chrome or Visual Studio Code helpers) are grouped so you see combined CPU, memory, disk, network, and GPU use for the application the user actually launched.
 
 The project is under active development. Core monitoring, History, Process Intelligence, Diagnostics, installer packaging, and English/Persian UI are implemented. Remaining work includes placeholder pages, broader GPU hardware validation, and release signing.
@@ -41,22 +50,39 @@ Physical disk and network monitoring use a restricted LocalSystem service (`Priv
 
 GPU values come from Windows `GPU Engine` and `GPU Process Memory` counters on WDDM-capable drivers. Missing counter objects, protected processes, and software-rendered workloads stay unavailable or partial. That is not a claim of universal GPU coverage.
 
-## Download
+## Download and install
 
-Grab the latest beta MSI from [Releases](https://github.com/rezamxs/MonitoringXS/releases). Builds are not code-signed yet, so Windows SmartScreen may warn on first run.
+The current build is **v1.0.0**, a beta **pre-release**: [MonitoringXS-1.0.0-x64.msi](https://github.com/rezamxs/MonitoringXS/releases/tag/v1.0.0) (all builds: [Releases](https://github.com/rezamxs/MonitoringXS/releases)).
+
+1. Download `MonitoringXS-1.0.0-x64.msi` and run it. Setup asks for administrator approval once (UAC), because it installs per-machine.
+2. The MSI is **not code-signed yet**, so Windows SmartScreen will likely show *"Windows protected your PC"*. Click **More info** → **Run anyway**. Only do this for a file you downloaded from this repository's Releases page.
+3. Launch **Monitoring XS** from the Start Menu (a Desktop shortcut is optional during setup).
+
+The installer is self-contained (no separate .NET or Windows App SDK runtime needed). It installs the app and the Privileged Broker service under `%ProgramFiles%\Monitoring XS`, so disk and network metrics work without extra steps. The app itself always runs unelevated.
+
+Uninstall from **Settings → Apps**. Your settings and History database in `%LOCALAPPDATA%\MonitoringXS` are intentionally kept; delete that folder yourself for a full removal. Details: [installer documentation](docs/INSTALLER.md).
 
 ## Requirements
 
-- Windows 10 build 17763+ or Windows 11
-- x64 (ARM64 is an architectural target, not yet tested)
-- .NET 10 SDK
-- Visual Studio 2026 with the **WinUI application development** workload and a current Windows SDK
-- Developer Mode enabled for local debug deployment
+To run:
 
-## Build and test
+- Windows 10 version 1809 (build 17763) or later, or Windows 11
+- x64 (ARM64 is an architectural target, not yet tested or packaged)
+
+To build from source, additionally:
+
+- .NET 10 SDK (`10.0.100` or a later feature band, see [`global.json`](global.json))
+- Visual Studio 2026 with the **WinUI application development** workload and a current Windows SDK
+- Windows Developer Mode, if Visual Studio prompts for it during local deployment
+
+## Build from source
 
 ```powershell
+git clone https://github.com/rezamxs/MonitoringXS.git
+cd MonitoringXS
 dotnet restore MonitoringXS.sln
+# The integration tests build this helper outside the solution, so restore it explicitly (CI does the same):
+dotnet restore tests/MonitoringXS.ProcessActionTestHelper/MonitoringXS.ProcessActionTestHelper.csproj
 dotnet build MonitoringXS.sln -c Release --no-restore
 dotnet test MonitoringXS.sln -c Release --no-build
 ```
@@ -69,7 +95,7 @@ dotnet run --project src/MonitoringXS.App/MonitoringXS.App.csproj -c Debug -p:Pl
 
 Current restore/build/test counts are recorded in [docs/VALIDATION.md](docs/VALIDATION.md) after each checkpoint. Do not treat an older numbered result in that log as the live suite size.
 
-To install the Privileged Broker for disk and network metrics, run from elevated PowerShell:
+When running from source (not from the MSI), install the Privileged Broker for disk and network metrics from an elevated PowerShell:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Install
@@ -80,6 +106,8 @@ Status (unelevated):
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-broker\Manage-PrivilegedBroker.ps1" -Mode Status
 ```
+
+Remove it with `-Mode Remove`. To build the MSI locally, run `scripts\installer\Build-Installer.ps1` (output goes to `.artifacts\validation\installer-packaging\package`).
 
 See [development setup](docs/DEVELOPMENT.md) and [installer documentation](docs/INSTALLER.md).
 
@@ -99,7 +127,7 @@ Architecture details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Current status
 
-`main` is the current product line (through Phase E1: History UX and chart foundation). Beta installers are published as unsigned pre-releases on the [Releases](https://github.com/rezamxs/MonitoringXS/releases) page.
+Beta. `main` is the current product line; the first installer, [v1.0.0](https://github.com/rezamxs/MonitoringXS/releases/tag/v1.0.0), is published as an unsigned pre-release. Tags matching `v*` build the MSI and publish a pre-release automatically ([release workflow](.github/workflows/release.yml)).
 
 Some data is unavailable for protected or higher-integrity processes. The app reports that honestly instead of requesting permanent elevation.
 
@@ -117,6 +145,7 @@ Some data is unavailable for protected or higher-integrity processes. The app re
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Engineering style](docs/ENGINEERING_STYLE.md)
 - [Windows installer](docs/INSTALLER.md)
+- [Changelog](CHANGELOG.md)
 
 ## Feedback and bug reports
 
@@ -128,4 +157,6 @@ Some data is unavailable for protected or higher-integrity processes. The app re
 
 Issues and focused pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) before submitting.
 
-Created and maintained by [rezamxs](https://github.com/rezamxs). Licensed under the [MIT License](LICENSE).
+## License
+
+Released under the [MIT License](LICENSE). Created and maintained by [rezamxs](https://github.com/rezamxs).
