@@ -36,6 +36,22 @@ jobs:
             throw "Tag $($env:GITHUB_REF_NAME) does not match InstallerProductVersion $version."
           }
           ./scripts/installer/Build-Installer.ps1 -Configuration Release
+      - name: Smoke-test the trimmed broker
+        shell: pwsh
+        run: |
+          # The broker is published trimmed; prove the trimmed runtime starts,
+          # parses arguments and keeps its console server (pipe + ETW setup)
+          # alive instead of failing on a trimmed-away framework member.
+          [xml]$props = Get-Content -LiteralPath installer/InstallerVersion.props -Raw
+          $version = [string]$props.Project.PropertyGroup.InstallerProductVersion
+          $broker = Join-Path $PWD ".artifacts/validation/installer-packaging/publish/$version/broker/MonitoringXS.PrivilegedBroker.exe"
+          $usage = Start-Process -FilePath $broker -NoNewWindow -Wait -PassThru
+          if ($usage.ExitCode -ne 64) { throw "Broker without arguments exited $($usage.ExitCode), expected 64." }
+          $console = Start-Process -FilePath $broker -ArgumentList '--console' -NoNewWindow -PassThru
+          Start-Sleep -Seconds 8
+          if ($console.HasExited) { throw "Broker --console exited early with $($console.ExitCode)." }
+          Stop-Process -Id $console.Id -Force
+          Write-Output 'Trimmed broker started and stayed up.'
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
         with:

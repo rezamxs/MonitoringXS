@@ -4,6 +4,25 @@
     <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <RootNamespace>MonitoringXS.PrivilegedBroker</RootNamespace>
+    <!-- Long-running service with a tiny heap: no background GC thread. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+  </PropertyGroup>
+  <!--
+    Install size: the self-contained service otherwise carries a full second copy of the
+    .NET runtime plus the 23 MB Windows SDK projection it never calls. Partial trimming
+    only trims assemblies that declare themselves trimmable (the framework and the
+    projection); MonitoringXS code and TraceEvent are kept whole. Applied only when
+    publishing for a runtime, so solution builds and tests are unchanged.
+  -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <!-- Keep runtime behaviour identical to the untrimmed service. -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <EventSourceSupport>true</EventSourceSupport>
+    <UseSystemResourceKeys>false</UseSystemResourceKeys>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MonitoringXS.Platform.Windows\MonitoringXS.Platform.Windows.csproj" />

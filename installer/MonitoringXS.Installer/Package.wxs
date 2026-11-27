@@ -191,12 +191,17 @@
         <Exclude Files="$(var.AppPublishDir)\mi-NZ\**" />
         <Exclude Files="$(var.AppPublishDir)\ug-CN\**" />
         <Exclude Files="$(var.AppPublishDir)\**\*.pdb" />
+        <!-- x64 package: TraceEvent's x86/arm64 native helpers can never load here. -->
+        <Exclude Files="$(var.AppPublishDir)\x86\**" />
+        <Exclude Files="$(var.AppPublishDir)\arm64\**" />
       </Files>
     </ComponentGroup>
     <ComponentGroup Id="BrokerFiles" Directory="BROKERFOLDER">
       <Files Include="$(var.BrokerPublishDir)\**" Directory="BROKERFOLDER">
         <Exclude Files="$(var.BrokerPublishDir)\MonitoringXS.PrivilegedBroker.exe" />
         <Exclude Files="$(var.BrokerPublishDir)\**\*.pdb" />
+        <Exclude Files="$(var.BrokerPublishDir)\x86\**" />
+        <Exclude Files="$(var.BrokerPublishDir)\arm64\**" />
       </Files>
     </ComponentGroup>
   </Fragment>

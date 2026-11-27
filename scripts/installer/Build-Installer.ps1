@@ -99,6 +99,24 @@ $msi = Join-Path $packageRoot "MonitoringXS-$Version-x64.msi"
 if (-not (Test-Path -LiteralPath $msi)) {
     throw "Expected installer output is missing: $msi"
 }
+function Get-InstalledPayloadBytes {
+    # Approximates the installed payload: no symbols, no non-x64 TraceEvent natives.
+    param([string]$Path)
+    $root = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\') + '\'
+    $sum = (Get-ChildItem -LiteralPath $Path -File -Recurse |
+        Where-Object {
+            $relative = $_.FullName.Substring($root.Length)
+            $_.Extension -ne '.pdb' -and
+                -not $relative.StartsWith('x86\', [StringComparison]::OrdinalIgnoreCase) -and
+                -not $relative.StartsWith('arm64\', [StringComparison]::OrdinalIgnoreCase)
+        } |
+        Measure-Object -Property Length -Sum).Sum
+    if ($null -eq $sum) { return 0 }
+    return [long]$sum
+}
+
 $item = Get-Item -LiteralPath $msi
 Write-Output "Installer: $($item.FullName)"
 Write-Output "SizeBytes: $($item.Length)"
+Write-Output "AppInstalledBytes: $(Get-InstalledPayloadBytes $appPublish)"
+Write-Output "BrokerInstalledBytes: $(Get-InstalledPayloadBytes $brokerPublish)"
