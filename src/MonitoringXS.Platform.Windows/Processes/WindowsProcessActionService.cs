@@ -440,14 +440,11 @@ public sealed class WindowsProcessActionService : IProcessActionService, IDispos
                 }
 
                 NativeProcessInfo process = read.Process;
-                if (!process.SafetyVerified || process.IsCritical || process.IsProtected)
-                {
-                    return new(
-                        ProcessActionStatus.ProtectedProcess,
-                        "Tree contains an unverifiable, critical, or protected process; action refused.",
-                        descendants);
-                }
 
+                // Windows reuses process IDs, so a snapshot entry can name this
+                // parent's PID while belonging to an older, unrelated process
+                // (often a protected system service). Establish that the entry is
+                // a genuine descendant before its safety flags can refuse the tree.
                 if (process.InstanceId.StartTimeUtc < current.Parent.InstanceId.StartTimeUtc
                     || !string.Equals(
                         process.ProcessName,
@@ -455,6 +452,14 @@ public sealed class WindowsProcessActionService : IProcessActionService, IDispos
                         StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
+                }
+
+                if (!process.SafetyVerified || process.IsCritical || process.IsProtected)
+                {
+                    return new(
+                        ProcessActionStatus.ProtectedProcess,
+                        $"Tree contains an unverifiable, critical, or protected process ({entry.ProcessName}, PID {entry.ProcessId}); action refused.",
+                        descendants);
                 }
 
                 ProcessActionTarget child = new(
