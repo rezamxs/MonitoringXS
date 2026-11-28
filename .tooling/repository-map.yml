@@ -109,7 +109,7 @@ key_documentation:
   metrics: docs/METRICS.md
   performance: docs/PERFORMANCE.md
   troubleshooting: docs/TROUBLESHOOTING.md
-  validation: docs/VALIDATION.md
+  validation_archive: docs/archive/VALIDATION.md
   adr_directory: docs/adr/
 
 test_projects:

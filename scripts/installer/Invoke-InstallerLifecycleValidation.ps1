@@ -14,8 +14,13 @@ Set-StrictMode -Version Latest
 
 $serviceName = 'MonitoringXS.PrivilegedEtwBroker'
 $productName = 'Monitoring XS'
-$currentProductCode = '{5F19D1C2-3DDD-4165-A5FE-9F296A509EB5}'
-$previousProductCode = '{6E351D69-BE14-40D2-B59D-95073AEBB106}'
+# Current identity comes from installer/InstallerVersion.props so it cannot drift from the built MSI.
+# The previous identity is the last shipped release that the current MSI must major-upgrade (1.0.0).
+[xml]$installerVersionProps = Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\..\installer\InstallerVersion.props') -Raw
+$currentVersion = [string]$installerVersionProps.Project.PropertyGroup.InstallerProductVersion
+$currentProductCode = '{' + [string]$installerVersionProps.Project.PropertyGroup.InstallerProductCode + '}'
+$previousVersion = '1.0.0'
+$previousProductCode = '{5F19D1C2-3DDD-4165-A5FE-9F296A509EB5}'
 $installRoot = Join-Path $env:ProgramFiles 'Monitoring XS'
 $appPath = Join-Path $installRoot 'App\MonitoringXS.App.exe'
 $brokerPath = Join-Path $installRoot 'Broker\MonitoringXS.PrivilegedBroker.exe'
@@ -334,7 +339,7 @@ Assert-State ($script:EvidenceRoot.StartsWith($allowedPrefix, [StringComparison]
 New-Item -ItemType Directory -Path (Join-Path $script:EvidenceRoot 'logs') -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $script:EvidenceRoot 'path with spaces') -Force | Out-Null
 
-$spacedCurrent = Join-Path $script:EvidenceRoot 'path with spaces\Monitoring XS 1.0.0.msi'
+$spacedCurrent = Join-Path $script:EvidenceRoot "path with spaces\Monitoring XS $currentVersion.msi"
 $failingMsi = Join-Path $script:EvidenceRoot (
     "path with spaces\Monitoring XS rollback-$([Guid]::NewGuid().ToString('N')).msi")
 $initialUserFiles = @{}
@@ -381,11 +386,11 @@ try {
     }
 
     $null = Invoke-Msi '/i' $spacedCurrent 'clean-install'
-    Assert-Installed '1.0.0' $false
+    Assert-Installed $currentVersion $false
     Add-Result 'clean-install-state' 'Passed' 'Default install omitted Desktop shortcut.'
 
     $null = Invoke-Msi '/i' $spacedCurrent 'already-installed' @('ADDLOCAL=ProductFeature,DesktopShortcutFeature')
-    Assert-Installed '1.0.0' $true
+    Assert-Installed $currentVersion $true
     Add-Result 'already-installed-state' 'Passed' 'Explicit Desktop feature added without duplicate product.'
 
     Stop-App
@@ -395,7 +400,7 @@ try {
     Assert-State ($LASTEXITCODE -eq 0) 'Could not create repair test state.'
     $null = Invoke-Msi '/fa' $spacedCurrent 'repair'
     Assert-State (Test-Path -LiteralPath $repairFile) 'Repair did not restore the removed application file.'
-    Assert-Installed '1.0.0' $true
+    Assert-Installed $currentVersion $true
     Add-Result 'repair-state' 'Passed' 'File and Automatic/Running service definition restored.'
 
     $app = Start-AppUnelevated
@@ -406,16 +411,16 @@ try {
     Add-Result 'uninstall-state' 'Passed' 'Running app/Broker, files, shortcuts, service, registration, and ETW session removed.'
 
     $null = Invoke-Msi '/i' $previous 'previous-install'
-    Assert-Installed '0.9.0' $false
+    Assert-Installed $previousVersion $false
     $null = Invoke-Msi '/i' $spacedCurrent 'major-upgrade'
-    Assert-Installed '1.0.0' $false
+    Assert-Installed $currentVersion $false
     Assert-State ($null -eq (Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$previousProductCode" -ErrorAction SilentlyContinue)) 'Previous product registration remains after upgrade.'
     Add-Result 'major-upgrade-state' 'Passed' 'Previous product removed; one current product and service remain.'
     $null = Invoke-Msi '/x' $currentProductCode 'upgrade-uninstall'
     Assert-Uninstalled
 
     $null = Invoke-Msi '/i' $spacedCurrent 'repeat-install'
-    Assert-Installed '1.0.0' $false
+    Assert-Installed $currentVersion $false
     $null = Invoke-Msi '/x' $currentProductCode 'repeat-uninstall'
     Assert-Uninstalled
     Add-Result 'repeat-cycle' 'Passed' 'Second clean install/uninstall completed.'
