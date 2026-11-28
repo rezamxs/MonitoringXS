@@ -104,7 +104,7 @@ Run from Visual Studio (x64) or:
 dotnet run --project src/MonitoringXS.App/MonitoringXS.App.csproj -c Debug -p:Platform=x64
 ```
 
-Current restore/build/test counts are recorded in [docs/VALIDATION.md](docs/VALIDATION.md) after each checkpoint. Do not treat an older numbered result in that log as the live suite size.
+CI runs the full Release build and test suite on every push and pull request.
 
 When running from source (not from the MSI), install the Privileged Broker for disk and network metrics from an elevated PowerShell:
 
@@ -151,12 +151,11 @@ Some data is unavailable for protected or higher-integrity processes. The app re
 - [Security](docs/SECURITY.md) and [privacy](docs/PRIVACY.md)
 - [Performance](docs/PERFORMANCE.md)
 - [Design system](docs/DESIGN_SYSTEM.md)
-- [Milestones](docs/MILESTONES.md)
-- [Validation log](docs/VALIDATION.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Engineering style](docs/ENGINEERING_STYLE.md)
 - [Windows installer](docs/INSTALLER.md)
 - [Changelog](CHANGELOG.md)
+- [Archived development notes](docs/archive/README.md)
 
 ## Feedback and bug reports
 

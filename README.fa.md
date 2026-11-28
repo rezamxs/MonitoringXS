@@ -120,7 +120,7 @@ dotnet run --project src/MonitoringXS.App/MonitoringXS.App.csproj -c Debug -p:Pl
 
 <div dir="rtl">
 
-تعداد فعلی نتایج restore/build/test بعد از هر مرحله در [docs/VALIDATION.md](docs/VALIDATION.md) ثبت می‌شود. عددهای قدیمی‌تر آن گزارش را اندازه‌ی فعلی مجموعه‌ی تست‌ها در نظر نگیرید.
+CI در هر push و pull request، build و کل تست‌ها را در حالت Release اجرا می‌کند.
 
 اگر برنامه را از سورس اجرا می‌کنید (نه از MSI)، برای معیارهای دیسک و شبکه Privileged Broker را از یک PowerShell با دسترسی مدیر نصب کنید:
 
@@ -177,12 +177,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\privileged-br
 - [امنیت](docs/SECURITY.md) و [حریم خصوصی](docs/PRIVACY.md)
 - [کارایی](docs/PERFORMANCE.md)
 - [سیستم طراحی](docs/DESIGN_SYSTEM.md)
-- [نقاط عطف](docs/MILESTONES.md)
-- [گزارش اعتبارسنجی](docs/VALIDATION.md)
 - [عیب‌یابی](docs/TROUBLESHOOTING.md)
 - [سبک مهندسی](docs/ENGINEERING_STYLE.md)
 - [نصب‌کننده‌ی ویندوز](docs/INSTALLER.md)
 - [تغییرات نسخه‌ها](CHANGELOG.md)
+- [یادداشت‌های بایگانی‌شده‌ی توسعه](docs/archive/README.md)
 
 ## بازخورد و گزارش باگ
 
