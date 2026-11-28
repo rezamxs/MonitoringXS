@@ -22,7 +22,7 @@ chart gaps. The earliest raw timestamp represents each downsample bucket.
 
 ## Sampling
 
-Live sampling defaults to one second. Each sample carries a UTC wall-clock timestamp. PID plus process start time identifies a process instance and prevents PID-reuse contamination.
+Live sampling defaults to two seconds (1 and 5 seconds remain selectable in Settings; an explicit saved choice is kept). While the window is minimized or hidden, sampling slows to 5 seconds and the UI stops updating until the window is shown again. Each sample carries a UTC wall-clock timestamp. PID plus process start time identifies a process instance and prevents PID-reuse contamination.
 
 The UI explains each supported metric from one localized presentation service.
 Beginner text uses provider-neutral product language; Advanced details show the

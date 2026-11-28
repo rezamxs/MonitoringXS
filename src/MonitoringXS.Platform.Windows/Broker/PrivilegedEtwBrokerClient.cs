@@ -87,6 +87,25 @@ public sealed class PrivilegedEtwBrokerClient :
         }
     }
 
+    /// <summary>
+    /// Closes the current service connection so the next read repeats the hello
+    /// handshake. Used after the unsigned-client opt-in changes, because the
+    /// service authorizes a client once per connection.
+    /// </summary>
+    public async Task ResetConnectionAsync(CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        await _requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            _transport.Reset();
+        }
+        finally
+        {
+            _requestGate.Release();
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -213,7 +232,7 @@ public sealed class PrivilegedEtwBrokerClient :
             or UnauthorizedAccessException
             or OperationCanceledException;
 
-    private static string ErrorDetail(BrokerErrorCode code) => code switch
+    internal static string ErrorDetail(BrokerErrorCode code) => code switch
     {
         BrokerErrorCode.Unauthorized => "The privileged ETW broker denied this local client.",
         BrokerErrorCode.ProtocolMismatch => "The privileged ETW broker protocol version is incompatible.",
@@ -234,6 +253,11 @@ internal interface IPrivilegedEtwBrokerTransport : IDisposable, IAsyncDisposable
         BrokerCommand command,
         byte[] payload,
         CancellationToken cancellationToken);
+
+    /// <summary>Drops the current connection so the next request performs a fresh handshake.</summary>
+    void Reset()
+    {
+    }
 }
 
 internal sealed class NamedPipeEtwBrokerTransport : IPrivilegedEtwBrokerTransport
@@ -323,6 +347,8 @@ internal sealed class NamedPipeEtwBrokerTransport : IPrivilegedEtwBrokerTranspor
         return ValueTask.CompletedTask;
     }
 
+    public void Reset() => Disconnect();
+
     private async ValueTask<bool> EnsureConnectedAsync(CancellationToken cancellationToken)
     {
         if (_pipe?.IsConnected == true)
@@ -376,11 +402,26 @@ internal sealed class NamedPipeEtwBrokerTransport : IPrivilegedEtwBrokerTranspor
                 pipe,
                 PrivilegedEtwBrokerProtocol.MaximumResponseBytes,
                 timeout.Token).ConfigureAwait(false);
-            if (response.RequestId != requestId || response.Command != BrokerCommand.HelloResponse)
+            if (response.RequestId != requestId)
             {
                 throw new BrokerProtocolException(
-                    BrokerErrorCode.ProtocolMismatch,
-                    "The privileged ETW broker handshake failed.");
+                    BrokerErrorCode.MalformedMessage,
+                    "The broker response identifier does not match the request.");
+            }
+
+            if (response.Command == BrokerCommand.ErrorResponse)
+            {
+                // The service answers an unauthorized or malformed hello with a
+                // structured error frame. Surface its real code instead of
+                // reporting every rejected handshake as a protocol mismatch.
+                throw HandshakeRejected(response.Payload);
+            }
+
+            if (response.Command != BrokerCommand.HelloResponse)
+            {
+                throw new BrokerProtocolException(
+                    BrokerErrorCode.MalformedMessage,
+                    "The privileged ETW broker handshake returned an unexpected response.");
             }
 
             BrokerHelloResponse hello = BrokerJson.Deserialize<BrokerHelloResponse>(response.Payload);
@@ -402,6 +443,14 @@ internal sealed class NamedPipeEtwBrokerTransport : IPrivilegedEtwBrokerTranspor
             pipe.Dispose();
             throw;
         }
+    }
+
+    internal static BrokerProtocolException HandshakeRejected(byte[] payload)
+    {
+        BrokerErrorResponse error = BrokerJson.Deserialize<BrokerErrorResponse>(payload);
+        return new BrokerProtocolException(
+            error.Code,
+            PrivilegedEtwBrokerClient.ErrorDetail(error.Code));
     }
 
     private int NextRequestId()

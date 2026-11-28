@@ -14,6 +14,15 @@
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!--
+      Memory: a monitor with a small, steady heap gains nothing from a background GC
+      thread and its extra reserved memory; workstation non-concurrent GC keeps the
+      footprint lower. Server GC stays off (the default).
+    -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <!-- Ship only the satellite resources for the app's own languages. -->
+    <SatelliteResourceLanguages>en;fa</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Assets\Branding\*.ico" />

@@ -68,7 +68,8 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
                     document.Theme,
                     ParseLanguage(document.Language),
                     ParseApplicationSort(document.ApplicationSort),
-                    document.ApplicationSortDescending ?? false);
+                    document.ApplicationSortDescending ?? false,
+                    document.PrivilegedMetricsConsentPromptSuppressed ?? false);
             if (settings?.IsValid == true)
             {
                 return new(settings, true, false);
@@ -137,7 +138,8 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
                         settings.Theme,
                         settings.Language.ToString(),
                         settings.ApplicationSort.ToString(),
-                        settings.ApplicationSortDescending),
+                        settings.ApplicationSortDescending,
+                        settings.PrivilegedMetricsConsentPromptSuppressed),
                     SerializerOptions,
                     cancellationToken).ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -259,5 +261,6 @@ public sealed class JsonApplicationSettingsStore : IApplicationSettingsStore
         ApplicationTheme Theme,
         string? Language = null,
         string? ApplicationSort = null,
-        bool? ApplicationSortDescending = null);
+        bool? ApplicationSortDescending = null,
+        bool? PrivilegedMetricsConsentPromptSuppressed = null);
 }

@@ -88,13 +88,14 @@ storage or broker data into a fabricated zero.
 
 Settings stay under `%LOCALAPPDATA%\MonitoringXS\settings.json` as a small
 version-1 JSON document. It contains only the live interval, history-retention
-hours, System/Light/Dark theme, UI language, and Running Apps sort preference. It stores no credentials, tokens, SIDs,
+hours, System/Light/Dark theme, UI language, Running Apps sort preference, and whether the user chose "Don't ask again" for the unsigned-build access prompt. It stores no credentials, tokens, SIDs,
 Broker ACLs, executable paths, command lines, or network data. Values are
 allowlisted, writes use a temporary file plus atomic replacement, and corrupt
 or invalid files are quarantined before safe defaults are used. A newer
 document version fails closed without overwriting it. Normal UI receives only
-allowlisted Broker states and never installs, removes, restarts, or elevates
-the service. See [ADR 0006](adr/0006-versioned-per-user-settings.md).
+allowlisted Broker states and never installs, removes, or restarts the
+service; the only elevation it can request is the UAC-gated unsigned-build
+opt-in described below. See [ADR 0006](adr/0006-versioned-per-user-settings.md).
 
 ## Application actions
 
@@ -119,6 +120,34 @@ current aggregate metric values/availability, and a Monitoring XS timestamp.
 ## Elevated helper design
 
 The helper will accept a versioned request containing only an operation enum and validated identifiers. It will reject unknown fields/operations, verify the caller and target, perform one allow-listed operation, return one structured response, and terminate. General process launch, arbitrary paths, and shell strings are forbidden.
+
+## Unsigned builds and the administrator opt-in
+
+Release builds of the Privileged Metrics Service authenticate the app by
+publisher. A signed service accepts only an app with a trusted Authenticode
+signature from the same publisher and ignores any opt-in. An unsigned service
+(the current unsigned MSI) has no publisher to compare against, so it accepts
+the unsigned app only after an administrator explicitly allows it on that PC.
+The fixed `%ProgramFiles%` path, the protected-ACL check and the per-user,
+per-session pipe endpoint are still enforced in every case.
+
+The opt-in is `HKLM\SOFTWARE\MonitoringXS\PrivilegedMetrics`,
+`AllowUnsignedClient` = 1 (REG_DWORD, 64-bit view). Standard users cannot
+create keys under `HKLM\SOFTWARE`; the key is written with a protected DACL
+(SYSTEM and Administrators full control, Users read) owned by Administrators.
+The service re-checks the owner and DACL on every handshake and ignores the
+value if any other principal could write, delete, re-permission or take
+ownership of the key.
+
+Only the shipped service executable writes or removes it, in its
+`--grant-unsigned-client-consent` / `--revoke-unsigned-client-consent` modes,
+which refuse to run without an elevated administrator token. The app never
+elevates itself: on launch, if the running unsigned service rejected it and no
+opt-in exists, it explains why the access is needed and asks first (Allow /
+Not now / Don't ask again); Allow and the Settings Allow/Revoke buttons start
+that helper through UAC. A cancelled UAC prompt changes nothing. "Don't ask
+again" is stored in the per-user settings. Uninstall removes the key; a major
+upgrade also removes it, so a new unsigned build is asked about again.
 
 ## Installer boundary
 

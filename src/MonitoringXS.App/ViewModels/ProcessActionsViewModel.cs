@@ -287,7 +287,7 @@ public sealed partial class ProcessActionsViewModel : ObservableObject, IDisposa
         ExecutablePathText = newValue.Process.ExecutablePath ?? _localization.Get(LocalizationKeys.Unavailable);
         StartTimeText = newValue.Target.InstanceId.StartTimeUtc
             .ToLocalTime()
-            .ToString("G", System.Globalization.CultureInfo.CurrentCulture);
+            .ToString("G", _localization.Culture);
         RefreshSelectedPresentation();
         if (identityChanged)
         {

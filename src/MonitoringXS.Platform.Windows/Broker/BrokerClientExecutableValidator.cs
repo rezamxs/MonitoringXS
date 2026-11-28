@@ -33,7 +33,33 @@ internal static class BrokerClientExecutableValidator
             return false;
         }
 
-        return !RequiresTrustedPublisher || HasTrustedBrokerPublisher(executablePath);
+        return !RequiresTrustedPublisher
+            || IsPublisherRequirementMet(
+                brokerIsSigned: ReadPublisher(Path.Combine(AppContext.BaseDirectory, BrokerExecutable)) is not null,
+                PrivilegedMetricsConsent.IsGranted,
+                () => HasTrustedBrokerPublisher(executablePath));
+    }
+
+    /// <summary>
+    /// Publisher authentication is anchored on the broker's own signature. A
+    /// signed broker accepts only a client with a trusted signature from the
+    /// same publisher and ignores the unsigned-client opt-in. An unsigned broker
+    /// (the current unsigned MSI) has no publisher to compare against, so it
+    /// accepts the unsigned app only after an administrator explicitly opted in
+    /// (<see cref="PrivilegedMetricsConsent"/>). The fixed Program Files path,
+    /// the protected ACL check and the per-user, per-session pipe endpoint are
+    /// enforced before this in every case.
+    /// </summary>
+    internal static bool IsPublisherRequirementMet(
+        bool brokerIsSigned,
+        Func<bool> unsignedClientConsentGranted,
+        Func<bool> clientMatchesTrustedBrokerPublisher)
+    {
+        ArgumentNullException.ThrowIfNull(unsignedClientConsentGranted);
+        ArgumentNullException.ThrowIfNull(clientMatchesTrustedBrokerPublisher);
+        return brokerIsSigned
+            ? clientMatchesTrustedBrokerPublisher()
+            : unsignedClientConsentGranted();
     }
 
     private static bool HasProtectedAcl(string executablePath)
@@ -90,7 +116,7 @@ internal static class BrokerClientExecutableValidator
             && string.Equals(ReadPublisher(applicationPath), ReadPublisher(brokerPath), StringComparison.Ordinal);
     }
 
-    private static string? ReadPublisher(string path)
+    internal static string? ReadPublisher(string path)
     {
         try
         {

@@ -64,6 +64,8 @@ internal static class LocalizationKeys
     public const string BrokerBinaryMissingDetail = nameof(BrokerBinaryMissingDetail);
     public const string BrokerProtocolMismatchLabel = nameof(BrokerProtocolMismatchLabel);
     public const string BrokerProtocolMismatchDetail = nameof(BrokerProtocolMismatchDetail);
+    public const string BrokerClientRejectedLabel = nameof(BrokerClientRejectedLabel);
+    public const string BrokerClientRejectedDetail = nameof(BrokerClientRejectedDetail);
     public const string BrokerConnectionUnavailableLabel = nameof(BrokerConnectionUnavailableLabel);
     public const string BrokerConnectionUnavailableDetail = nameof(BrokerConnectionUnavailableDetail);
     public const string BrokerHealthyLabel = nameof(BrokerHealthyLabel);
@@ -208,6 +210,7 @@ internal static class LocalizationKeys
     public const string ReasonServiceStopped = nameof(ReasonServiceStopped);
     public const string ReasonServiceConnection = nameof(ReasonServiceConnection);
     public const string ReasonProtocolMismatch = nameof(ReasonProtocolMismatch);
+    public const string ReasonServiceRejectedClient = nameof(ReasonServiceRejectedClient);
     public const string ReasonSessionConflict = nameof(ReasonSessionConflict);
     public const string ReasonEventLoss = nameof(ReasonEventLoss);
     public const string ReasonProcessExited = nameof(ReasonProcessExited);
@@ -329,4 +332,21 @@ internal static class LocalizationKeys
     public const string BetaLimitationChartGaps = nameof(BetaLimitationChartGaps);
     public const string BetaLimitationNoFakeData = nameof(BetaLimitationNoFakeData);
     public const string BetaLimitationDefects = nameof(BetaLimitationDefects);
+    public const string ConsentDialogTitle = nameof(ConsentDialogTitle);
+    public const string ConsentDialogWhy = nameof(ConsentDialogWhy);
+    public const string ConsentDialogUnsigned = nameof(ConsentDialogUnsigned);
+    public const string ConsentDialogScope = nameof(ConsentDialogScope);
+    public const string ConsentDialogAllow = nameof(ConsentDialogAllow);
+    public const string ConsentDialogNotNow = nameof(ConsentDialogNotNow);
+    public const string ConsentDialogDontAskAgain = nameof(ConsentDialogDontAskAgain);
+    public const string ConsentNoticeTitle = nameof(ConsentNoticeTitle);
+    public const string ConsentCancelledMessage = nameof(ConsentCancelledMessage);
+    public const string ConsentFailedMessage = nameof(ConsentFailedMessage);
+    public const string ConsentHelperMissingMessage = nameof(ConsentHelperMissingMessage);
+    public const string ConsentAllowedMessage = nameof(ConsentAllowedMessage);
+    public const string ConsentRevokedMessage = nameof(ConsentRevokedMessage);
+    public const string ConsentStateNotRequired = nameof(ConsentStateNotRequired);
+    public const string ConsentStateAllowed = nameof(ConsentStateAllowed);
+    public const string ConsentStateNotAllowed = nameof(ConsentStateNotAllowed);
+    public const string Ok = nameof(Ok);
 }

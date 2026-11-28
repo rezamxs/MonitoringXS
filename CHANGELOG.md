@@ -6,6 +6,8 @@ All notable changes follow Keep a Changelog principles. The project uses semanti
 
 ### Added
 
+- Unsigned builds: the app explains why Physical Disk and Network need the Privileged Metrics Service and asks before an administrator opts in (UAC); Settings shows the state with Allow/Revoke. The unsigned service accepts the unsigned app only with that admin-only opt-in; a signed service still requires the same publisher.
+
 - Logical-application monitoring for CPU, memory, process I/O, physical disk, network, and GPU.
 - Single capture runtime and snapshot hub; UI consumes published snapshots rather than owning collectors.
 - SQLite History v3 with 24-hour retention, application/process sessions, and PID + start-time identity.

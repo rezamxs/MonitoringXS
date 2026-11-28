@@ -104,7 +104,18 @@ reported unavailable instead of being overwritten. Read-only, locked, or
 full-disk failures do not stop live metrics, History, navigation, or the
 Broker. Live cadence changes apply immediately; retention changes apply during
 future asynchronous maintenance and can remove older history. The Settings
-page never installs or elevates the Broker.
+page never installs, removes, or restarts the Broker.
+
+## Physical Disk and Network show "Client rejected" on an unsigned build
+
+Release builds of the Privileged Metrics Service accept an unsigned app only
+after an administrator allows it on this PC. On launch Monitoring XS explains
+this and offers **Allow**, which asks Windows for administrator permission
+(UAC). If you chose **Not now** or **Don't ask again**, open Settings →
+Privileged metrics → Unsigned build access and choose **Allow…**. **Revoke…**
+removes the permission. The setting is
+`HKLM\SOFTWARE\MonitoringXS\PrivilegedMetrics\AllowUnsignedClient` and is
+removed on uninstall. A signed service ignores it.
 
 ## Search or sort looks stale
 

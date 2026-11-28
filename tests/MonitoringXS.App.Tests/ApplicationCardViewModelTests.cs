@@ -69,7 +69,7 @@ public sealed class ApplicationCardViewModelTests
     [Theory]
     [InlineData(MetricAvailability.WarmingUp, "Warming up", "Warming up: another valid sample is required.")]
     [InlineData(MetricAvailability.Unavailable, "Unavailable", "Data is temporarily unavailable.")]
-    [InlineData(MetricAvailability.Unsupported, "Unavailable", "This Windows monitoring provider is unsupported on the current system.")]
+    [InlineData(MetricAvailability.Unsupported, "Unavailable", "Not supported on this system.")]
     public void KeepsUnavailableReasonsVisibleWithoutRepeatingDirections(
         MetricAvailability availability,
         string expectedValue,
@@ -105,6 +105,7 @@ public sealed class ApplicationCardViewModelTests
     [InlineData("Broker service stopped.", "The Privileged Metrics Service is stopped.")]
     [InlineData("Broker connection failed.", "The Privileged Metrics Service connection is unavailable.")]
     [InlineData("The privileged ETW broker protocol version is incompatible. Client version 1; server version 2.", "The app and Privileged Metrics Service protocol versions do not match.")]
+    [InlineData("The privileged ETW broker denied this local client.", "The Privileged Metrics Service rejected this app.")]
     [InlineData("TraceEventSession.EnableKernelProvider failed with Win32 5.", "Data is temporarily unavailable.")]
     [InlineData(@"C:\sensitive\broker.exe failed.", "Data is temporarily unavailable.")]
     public void BrokerStatusShowsOnlySafeActionableDetail(string detail, string expected)

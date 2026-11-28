@@ -58,7 +58,10 @@ change is introduced.
 MajorUpgrade stops and removes the older Broker before replacing files, then
 installs and starts the current definition. Repair restores installer-owned
 files, shortcuts, and service registration. Uninstall stops and deletes the
-service and removes installer-owned files, shortcuts, and registry rows.
+service and removes installer-owned files, shortcuts, and registry rows,
+including the administrator's unsigned-build opt-in
+(`HKLM\SOFTWARE\MonitoringXS\PrivilegedMetrics`), which a major upgrade
+also removes so a new unsigned build is asked about again.
 Windows Installer handles cancellation and rollback; exit code 3010 must be
 reported as reboot required, never silently treated as complete.
 

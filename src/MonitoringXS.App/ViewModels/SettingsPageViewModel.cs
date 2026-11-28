@@ -28,7 +28,8 @@ public enum BrokerOperationalState
     BinaryMissing,
     ProtocolMismatch,
     ConnectionUnavailable,
-    Healthy
+    Healthy,
+    ClientRejected
 }
 
 public sealed record BrokerOperationalStatus(
@@ -71,16 +72,40 @@ internal sealed class BrokerSettingsStatusProvider(
         }
 
         NetworkEventBatch network = await client.ReadNetworkBatchAsync([], cancellationToken);
-        if (network.Availability == MetricAvailability.Unsupported)
+        return BrokerStatusPresentation.Create(
+            BrokerConnectionClassifier.Classify(network.Availability, network.Detail),
+            localization);
+    }
+}
+
+/// <summary>
+/// Maps a live broker read onto the Settings status. Only an explicit protocol
+/// version incompatibility is reported as a mismatch; a service that rejects
+/// this client (for example an unsigned build failing the publisher check) and
+/// a service whose kernel provider is unsupported are reported as what they are.
+/// </summary>
+internal static class BrokerConnectionClassifier
+{
+    public static BrokerOperationalState Classify(MetricAvailability availability, string? detail)
+    {
+        string text = detail ?? string.Empty;
+        if (text.Contains("protocol", StringComparison.OrdinalIgnoreCase)
+            && text.Contains("incompatible", StringComparison.OrdinalIgnoreCase))
         {
-            return BrokerStatusPresentation.Create(BrokerOperationalState.ProtocolMismatch, localization);
+            return BrokerOperationalState.ProtocolMismatch;
         }
 
-        return network.Availability is MetricAvailability.Available
+        if (availability == MetricAvailability.AccessDenied
+            && text.Contains("denied this local client", StringComparison.OrdinalIgnoreCase))
+        {
+            return BrokerOperationalState.ClientRejected;
+        }
+
+        return availability is MetricAvailability.Available
             or MetricAvailability.Partial
             or MetricAvailability.WarmingUp
-            ? BrokerStatusPresentation.Create(BrokerOperationalState.Healthy, localization)
-            : BrokerStatusPresentation.Create(BrokerOperationalState.ConnectionUnavailable, localization);
+            ? BrokerOperationalState.Healthy
+            : BrokerOperationalState.ConnectionUnavailable;
     }
 }
 
@@ -113,6 +138,10 @@ internal static class BrokerStatusPresentation
             state,
             localization.Get(LocalizationKeys.BrokerProtocolMismatchLabel),
             localization.Get(LocalizationKeys.BrokerProtocolMismatchDetail)),
+        BrokerOperationalState.ClientRejected => new(
+            state,
+            localization.Get(LocalizationKeys.BrokerClientRejectedLabel),
+            localization.Get(LocalizationKeys.BrokerClientRejectedDetail)),
         BrokerOperationalState.ConnectionUnavailable => new(
             state,
             localization.Get(LocalizationKeys.BrokerConnectionUnavailableLabel),
@@ -132,6 +161,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private readonly IApplicationSettingsStore _store;
     private readonly IMetricHistoryRetentionController _retention;
     private readonly IBrokerSettingsStatusProvider _broker;
+    private readonly IPrivilegedMetricsConsentService _consent;
     private readonly LiveRefreshCadence _cadence;
     private readonly LocalizationService _localization;
     private readonly SemaphoreSlim _saveGate = new(1, 1);
@@ -140,6 +170,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     private ApplicationSettings _settings = ApplicationSettings.Default;
     private int _saveVersion;
     private BrokerOperationalState? _brokerState;
+    private int _consentPromptOffered;
 
     public SettingsPageViewModel(
         IApplicationSettingsStore store,
@@ -152,7 +183,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             retention,
             new BrokerSettingsStatusProvider(brokerClient, localization ?? new LocalizationService()),
             cadence,
-            localization)
+            localization,
+            new WindowsPrivilegedMetricsConsentService(brokerClient))
     {
     }
 
@@ -161,21 +193,36 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
         IMetricHistoryRetentionController retention,
         IBrokerSettingsStatusProvider broker,
         LiveRefreshCadence cadence,
-        LocalizationService? localization = null)
+        LocalizationService? localization = null,
+        IPrivilegedMetricsConsentService? consent = null)
     {
         _store = store;
         _retention = retention;
         _broker = broker;
+        _consent = consent ?? new WindowsPrivilegedMetricsConsentService(null);
         _cadence = cadence;
         _localization = localization ?? new LocalizationService();
         BuildOptions();
         _localization.LanguageChanged += Localization_LanguageChanged;
         RefreshBrokerStatusCommand = new AsyncRelayCommand(RefreshBrokerStatusAsync);
+        AllowUnsignedClientCommand = new AsyncRelayCommand(
+            token => ChangeConsentAsync(grant: true, token),
+            () => !IsConsentChanging && ConsentState == PrivilegedMetricsConsentState.NotAllowed);
+        RevokeUnsignedClientCommand = new AsyncRelayCommand(
+            token => ChangeConsentAsync(grant: false, token),
+            () => !IsConsentChanging && ConsentState == PrivilegedMetricsConsentState.Allowed);
     }
 
     public event Action<ApplicationTheme>? ThemeRequested;
 
+    /// <summary>Raised after the unsigned-client opt-in changed, so live capture can refresh.</summary>
+    public event Action? PrivilegedMetricsAccessChanged;
+
     public IAsyncRelayCommand RefreshBrokerStatusCommand { get; }
+
+    public IAsyncRelayCommand AllowUnsignedClientCommand { get; }
+
+    public IAsyncRelayCommand RevokeUnsignedClientCommand { get; }
 
     public ApplicationSettings CurrentSettings
     {
@@ -226,6 +273,22 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     [ObservableProperty]
     public partial string BrokerDetailText { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AllowUnsignedClientCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RevokeUnsignedClientCommand))]
+    public partial PrivilegedMetricsConsentState ConsentState { get; set; } = PrivilegedMetricsConsentState.NotAllowed;
+
+    [ObservableProperty]
+    public partial string ConsentStateText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ConsentMessageText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AllowUnsignedClientCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RevokeUnsignedClientCommand))]
+    public partial bool IsConsentChanging { get; set; }
+
     public string AccessibilitySummary => _localization.Format(
         LocalizationKeys.SettingsAccessibilitySummary,
         SelectedSampling?.Label ?? _localization.Get(LocalizationKeys.SettingsNotLoaded),
@@ -253,8 +316,113 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
                 : load.Error ?? _localization.Get(LocalizationKeys.SettingsStorageUnavailable);
         BrokerStateText = _localization.Get(LocalizationKeys.SettingsNotChecked);
         BrokerDetailText = _localization.Get(LocalizationKeys.BrokerRefreshPrompt);
+        RefreshConsentState();
         OnPropertyChanged(nameof(AccessibilitySummary));
     }
+
+    /// <summary>
+    /// Checks once per app run whether to explain and offer the unsigned-client
+    /// opt-in. Later calls (for example after a language switch rebuilds the
+    /// window) return false without probing the service again.
+    /// </summary>
+    public async Task<bool> ShouldOfferPrivilegedMetricsConsentAsync(CancellationToken cancellationToken)
+    {
+        if (Interlocked.Exchange(ref _consentPromptOffered, 1) != 0)
+        {
+            return false;
+        }
+
+        if (CurrentSettings.PrivilegedMetricsConsentPromptSuppressed)
+        {
+            return false;
+        }
+
+        await RefreshBrokerStatusAsync(cancellationToken);
+        RefreshConsentState();
+        return PrivilegedMetricsConsentPolicy.ShouldPrompt(
+            _brokerState ?? BrokerOperationalState.ConnectionUnavailable,
+            brokerSigned: ConsentState == PrivilegedMetricsConsentState.NotRequired,
+            consentGranted: ConsentState == PrivilegedMetricsConsentState.Allowed,
+            promptSuppressedByUser: CurrentSettings.PrivilegedMetricsConsentPromptSuppressed,
+            alreadyPromptedThisSession: false);
+    }
+
+    /// <summary>Stores "Don't ask again" in the per-user settings.</summary>
+    public Task SuppressPrivilegedMetricsConsentPromptAsync(CancellationToken cancellationToken) =>
+        ChangeAsync(
+            settings => settings with { PrivilegedMetricsConsentPromptSuppressed = true },
+            _ => ValueTask.FromResult(MetricHistoryRetentionResult.Success),
+            cancellationToken);
+
+    /// <summary>
+    /// Asks Windows for administrator permission (UAC) to write or remove the
+    /// opt-in, then reconnects to the service and refreshes the status. A
+    /// cancelled UAC prompt changes nothing.
+    /// </summary>
+    public async Task<PrivilegedMetricsConsentChangeResult> ChangeConsentAsync(
+        bool grant,
+        CancellationToken cancellationToken)
+    {
+        IsConsentChanging = true;
+        ConsentMessageText = string.Empty;
+        try
+        {
+            PrivilegedMetricsConsentChangeResult result =
+                await _consent.RequestChangeAsync(grant, cancellationToken);
+            RefreshConsentState();
+            ConsentMessageText = ConsentResultMessage(grant, result);
+            if (result == PrivilegedMetricsConsentChangeResult.Succeeded)
+            {
+                await _consent.ReconnectAsync(cancellationToken);
+                PrivilegedMetricsAccessChanged?.Invoke();
+                await RefreshBrokerStatusAsync(cancellationToken);
+            }
+
+            return result;
+        }
+        finally
+        {
+            IsConsentChanging = false;
+        }
+    }
+
+    internal string ConsentResultMessage(bool grant, PrivilegedMetricsConsentChangeResult result) => result switch
+    {
+        PrivilegedMetricsConsentChangeResult.Succeeded => _localization.Get(grant
+            ? LocalizationKeys.ConsentAllowedMessage
+            : LocalizationKeys.ConsentRevokedMessage),
+        PrivilegedMetricsConsentChangeResult.Cancelled => _localization.Get(LocalizationKeys.ConsentCancelledMessage),
+        PrivilegedMetricsConsentChangeResult.HelperMissing => _localization.Get(LocalizationKeys.ConsentHelperMissingMessage),
+        _ => _localization.Get(LocalizationKeys.ConsentFailedMessage)
+    };
+
+    private void RefreshConsentState()
+    {
+        bool signed;
+        bool granted;
+        try
+        {
+            signed = !_consent.OptInApplies();
+            granted = !signed && _consent.IsGranted();
+        }
+        catch (Exception exception) when (exception is IOException
+            or UnauthorizedAccessException
+            or System.Security.SecurityException)
+        {
+            signed = false;
+            granted = false;
+        }
+
+        ConsentState = PrivilegedMetricsConsentPolicy.Resolve(signed, granted);
+        ConsentStateText = ConsentStateLabel(ConsentState);
+    }
+
+    private string ConsentStateLabel(PrivilegedMetricsConsentState state) => state switch
+    {
+        PrivilegedMetricsConsentState.NotRequired => _localization.Get(LocalizationKeys.ConsentStateNotRequired),
+        PrivilegedMetricsConsentState.Allowed => _localization.Get(LocalizationKeys.ConsentStateAllowed),
+        _ => _localization.Get(LocalizationKeys.ConsentStateNotAllowed)
+    };
 
     public async Task SetLanguageAsync(
         SettingsOption<ApplicationLanguage> option,
@@ -419,6 +587,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
             BrokerDetailText = status.Detail;
         }
 
+        ConsentStateText = ConsentStateLabel(ConsentState);
+        ConsentMessageText = string.Empty;
         OnPropertyChanged(nameof(AccessibilitySummary));
         StatusText = State switch
         {
@@ -554,6 +724,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IDisposabl
     {
         _localization.LanguageChanged -= Localization_LanguageChanged;
         RefreshBrokerStatusCommand.Cancel();
+        AllowUnsignedClientCommand.Cancel();
+        RevokeUnsignedClientCommand.Cancel();
         _saveGate.Dispose();
         _brokerRefreshGate.Dispose();
     }

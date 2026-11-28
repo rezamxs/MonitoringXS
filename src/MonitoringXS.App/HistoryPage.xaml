@@ -170,12 +170,12 @@
             AutomationProperties.Name="History metric charts"
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Auto">
-            <ItemsRepeater ItemsSource="{Binding Charts}">
+            <ItemsRepeater Margin="0,0,12,0" ItemsSource="{Binding Charts}">
                 <ItemsRepeater.Layout>
                     <UniformGridLayout
                         ItemsStretch="Fill"
                         MinColumnSpacing="12"
-                        MinItemHeight="208"
+                        MinItemHeight="260"
                         MinItemWidth="400"
                         MinRowSpacing="12"
                         Orientation="Horizontal" />
@@ -216,7 +216,7 @@
                                 </Grid>
                                 <controls:MetricSparkline
                                     Grid.Row="1"
-                                    Height="156"
+                                    Height="184"
                                     AutomationProperties.Name="{Binding AccessibilityText, Mode=OneWay}"
                                     EmptyText="{Binding StateText, Mode=OneWay}"
                                     IsTabStop="True"

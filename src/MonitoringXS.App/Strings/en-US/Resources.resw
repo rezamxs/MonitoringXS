@@ -65,6 +65,8 @@
   <data name="BrokerBinaryMissingDetail" xml:space="preserve"><value>The service is registered, but its executable is unavailable.</value></data>
   <data name="BrokerProtocolMismatchLabel" xml:space="preserve"><value>Protocol mismatch</value></data>
   <data name="BrokerProtocolMismatchDetail" xml:space="preserve"><value>The app and service protocol versions do not match.</value></data>
+  <data name="BrokerClientRejectedLabel" xml:space="preserve"><value>Client rejected</value></data>
+  <data name="BrokerClientRejectedDetail" xml:space="preserve"><value>The service is running but rejected this app. An unsigned build needs an administrator to allow it under Unsigned build access; a signed service requires the app to be signed by the same publisher.</value></data>
   <data name="BrokerConnectionUnavailableLabel" xml:space="preserve"><value>Connection unavailable</value></data>
   <data name="BrokerConnectionUnavailableDetail" xml:space="preserve"><value>The app could not establish a healthy local service connection.</value></data>
   <data name="BrokerHealthyLabel" xml:space="preserve"><value>Healthy</value></data>
@@ -86,7 +88,7 @@
   <data name="SettingsAppearanceDescription.Text" xml:space="preserve"><value>Theme changes apply immediately. System follows Windows and High Contrast.</value></data>
   <data name="SettingsThemeSelector.AutomationProperties.Name" xml:space="preserve"><value>Application theme</value></data>
   <data name="SettingsPrivilegedTitle.Text" xml:space="preserve"><value>Privileged metrics</value></data>
-  <data name="SettingsPrivilegedDescription.Text" xml:space="preserve"><value>Network and Physical Disk require the Privileged Metrics Service. Settings never install, remove, restart, or elevate it.</value></data>
+  <data name="SettingsPrivilegedDescription.Text" xml:space="preserve"><value>Network and Physical Disk require the Privileged Metrics Service. Settings never install, remove, or restart it.</value></data>
   <data name="SettingsBrokerRefreshButton.Content" xml:space="preserve"><value>Refresh status</value></data>
   <data name="SettingsBrokerRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>Refresh Privileged Metrics Service status</value></data>
   <data name="SettingsBrokerProgress.AutomationProperties.Name" xml:space="preserve"><value>Checking Privileged Metrics Service status</value></data>
@@ -318,11 +320,12 @@
   <data name="ReasonPartial" xml:space="preserve"><value>Partial: measured value is a lower bound because some attributable data is missing.</value></data>
   <data name="ReasonWarmingUp" xml:space="preserve"><value>Warming up: another valid sample is required.</value></data>
   <data name="ReasonPermissionRequired" xml:space="preserve"><value>Permission required for this provider or process.</value></data>
-  <data name="ReasonProviderUnsupported" xml:space="preserve"><value>This Windows monitoring provider is unsupported on the current system.</value></data>
+  <data name="ReasonProviderUnsupported" xml:space="preserve"><value>Not supported on this system.</value></data>
   <data name="ReasonServiceNotInstalled" xml:space="preserve"><value>The Privileged Metrics Service is not installed.</value></data>
   <data name="ReasonServiceStopped" xml:space="preserve"><value>The Privileged Metrics Service is stopped.</value></data>
   <data name="ReasonServiceConnection" xml:space="preserve"><value>The Privileged Metrics Service connection is unavailable.</value></data>
   <data name="ReasonProtocolMismatch" xml:space="preserve"><value>The app and Privileged Metrics Service protocol versions do not match.</value></data>
+  <data name="ReasonServiceRejectedClient" xml:space="preserve"><value>The Privileged Metrics Service rejected this app.</value></data>
   <data name="ReasonSessionConflict" xml:space="preserve"><value>Another monitoring session conflicts with this provider.</value></data>
   <data name="ReasonEventLoss" xml:space="preserve"><value>Some provider or queue samples were lost; values are lower bounds.</value></data>
   <data name="ReasonProcessExited" xml:space="preserve"><value>The process exited before its counters could be read.</value></data>
@@ -537,4 +540,27 @@
   <data name="SystemOverviewChartSummary" xml:space="preserve"><value>Last minute; missing samples remain visible as gaps.</value></data>
   <data name="SystemOverviewChartEmpty" xml:space="preserve"><value>Waiting for real samples…</value></data>
   <data name="SystemOverviewChartAutomationName" xml:space="preserve"><value>{0} {1} live chart</value></data>
+  <data name="ConsentDialogTitle" xml:space="preserve"><value>Allow disk and network monitoring?</value></data>
+  <data name="ConsentDialogWhy" xml:space="preserve"><value>Physical Disk and Network usage per app need the Privileged Metrics Service, which runs as administrator.</value></data>
+  <data name="ConsentDialogUnsigned" xml:space="preserve"><value>This build isn't code-signed, so Windows can't verify the publisher automatically, and the service won't trust this app until an administrator allows it on this PC.</value></data>
+  <data name="ConsentDialogScope" xml:space="preserve"><value>Allowing it lets this app read disk and network counters only. Nothing is sent anywhere. You can revoke it anytime in Settings → Privileged metrics.</value></data>
+  <data name="ConsentDialogAllow" xml:space="preserve"><value>Allow</value></data>
+  <data name="ConsentDialogNotNow" xml:space="preserve"><value>Not now</value></data>
+  <data name="ConsentDialogDontAskAgain" xml:space="preserve"><value>Don't ask again</value></data>
+  <data name="ConsentNoticeTitle" xml:space="preserve"><value>Privileged metrics</value></data>
+  <data name="ConsentCancelledMessage" xml:space="preserve"><value>Windows did not grant administrator permission, so Physical Disk and Network stay unavailable. You can allow access later in Settings → Privileged metrics.</value></data>
+  <data name="ConsentFailedMessage" xml:space="preserve"><value>The permission could not be changed. Physical Disk and Network stay as they were.</value></data>
+  <data name="ConsentHelperMissingMessage" xml:space="preserve"><value>The Privileged Metrics Service is not installed in Program Files, so access cannot be changed from here.</value></data>
+  <data name="ConsentAllowedMessage" xml:space="preserve"><value>Access allowed. Reconnecting to the Privileged Metrics Service…</value></data>
+  <data name="ConsentRevokedMessage" xml:space="preserve"><value>Access revoked. The service rejects this unsigned build from the next connection.</value></data>
+  <data name="ConsentStateNotRequired" xml:space="preserve"><value>Not required — the service is code-signed</value></data>
+  <data name="ConsentStateAllowed" xml:space="preserve"><value>Allowed</value></data>
+  <data name="ConsentStateNotAllowed" xml:space="preserve"><value>Not allowed</value></data>
+  <data name="Ok" xml:space="preserve"><value>OK</value></data>
+  <data name="SettingsConsentTitle.Text" xml:space="preserve"><value>Unsigned build access</value></data>
+  <data name="SettingsConsentDescription.Text" xml:space="preserve"><value>This build isn't code-signed. The service accepts it only after an administrator allows it on this PC. Allow and Revoke ask Windows for administrator permission; the app itself stays unelevated.</value></data>
+  <data name="SettingsConsentAllowButton.Content" xml:space="preserve"><value>Allow…</value></data>
+  <data name="SettingsConsentAllowButton.AutomationProperties.Name" xml:space="preserve"><value>Allow this unsigned build to use the Privileged Metrics Service</value></data>
+  <data name="SettingsConsentRevokeButton.Content" xml:space="preserve"><value>Revoke…</value></data>
+  <data name="SettingsConsentRevokeButton.AutomationProperties.Name" xml:space="preserve"><value>Revoke access to the Privileged Metrics Service</value></data>
 </root>

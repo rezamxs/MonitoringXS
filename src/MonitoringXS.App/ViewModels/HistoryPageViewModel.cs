@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MonitoringXS.App.Localization;
 using MonitoringXS.Core.Abstractions;
@@ -321,7 +322,9 @@ public sealed partial class HistoryPageViewModel : ObservableObject, IDisposable
                 LocalizationKeys.HistoryLastUpdatedFormat,
                 localUpdated.ToString("g", _localization.Culture));
             SelectedRangeText = _localization.Format(LocalizationKeys.SelectedRangeFormat, range.Label);
-            QueryPerformanceText = $"{stopwatch.Elapsed.TotalMilliseconds:0.0} ms · {Charts.Sum(chart => chart.Samples.Count)} chart points";
+            QueryPerformanceText = string.Create(
+                CultureInfo.InvariantCulture,
+                $"{stopwatch.Elapsed.TotalMilliseconds:0.0} ms · {Charts.Sum(chart => chart.Samples.Count)} chart points");
         }
         catch (OperationCanceledException) when (request.IsCancellationRequested)
         {

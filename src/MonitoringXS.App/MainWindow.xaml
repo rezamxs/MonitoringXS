@@ -176,7 +176,7 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <FontIcon FontSize="16" Glyph="&#xE9F5;" Foreground="{StaticResource DataAccentBrush}" />
+                                    <FontIcon FontSize="16" Glyph="&#xE950;" Foreground="{StaticResource DataAccentBrush}" />
                                     <TextBlock x:Uid="MetricCpuLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="CPU" />
                                 </Grid>
                                 <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="24" Text="{Binding CpuText}" />
@@ -203,7 +203,7 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <FontIcon FontSize="16" Glyph="&#xE950;" Foreground="{StaticResource DataAccentBrush}" />
+                                    <FontIcon FontSize="16" Glyph="&#xE964;" Foreground="{StaticResource DataAccentBrush}" />
                                     <TextBlock x:Uid="MetricMemoryLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Working set" />
                                 </Grid>
                                 <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="24" Text="{Binding MemoryText}" />
@@ -322,7 +322,7 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <FontIcon FontSize="18" Glyph="&#xE968;" Foreground="{StaticResource DataAccentBrush}" VerticalAlignment="Center" />
+                            <FontIcon FontSize="18" Glyph="&#xE774;" Foreground="{StaticResource DataAccentBrush}" VerticalAlignment="Center" />
                             <TextBlock x:Uid="MetricNetworkTitle" Grid.Column="1" Style="{StaticResource SectionTitleStyle}" Text="Network" VerticalAlignment="Center" />
                         </Grid>
                         <Grid ColumnSpacing="12">
@@ -378,7 +378,7 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <FontIcon FontSize="18" Glyph="&#xE943;" Foreground="{StaticResource DataAccentBrush}" VerticalAlignment="Center" />
+                            <FontIcon FontSize="18" Glyph="&#xE7F4;" Foreground="{StaticResource DataAccentBrush}" VerticalAlignment="Center" />
                             <TextBlock x:Uid="MetricGpuTitle" Grid.Column="1" Style="{StaticResource SectionTitleStyle}" Text="GPU" VerticalAlignment="Center" />
                         </Grid>
                         <Grid ColumnSpacing="12">
@@ -400,7 +400,7 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <FontIcon FontSize="14" Glyph="&#xE9F5;" Foreground="{StaticResource DataAccentBrush}" />
+                                        <FontIcon FontSize="14" Glyph="&#xE7F4;" Foreground="{StaticResource DataAccentBrush}" />
                                         <TextBlock x:Uid="MetricBusiestEngineLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Busiest engine" />
                                     </Grid>
                                     <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="22" Text="{Binding GpuUsageText}" />
@@ -421,7 +421,7 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <FontIcon FontSize="14" Glyph="&#xE950;" Foreground="{StaticResource DataAccentBrush}" />
+                                        <FontIcon FontSize="14" Glyph="&#xE964;" Foreground="{StaticResource DataAccentBrush}" />
                                         <TextBlock x:Uid="MetricDedicatedLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Dedicated memory" />
                                     </Grid>
                                     <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="22" Text="{Binding DedicatedGpuMemoryText}" />
@@ -441,7 +441,7 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <FontIcon FontSize="14" Glyph="&#xE774;" Foreground="{StaticResource DataAccentBrush}" />
+                                        <FontIcon FontSize="14" Glyph="&#xE964;" Foreground="{StaticResource DataAccentBrush}" />
                                         <TextBlock x:Uid="MetricSharedLabel" Grid.Column="1" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}" Text="Shared memory" />
                                     </Grid>
                                     <TextBlock Style="{StaticResource MetricValueStyle}" FontSize="22" Text="{Binding SharedGpuMemoryText}" />
@@ -762,7 +762,12 @@
                                     Style="{StaticResource CardMetricValueStyle}"
                                     Text="{x:Bind IoText, Mode=OneWay}"
                                     TextWrapping="Wrap" />
-                                <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind IoStatusText, Mode=OneWay}" />
+                                <TextBlock
+                                        MaxLines="2"
+                                        Style="{StaticResource CardSupportingTextStyle}"
+                                        Text="{x:Bind IoStatusText, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis"
+                                        TextWrapping="Wrap" />
                             </StackPanel>
                             <Border
                                 Grid.Column="1"
@@ -777,7 +782,12 @@
                                         Style="{StaticResource CardMetricValueStyle}"
                                         Text="{x:Bind PhysicalDiskText, Mode=OneWay}"
                                         TextWrapping="Wrap" />
-                                    <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind PhysicalDiskStatusText, Mode=OneWay}" />
+                                    <TextBlock
+                                        MaxLines="2"
+                                        Style="{StaticResource CardSupportingTextStyle}"
+                                        Text="{x:Bind PhysicalDiskStatusText, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis"
+                                        TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <Border
@@ -794,7 +804,12 @@
                                         Style="{StaticResource CardMetricValueStyle}"
                                         Text="{x:Bind NetworkText, Mode=OneWay}"
                                         TextWrapping="Wrap" />
-                                    <TextBlock Style="{StaticResource CardSupportingTextStyle}" Text="{x:Bind NetworkStatusText, Mode=OneWay}" />
+                                    <TextBlock
+                                        MaxLines="2"
+                                        Style="{StaticResource CardSupportingTextStyle}"
+                                        Text="{x:Bind NetworkStatusText, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis"
+                                        TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <Border
@@ -812,8 +827,10 @@
                                         Text="{x:Bind GpuText, Mode=OneWay}"
                                         TextWrapping="Wrap" />
                                     <TextBlock
+                                        MaxLines="2"
                                         Style="{StaticResource CardSupportingTextStyle}"
                                         Text="{x:Bind GpuStatusText, Mode=OneWay}"
+                                        TextTrimming="CharacterEllipsis"
                                         TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>

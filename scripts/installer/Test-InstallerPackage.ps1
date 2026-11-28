@@ -78,6 +78,15 @@ foreach ($shortcut in $shortcuts) {
     Assert-Installer ($shortcut.Fields[3] -eq '[APPFOLDER]MonitoringXS.App.exe' -and $shortcut.Fields[4] -eq 'APPFOLDER') 'Shortcut target or working directory is unsafe.'
 }
 
+# RemoveRegistryKey removeOnUninstall is authored as a Registry row whose Name is '-'.
+$registryRows = @(Read-InstallerRows 'SELECT `Registry`,`Root`,`Key`,`Name`,`Component_` FROM `Registry`' 5)
+$consentRemoval = @($registryRows | Where-Object {
+        $_.Fields[1] -eq '2' -and
+        $_.Fields[2] -eq 'Software\MonitoringXS\PrivilegedMetrics' -and $_.Fields[3] -eq '-' -and
+        $_.Fields[4] -eq 'BrokerServiceComponent'
+    })
+Assert-Installer ($consentRemoval.Count -eq 1) 'Uninstall no longer removes the unsigned-client opt-in key.'
+
 $customActions = @(Read-InstallerRows 'SELECT `Action`,`Source`,`Target` FROM `CustomAction`' 3)
 $productActions = @($customActions | Where-Object { $_.Fields[1] -eq 'InstallerCustomActions' })
 Assert-Installer ($productActions.Count -eq 2) 'Unexpected product custom-action count.'
