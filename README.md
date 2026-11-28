@@ -52,15 +52,26 @@ GPU values come from Windows `GPU Engine` and `GPU Process Memory` counters on W
 
 ## Download and install
 
-The current build is **v1.0.0**, a beta **pre-release**: [MonitoringXS-1.0.0-x64.msi](https://github.com/rezamxs/MonitoringXS/releases/tag/v1.0.0) (all builds: [Releases](https://github.com/rezamxs/MonitoringXS/releases)).
+The current build is **v1.0.1**, a beta **pre-release**: [MonitoringXS-1.0.1-x64.msi](https://github.com/rezamxs/MonitoringXS/releases/tag/v1.0.1) (all builds: [Releases](https://github.com/rezamxs/MonitoringXS/releases)).
 
-1. Download `MonitoringXS-1.0.0-x64.msi` and run it. Setup asks for administrator approval once (UAC), because it installs per-machine.
+1. Download `MonitoringXS-1.0.1-x64.msi` and run it. Setup asks for administrator approval once (UAC), because it installs per-machine.
 2. The MSI is **not code-signed yet**, so Windows SmartScreen will likely show *"Windows protected your PC"*. Click **More info** → **Run anyway**. Only do this for a file you downloaded from this repository's Releases page.
 3. Launch **Monitoring XS** from the Start Menu (a Desktop shortcut is optional during setup).
 
-The installer is self-contained (no separate .NET or Windows App SDK runtime needed). It installs the app and the Privileged Broker service under `%ProgramFiles%\Monitoring XS`, so disk and network metrics work without extra steps. The app itself always runs unelevated.
+The installer is self-contained (no separate .NET or Windows App SDK runtime needed). It installs the app and the Privileged Broker service under `%ProgramFiles%\Monitoring XS`, so disk and network metrics are available once you allow them (see [Privileged metrics permission](#privileged-metrics-permission)). The app itself always runs unelevated.
 
 Uninstall from **Settings → Apps**. Your settings and History database in `%LOCALAPPDATA%\MonitoringXS` are intentionally kept; delete that folder yourself for a full removal. Details: [installer documentation](docs/INSTALLER.md).
+
+## Privileged metrics permission
+
+Per-app **Physical Disk** and **Network** numbers come from Windows counters that only an administrator-level service can read. So MonitoringXS installs a small **Privileged Metrics Service** next to the app; the app itself always runs as a normal user.
+
+This build isn't code-signed yet, so Windows can't verify who published it, and the service won't trust the app on its own. The first time you open MonitoringXS, it asks:
+
+- **Allow** shows a Windows administrator prompt (UAC) and saves one admin-only setting: `HKLM\SOFTWARE\MonitoringXS\PrivilegedMetrics`, value `AllowUnsignedClient = 1`.
+- **Not now** skips it. CPU, memory, process I/O, GPU and History keep working; only Disk and Network show as unavailable.
+
+The service only reads disk and network counters on your PC. Nothing is sent anywhere. You can turn it off anytime in **Settings → Privileged metrics**, and uninstalling MonitoringXS removes the service and the setting.
 
 ## Requirements
 
