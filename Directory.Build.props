@@ -9,11 +9,13 @@
     <TreatWarningsAsErrors Condition="'$(CI)' == 'true'">true</TreatWarningsAsErrors>
     <Authors>rezaalizadeh</Authors>
     <Company>rezam_xs</Company>
-    <Version>0.9.0</Version>
+    <Version>1.0.1</Version>
     <Product>Monitoring XS</Product>
     <Description>A low-overhead Windows resource monitor for logical applications rather than raw process lists.</Description>
     <!-- Public Beta identity: keep DisplayVersion and BetaChannel in sync with release milestones. -->
-    <DisplayVersion>0.9.0-beta.1</DisplayVersion>
+    <DisplayVersion>1.0.1</DisplayVersion>
+    <InformationalVersion>$(DisplayVersion)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <BetaChannel>Public Beta</BetaChannel>
     <Copyright>Copyright (c) 2026 rezam_xs</Copyright>
     <RepositoryUrl>https://github.com/rezamxs/MonitoringXS</RepositoryUrl>

@@ -15,7 +15,7 @@ public static class AppIdentity
         Assembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product ?? "Monitoring XS";
 
     public static string NumericVersion { get; } =
-        Assembly.GetName().Version?.ToString(3) ?? "0.9.0";
+        Assembly.GetName().Version?.ToString(3) ?? "1.0.1";
 
     public static string DisplayVersion { get; } =
         Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
